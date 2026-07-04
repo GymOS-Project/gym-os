@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { supabase } from "../supabase";
 import { sendWhatsAppMessage } from "../services/whatsapp";
 
-export function startSubscriptionNotifier() {
+export function startSubscriptionExpiryReminderJob() {
   cron.schedule("0 9 * * *", async () => {
     const today = new Date().toISOString().split("T")[0];
     const threeDaysFromNow = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
@@ -10,7 +10,7 @@ export function startSubscriptionNotifier() {
     try {
       const { data: expiring, error } = await supabase
         .from("member_packages")
-        .select("*, members(id, name, phone)")
+        .select("end_date, members(id, name, phone)")
         .eq("status", "active")
         .gte("end_date", today)
         .lte("end_date", threeDaysFromNow);
@@ -26,7 +26,7 @@ export function startSubscriptionNotifier() {
         );
       }
     } catch (err) {
-      console.error("[notifier] Failed to send expiry notifications", err);
+      console.error("[subscriptionReminder] Failed to send expiry notifications", err);
     }
   });
 }

@@ -1,48 +1,40 @@
 import { Router } from "express";
-import { and } from "drizzle-orm";
-import { db } from "../db/client";
-import { branches, members, plans } from "../db/schema";
+import { supabase } from "../supabase";
 
 const router = Router();
 
-router.get("/dashboard", async (_req, res) => {
-  const allMembers = await db.select().from(members);
-  const allPlans = await db.select().from(plans);
-  const allBranches = await db.select().from(branches);
+router.get("/dashboard", async (req, res) => {
+  const admin_id = req.query.admin_id as string;
+  if (!admin_id) return res.status(400).json({ message: "admin_id query param is required" });
 
-  const activeMembers = allMembers.filter((m) => m.status === "active").length;
-  const expiredMembers = allMembers.filter((m) => m.status === "expired").length;
-  const expiringSoon = allMembers.filter(
-    (m) => m.status === "expiring_soon"
-  ).length;
+  const today = new Date().toISOString().split("T")[0];
+  const weekLater = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
 
-  const branchDistribution = allBranches.map((b) => ({
-    branch: b.id,
-    count: allMembers.filter((m) => m.branch === b.id).length,
-  }));
+  const [membersRes, packagesRes, txnsRes] = await Promise.all([
+    supabase.from("members").select("id, is_active").eq("admin_id", admin_id),
+    supabase.from("member_packages").select("status, end_date, amount_paid").eq("admin_id", admin_id),
+    supabase.from("transactions").select("amount").eq("admin_id", admin_id).eq("type", "payment").gte("transaction_date", monthStart),
+  ]);
 
-  const planDistribution = allPlans.map((p) => ({
-    plan: p.id,
-    count: allMembers.filter((m) => m.plan === p.id).length,
-  }));
+  const members = membersRes.data || [];
+  const packages = packagesRes.data || [];
+  const transactions = txnsRes.data || [];
 
-  const planPriceMap = new Map(allPlans.map((p) => [p.id, Number(p.price)]));
+  const activePackages = packages.filter((p) => p.status === "active");
+  const expiredPackages = packages.filter((p) => p.status === "expired");
+  const expiringThisWeek = activePackages.filter((p) => p.end_date >= today && p.end_date <= weekLater);
 
-  const nonExpiredMembers = allMembers.filter((m) => m.status !== "expired");
-
-  const monthlyRevenue = nonExpiredMembers.reduce((sum, member) => {
-    const price = planPriceMap.get(member.plan) ?? 0;
-    return sum + price;
-  }, 0);
+  const totalRevenue = packages.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+  const monthlyRevenue = transactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   res.json({
-    totalMembers: allMembers.length,
-    activeMembers,
-    expiredMembers,
-    expiringThisWeek: expiringSoon,
+    totalMembers: members.length,
+    activeMembers: activePackages.length,
+    expiredMembers: expiredPackages.length,
+    expiringThisWeek: expiringThisWeek.length,
+    totalRevenue,
     monthlyRevenue,
-    branchDistribution,
-    planDistribution,
   });
 });
 

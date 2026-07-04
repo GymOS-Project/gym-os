@@ -1,12 +1,3 @@
-import "dotenv/config";
-import { defineConfig } from "drizzle-kit";
-
-export default defineConfig({
-  dialect: "postgresql",
-  schema: "./src/db/schema.ts",
-  out: "./drizzle",
-  dbCredentials: {
-    url: process.env.DATABASE_URL!,
-  },
-});
-
+// Drizzle ORM has been removed. This file is kept as a placeholder.
+// The server now uses Supabase exclusively.
+export {}
