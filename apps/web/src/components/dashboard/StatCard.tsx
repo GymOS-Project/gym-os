@@ -5,7 +5,7 @@ interface StatCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
-  icon: LucideIcon;
+  icon: typeof LucideIcon;
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'destructive';
 }
 
