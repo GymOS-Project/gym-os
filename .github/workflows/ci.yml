@@ -70,3 +70,6 @@ jobs:
 
       - name: Build
         run: bun run build
+
+- name: The PR Agent
+  uses: The-PR-Agent/pr-agent@v0.39.0
