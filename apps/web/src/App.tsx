@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
@@ -30,6 +30,103 @@ import NearToExpirePage from "@/pages/reports/NearToExpirePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+const protectedElement = (element: React.ReactNode) => (
+  <ProtectedRoute>{element}</ProtectedRoute>
+);
+const routes = [
+  { path: "/login", element: <LoginPage /> },
+  { path: "/signup", element: <SignupPage /> },
+  { path: "/", element: <DashboardPage />, protected: true },
+  { path: "/members", element: <MemberListPage />, protected: true },
+  { path: "/members/add", element: <AddMemberPage />, protected: true },
+  { path: "/members/packages", element: <PackageTypesPage />, protected: true },
+  {
+    path: "/followups/common",
+    element: (
+      <FollowupsPage
+        type="general"
+        title="Common Follow Up"
+        description="Track general follow-ups with members"
+      />
+    ),
+    protected: true,
+  },
+  {
+    path: "/followups/enquiry",
+    element: (
+      <FollowupsPage
+        type="general"
+        title="Enquiry Follow Up"
+        description="Follow up with enquiry leads"
+      />
+    ),
+    protected: true,
+  },
+  {
+    path: "/followups/payment-due",
+    element: (
+      <FollowupsPage
+        type="payment_due"
+        title="Payment Due Follow Up"
+        description="Track members with pending payments"
+      />
+    ),
+    protected: true,
+  },
+  {
+    path: "/followups/renewal",
+    element: (
+      <FollowupsPage
+        type="renewal"
+        title="Renewal Follow Up"
+        description="Follow up with members for subscription renewal"
+      />
+    ),
+    protected: true,
+  },
+  { path: "/enquiry/add", element: <AddEnquiryPage />, protected: true },
+  {
+    path: "/enquiry",
+    element: (
+      <EnquiryListPage
+        title="Enquiry Data List"
+        description="All leads and enquiries"
+      />
+    ),
+    protected: true,
+  },
+  {
+    path: "/enquiry/followups",
+    element: <EnquiryFollowupListPage />,
+    protected: true,
+  },
+  {
+    path: "/enquiry/not-interested",
+    element: (
+      <EnquiryListPage
+        filterStatus="not_interested"
+        title="Not Interested"
+        description="Leads who are not interested"
+      />
+    ),
+    protected: true,
+  },
+  { path: "/reports/sales", element: <SalesHistoryPage />, protected: true },
+  {
+    path: "/reports/transactions",
+    element: <TransactionsPage />,
+    protected: true,
+  },
+  { path: "/reports/reviews", element: <ReviewsPage />, protected: true },
+  {
+    path: "/reports/references",
+    element: <ReferenceMembersPage />,
+    protected: true,
+  },
+  { path: "/reports/shift", element: <ShiftReportPage />, protected: true },
+  { path: "/reports/expiring", element: <NearToExpirePage />, protected: true },
+  { path: "*", element: <NotFound /> },
+];
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -39,39 +136,13 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            {/* Public */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-
-            {/* Protected */}
-            <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-
-            {/* Members */}
-            <Route path="/members" element={<ProtectedRoute><MemberListPage /></ProtectedRoute>} />
-            <Route path="/members/add" element={<ProtectedRoute><AddMemberPage /></ProtectedRoute>} />
-            <Route path="/members/packages" element={<ProtectedRoute><PackageTypesPage /></ProtectedRoute>} />
-
-            {/* Follow-ups */}
-            <Route path="/followups/common" element={<ProtectedRoute><FollowupsPage type="general" title="Common Follow Up" description="Track general follow-ups with members" /></ProtectedRoute>} />
-            <Route path="/followups/enquiry" element={<ProtectedRoute><FollowupsPage type="general" title="Enquiry Follow Up" description="Follow up with enquiry leads" /></ProtectedRoute>} />
-            <Route path="/followups/payment-due" element={<ProtectedRoute><FollowupsPage type="payment_due" title="Payment Due Follow Up" description="Track members with pending payments" /></ProtectedRoute>} />
-            <Route path="/followups/renewal" element={<ProtectedRoute><FollowupsPage type="renewal" title="Renewal Follow Up" description="Follow up with members for subscription renewal" /></ProtectedRoute>} />
-
-            {/* Enquiry */}
-            <Route path="/enquiry/add" element={<ProtectedRoute><AddEnquiryPage /></ProtectedRoute>} />
-            <Route path="/enquiry" element={<ProtectedRoute><EnquiryListPage title="Enquiry Data List" description="All leads and enquiries" /></ProtectedRoute>} />
-            <Route path="/enquiry/followups" element={<ProtectedRoute><EnquiryFollowupListPage /></ProtectedRoute>} />
-            <Route path="/enquiry/not-interested" element={<ProtectedRoute><EnquiryListPage filterStatus="not_interested" title="Not Interested" description="Leads who are not interested" /></ProtectedRoute>} />
-
-            {/* Reports */}
-            <Route path="/reports/sales" element={<ProtectedRoute><SalesHistoryPage /></ProtectedRoute>} />
-            <Route path="/reports/transactions" element={<ProtectedRoute><TransactionsPage /></ProtectedRoute>} />
-            <Route path="/reports/reviews" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
-            <Route path="/reports/references" element={<ProtectedRoute><ReferenceMembersPage /></ProtectedRoute>} />
-            <Route path="/reports/shift" element={<ProtectedRoute><ShiftReportPage /></ProtectedRoute>} />
-            <Route path="/reports/expiring" element={<ProtectedRoute><NearToExpirePage /></ProtectedRoute>} />
-
-            <Route path="*" element={<NotFound />} />
+            {routes.map(({ path, element, protected: isProtected }) => (
+              <Route
+                key={path}
+                path={path}
+                element={isProtected ? protectedElement(element) : element}
+              />
+            ))}
           </Routes>
         </AuthProvider>
       </BrowserRouter>
