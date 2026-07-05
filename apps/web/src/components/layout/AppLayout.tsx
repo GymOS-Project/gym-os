@@ -135,7 +135,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           <Dumbbell className="h-5 w-5 text-white" />
         </div>
         <div className="min-w-0">
-          <p className="font-bold text-white truncate">{admin?.gym_name || 'GymPro'}</p>
+          <p className="font-bold text-white truncate">{admin?.gym_name || 'GymOs'}</p>
           <p className="text-xs text-slate-400 truncate">{admin?.owner_name || 'Admin Panel'}</p>
         </div>
       </div>

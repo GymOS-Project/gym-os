@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["icon-192.png", "icon-512.png"],
       manifest: {
-        name: "GymPro Management System",
-        short_name: "GymPro",
+        name: "GymOs Management System",
+        short_name: "GymOs",
         description:
           "Professional gym management system for tracking members and subscriptions",
         start_url: "/",

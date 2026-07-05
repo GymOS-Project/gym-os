@@ -16,7 +16,7 @@ interface AuthContextType {
     email: string,
     password: string,
     adminData: { gym_name: string; owner_name: string; phone?: string; address?: string }
-  ) => Promise<{ error: Error | null }>;
+  ) => Promise<{ error: Error | null; authenticated: boolean }>;
   signOut: () => Promise<void>;
   refreshAdmin: () => Promise<void>;
 }
@@ -29,18 +29,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) { setLoading(false); return; }
     api.me()
-      .then(({ user, admin }) => { setUser(user); setAdmin(admin); })
-      .catch(() => { localStorage.removeItem("access_token"); })
+      .then(({ user, admin, authenticated }) => {
+        if (authenticated && user) {
+          setUser(user);
+          setAdmin(admin);
+        } else {
+          setUser(null);
+          setAdmin(null);
+        }
+      })
+      .catch(() => {
+        setUser(null);
+        setAdmin(null);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
       const result = await api.login(email, password);
-      localStorage.setItem("access_token", result.session.access_token);
+      if (!result.authenticated || !result.user) {
+        return { error: new Error(result.message || "Login failed") };
+      }
       setUser(result.user);
       setAdmin(result.admin);
       return { error: null };
@@ -55,16 +66,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     adminData: { gym_name: string; owner_name: string; phone?: string; address?: string }
   ) => {
     try {
-      await api.signup(email, password, adminData);
-      return { error: null };
+      const result = await api.signup(email, password, adminData);
+
+      if (result.authenticated && result.user) {
+        setUser(result.user);
+        setAdmin(result.admin);
+      }
+
+      return { error: null, authenticated: result.authenticated };
     } catch (err) {
-      return { error: err as Error };
+      return { error: err as Error, authenticated: false };
     }
   };
 
   const signOut = async () => {
     await api.signout().catch(() => {});
-    localStorage.removeItem("access_token");
     setUser(null);
     setAdmin(null);
   };
