@@ -1,20 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, CreditCard as Edit, Check, Phone } from 'lucide-react';
-import { toast } from 'sonner';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { Followup, Member } from '@/types';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Plus, CreditCard as Edit, Check, Phone } from "lucide-react";
+import { toast } from "sonner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { Followup, Member } from "@/types";
 
 interface FollowupsPageProps {
-  type: 'general' | 'payment_due' | 'renewal';
+  type: "general" | "payment_due" | "renewal";
   title: string;
   description: string;
 }
@@ -22,67 +22,55 @@ interface FollowupsPageProps {
 export default function FollowupsPage({ type, title, description }: FollowupsPageProps) {
   const { admin } = useAuth();
   const [followups, setFollowups] = useState<(Followup & { members: Member | null })[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<{ id: string; name: string; phone: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editFu, setEditFu] = useState<Followup | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ member_id: '', followup_date: new Date().toISOString().split('T')[0], next_followup_date: '', notes: '', status: 'pending' });
+  const [form, setForm] = useState({ member_id: "", followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" });
 
-  useEffect(() => { if (admin) { fetchFollowups(); fetchMembers(); } }, [admin]);
+  useEffect(() => { if (admin) { fetchFollowups(); fetchMembers(); } }, [admin, type]);
 
   const fetchFollowups = async () => {
     if (!admin) return;
     setLoading(true);
-    const { data } = await supabase
-      .from('followups').select('*, members(id, name, phone)')
-      .eq('admin_id', admin.id).eq('type', type).order('followup_date', { ascending: false });
-    setFollowups((data as any) || []);
+    try { setFollowups(await api.getFollowups(admin.id, type)); }
+    catch { toast.error("Failed to load"); }
     setLoading(false);
   };
 
   const fetchMembers = async () => {
     if (!admin) return;
-    const { data } = await supabase.from('members').select('id, name, phone').eq('admin_id', admin.id).eq('is_active', true);
-    setMembers(data || []);
+    try { setMembers(await api.getActiveMembers(admin.id)); }
+    catch {}
   };
 
-  const openAdd = () => {
-    setEditFu(null);
-    setForm({ member_id: '', followup_date: new Date().toISOString().split('T')[0], next_followup_date: '', notes: '', status: 'pending' });
-    setDialogOpen(true);
-  };
-
-  const openEdit = (fu: Followup) => {
-    setEditFu(fu);
-    setForm({ member_id: fu.member_id || '', followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || '', notes: fu.notes || '', status: fu.status });
-    setDialogOpen(true);
-  };
+  const openAdd = () => { setEditFu(null); setForm({ member_id: "", followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
+  const openEdit = (fu: Followup) => { setEditFu(fu); setForm({ member_id: fu.member_id || "", followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || "", notes: fu.notes || "", status: fu.status }); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!admin) return;
     setSaving(true);
-    const payload = { admin_id: admin.id, type, member_id: form.member_id || null, followup_date: form.followup_date, next_followup_date: form.next_followup_date || null, notes: form.notes || null, status: form.status };
-    const { error } = editFu
-      ? await supabase.from('followups').update(payload).eq('id', editFu.id)
-      : await supabase.from('followups').insert(payload);
+    const payload = { admin_id: admin.id, type, member_id: form.member_id || undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
+    try {
+      if (editFu) await api.updateFollowup(editFu.id, payload);
+      else await api.createFollowup(payload);
+      toast.success(editFu ? "Updated" : "Follow-up added");
+      setDialogOpen(false);
+      fetchFollowups();
+    } catch { toast.error("Failed to save"); }
     setSaving(false);
-    if (error) { toast.error('Failed to save'); return; }
-    toast.success(editFu ? 'Updated' : 'Follow-up added');
-    setDialogOpen(false);
-    fetchFollowups();
   };
 
   const markDone = async (id: string) => {
-    await supabase.from('followups').update({ status: 'done' }).eq('id', id);
-    toast.success('Marked as done');
-    fetchFollowups();
+    try { await api.updateFollowup(id, { status: "done" }); toast.success("Marked as done"); fetchFollowups(); }
+    catch { toast.error("Failed to update"); }
   };
 
   const statusBadge = (s: string) => {
     switch (s) {
-      case 'done': return <Badge className="bg-green-100 text-green-700 border-green-200">Done</Badge>;
-      case 'no_response': return <Badge className="bg-slate-100 text-slate-700 border-slate-200">No Response</Badge>;
+      case "done": return <Badge className="bg-green-100 text-green-700 border-green-200">Done</Badge>;
+      case "no_response": return <Badge className="bg-slate-100 text-slate-700 border-slate-200">No Response</Badge>;
       default: return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Pending</Badge>;
     }
   };
@@ -117,19 +105,16 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
                 <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
               ) : followups.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">No follow-ups yet</TableCell></TableRow>
-              ) : followups.map(fu => (
+              ) : followups.map((fu) => (
                 <TableRow key={fu.id} className="hover:bg-muted/30">
                   <TableCell>
                     {fu.members ? (
-                      <div>
-                        <p className="font-medium">{fu.members.name}</p>
-                        <p className="text-xs text-muted-foreground">{fu.members.phone}</p>
-                      </div>
+                      <div><p className="font-medium">{fu.members.name}</p><p className="text-xs text-muted-foreground">{fu.members.phone}</p></div>
                     ) : <span className="text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell>{new Date(fu.followup_date).toLocaleDateString()}</TableCell>
-                  <TableCell>{fu.next_followup_date ? new Date(fu.next_followup_date).toLocaleDateString() : '—'}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm">{fu.notes || '—'}</TableCell>
+                  <TableCell>{fu.next_followup_date ? new Date(fu.next_followup_date).toLocaleDateString() : "—"}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-sm">{fu.notes || "—"}</TableCell>
                   <TableCell>{statusBadge(fu.status)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
@@ -138,7 +123,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
                           <Phone className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {fu.status === 'pending' && (
+                      {fu.status === "pending" && (
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500" onClick={() => markDone(fu.id)}>
                           <Check className="h-3.5 w-3.5" />
                         </Button>
@@ -157,35 +142,35 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editFu ? 'Edit Follow-up' : 'Add Follow-up'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editFu ? "Edit Follow-up" : "Add Follow-up"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Member</Label>
-              <Select value={form.member_id} onValueChange={v => setForm(p => ({ ...p, member_id: v }))}>
+              <Select value={form.member_id} onValueChange={(v) => setForm((p) => ({ ...p, member_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">None</SelectItem>
-                  {members.map(m => <SelectItem key={m.id} value={m.id}>{m.name} — {m.phone}</SelectItem>)}
+                  {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.phone}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Follow-up Date</Label>
-                <Input type="date" value={form.followup_date} onChange={e => setForm(p => ({ ...p, followup_date: e.target.value }))} />
+                <Input type="date" value={form.followup_date} onChange={(e) => setForm((p) => ({ ...p, followup_date: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Next Follow-up</Label>
-                <Input type="date" value={form.next_followup_date} onChange={e => setForm(p => ({ ...p, next_followup_date: e.target.value }))} />
+                <Input type="date" value={form.next_followup_date} onChange={(e) => setForm((p) => ({ ...p, next_followup_date: e.target.value }))} />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>Notes</Label>
-              <Input value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Notes about this follow-up" />
+              <Input value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes about this follow-up" />
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
-              <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
+              <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pending">Pending</SelectItem>
@@ -197,9 +182,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white">
-              {saving ? 'Saving...' : editFu ? 'Update' : 'Add'}
-            </Button>
+            <Button onClick={handleSave} disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white">{saving ? "Saving..." : editFu ? "Update" : "Add"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

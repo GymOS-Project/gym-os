@@ -1,13 +1,50 @@
 import { Router } from "express";
-import { db } from "../db/client";
-import { plans } from "../db/schema";
+import { supabase } from "../supabase";
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
-  const all = await db.select().from(plans);
-  res.json(all);
+router.get("/", async (req, res) => {
+  const admin_id = req.query.admin_id as string;
+  if (!admin_id) return res.status(400).json({ message: "admin_id is required" });
+  const { data, error } = await supabase
+    .from("package_types")
+    .select("*")
+    .eq("admin_id", admin_id)
+    .order("created_at");
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(data);
+});
+
+router.post("/", async (req, res) => {
+  const { admin_id, name, duration_months, duration_days, price, description } = req.body;
+  if (!admin_id || !name || price == null) {
+    return res.status(400).json({ message: "admin_id, name, and price are required" });
+  }
+  const { data, error } = await supabase
+    .from("package_types")
+    .insert({ admin_id, name, duration_months: duration_months || null, duration_days: duration_days || null, price, description: description || null })
+    .select()
+    .single();
+  if (error) return res.status(500).json({ message: error.message });
+  res.status(201).json(data);
+});
+
+router.put("/:id", async (req, res) => {
+  const { name, duration_months, duration_days, price, description, is_active } = req.body;
+  const { data, error } = await supabase
+    .from("package_types")
+    .update({ name, duration_months: duration_months || null, duration_days: duration_days || null, price, description: description || null, is_active })
+    .eq("id", req.params.id)
+    .select()
+    .single();
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(data);
+});
+
+router.delete("/:id", async (req, res) => {
+  const { error } = await supabase.from("package_types").delete().eq("id", req.params.id);
+  if (error) return res.status(500).json({ message: error.message });
+  res.status(204).send();
 });
 
 export default router;
-

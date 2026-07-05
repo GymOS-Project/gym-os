@@ -1,43 +1,32 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { TriangleAlert as AlertTriangle } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Phone } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { TriangleAlert as AlertTriangle } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Phone } from "lucide-react";
+import { toast } from "sonner";
 
 export default function NearToExpirePage() {
   const { admin } = useAuth();
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [daysFilter, setDaysFilter] = useState('7');
+  const [daysFilter, setDaysFilter] = useState("7");
 
   useEffect(() => { if (admin) fetchData(); }, [admin, daysFilter]);
 
   const fetchData = async () => {
     if (!admin) return;
     setLoading(true);
-    const today = new Date().toISOString().split('T')[0];
-    const future = new Date(Date.now() + parseInt(daysFilter) * 86400000).toISOString().split('T')[0];
-    const { data } = await supabase
-      .from('member_packages')
-      .select('*, members(id, name, phone, email, shift)')
-      .eq('admin_id', admin.id)
-      .eq('status', 'active')
-      .gte('end_date', today)
-      .lte('end_date', future)
-      .order('end_date');
-    setMembers((data as any) || []);
+    try { setMembers(await api.getNearToExpire(admin.id, parseInt(daysFilter))); }
+    catch { toast.error("Failed to load"); }
     setLoading(false);
   };
 
-  const daysLeft = (endDate: string) => {
-    const days = Math.floor((new Date(endDate).getTime() - Date.now()) / 86400000);
-    return days;
-  };
+  const daysLeft = (endDate: string) => Math.floor((new Date(endDate).getTime() - Date.now()) / 86400000);
 
   return (
     <AppLayout title="Near to Expire">
@@ -60,14 +49,12 @@ export default function NearToExpirePage() {
             </SelectContent>
           </Select>
         </div>
-
         <div className="rounded-xl border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-4 flex items-center gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
           <p className="text-sm text-amber-700 dark:text-amber-400">
-            <strong>{members.length}</strong> member{members.length !== 1 ? 's' : ''} expiring in the next {daysFilter} days. Consider reaching out for renewal.
+            <strong>{members.length}</strong> member{members.length !== 1 ? "s" : ""} expiring in the next {daysFilter} days.
           </p>
         </div>
-
         <div className="rounded-xl border bg-card overflow-hidden">
           <Table>
             <TableHeader>
@@ -84,7 +71,7 @@ export default function NearToExpirePage() {
                 <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
               ) : members.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No expiring packages in this period</TableCell></TableRow>
-              ) : members.map(m => {
+              ) : members.map((m) => {
                 const days = daysLeft(m.end_date);
                 return (
                   <TableRow key={m.id} className="hover:bg-muted/30">
@@ -95,13 +82,13 @@ export default function NearToExpirePage() {
                     <TableCell className="text-sm">{m.package_name}</TableCell>
                     <TableCell className="text-sm">{new Date(m.end_date).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <Badge className={days <= 3 ? 'bg-red-100 text-red-700' : days <= 7 ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}>
-                        {days === 0 ? 'Today' : `${days}d`}
+                      <Badge className={days <= 3 ? "bg-red-100 text-red-700" : days <= 7 ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}>
+                        {days === 0 ? "Today" : `${days}d`}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500" onClick={() => window.open(`https://wa.me/${m.members?.phone?.replace(/\s/g, '')}?text=Hi ${m.members?.name}, your gym membership expires in ${days} days. Please renew to continue!`)}>
+                      <div className="flex justify-end">
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500" onClick={() => window.open(`tel:${m.members?.phone}`)}>
                           <Phone className="h-3.5 w-3.5" />
                         </Button>
                       </div>
