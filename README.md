@@ -1,77 +1,137 @@
 # GymOS
 
-## Project Info
+GymOS is a gym management monorepo with a React frontend and an Express backend backed by Supabase.
 
-## Local development (Bun + Turborepo)
+## Projects
 
-This project is a Bun-based Turborepo monorepo with two apps:
+- `apps/web`: Vite + React admin application
+- `apps/server`: Express + TypeScript API
 
-- `apps/web` – Vite/React frontend (current Gym UI)
-- `apps/server` – Node/Express + TypeScript backend using Supabase
+## Tech Stack
 
-### Prerequisites
+- Turborepo
+- Bun workspaces
+- React
+- TypeScript
+- Vite
+- Express
+- Supabase
 
-- Bun installed (v1.2.x): https://bun.sh
-- Node.js installed (for running Express/nodemon)
+## Requirements
 
-### Install dependencies
+- Bun `1.2.x` or newer
+- Node.js `18+`
+
+## Install
 
 ```sh
 bun install
 ```
 
-### Configure environment variables
+## Environment
 
-Backend (`apps/server/.env` – copy from `.env.example`):
+Server env lives in `apps/server/.env`.
 
-```sh
-cd apps/server
-cp .env.example .env   # or create manually
-```
+Required values:
 
-Set at least:
-
+- `PORT`
+- `FRONTEND_URL`
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `FRONTEND_URL` – e.g. `http://localhost:8080`
 
-Frontend (`apps/web/.env` – copy from `.env.example`):
+Frontend env is optional and usually lives in `apps/web/.env.local`.
 
-```sh
-cd apps/web
-cp .env.example .env
+- `VITE_API_BASE_URL`
+
+Example local setup:
+
+```env
+# apps/server/.env
+PORT=3001
+FRONTEND_URL=http://localhost:8080
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-Adjust `VITE_API_BASE_URL` if your API runs on a different port.
+```env
+# apps/web/.env.local
+VITE_API_BASE_URL=http://localhost:3001
+```
 
-### Run all apps in dev mode
+## Development
 
-From the repo root:
+Run both apps:
 
 ```sh
 bun run dev
 ```
 
-This runs both:
-
-- Web: http://localhost:8080
-- API: http://localhost:3001
-
-You can also run them individually:
+Run one app only:
 
 ```sh
-# Only web
 bun run dev:web
-
-# Only server
 bun run dev:server
 ```
 
-## Tech Stack
+Default local URLs:
 
-This project is built with:
+- Web: `http://localhost:8080`
+- API: `http://localhost:3001`
 
-- Turborepo (monorepo orchestration)
-- Bun (package manager)
-- Vite, TypeScript, React, shadcn-ui, Tailwind CSS (frontend)
-- Node, Express, TypeScript, Supabase (backend)
+## Build
+
+Build all workspaces:
+
+```sh
+bun run build
+```
+
+Build individual apps:
+
+```sh
+cd apps/web && npm run build
+cd apps/server && npm run build
+```
+
+## Deployment
+
+Deploy the frontend and backend separately.
+
+Recommended production layout:
+
+- Frontend: `https://app.yourdomain.com`
+- Backend: `https://api.yourdomain.com`
+- Supabase: hosted by Supabase
+
+This project uses cookie-based auth between web and API, so keeping both apps under the same root domain is the simplest production setup.
+
+Production example:
+
+```env
+# apps/server/.env
+PORT=3001
+NODE_ENV=production
+FRONTEND_URL=https://app.yourdomain.com
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+```env
+# apps/web/.env.production
+VITE_API_BASE_URL=https://api.yourdomain.com
+```
+
+## Workspace Scripts
+
+Root scripts:
+
+- `bun run dev`
+- `bun run dev:web`
+- `bun run dev:server`
+- `bun run build`
+- `bun run lint`
+
+See app-specific READMEs for more details:
+
+- `apps/web/README.md`
+- `apps/server/README.md`
