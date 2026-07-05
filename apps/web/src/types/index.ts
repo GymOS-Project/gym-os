@@ -6,7 +6,13 @@ export interface Admin {
   gym_name: string;
   owner_name: string;
   phone: string | null;
+  email: string | null;
+  website: string | null;
+  facebook_page: string | null;
   address: string | null;
+  business_registration_name: string | null;
+  owner_email: string | null;
+  gym_photo_url: string | null;
   logo_url: string | null;
   created_at: string;
   updated_at: string;

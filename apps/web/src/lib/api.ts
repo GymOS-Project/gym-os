@@ -6,10 +6,11 @@ import type {
 const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || "http://localhost:3001";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const isFormData = options?.body instanceof FormData;
   const res = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(options?.headers || {}),
     },
     ...options,
@@ -60,8 +61,8 @@ export const api = {
   // Auth
   login: (email: string, password: string) =>
     request<LoginResult>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
-  signup: (email: string, password: string, adminData: { gym_name: string; owner_name: string; email?: string, phone?: string; address?: string}) =>
-    request<LoginResult>("/auth/signup", { method: "POST", body: JSON.stringify({ email, password, ...adminData }) }),
+  signup: (data: FormData) =>
+    request<LoginResult>("/auth/signup", { method: "POST", body: data }),
   signout: () => request<{ message: string }>("/auth/signout", { method: "POST" }),
   me: () => request<LoginResult>("/auth/me"),
 

@@ -4,6 +4,7 @@ import { supabase } from "../supabase";
 const SESSION_COOKIE_NAME = "sessionToken";
 const REFRESH_COOKIE_NAME = "refreshToken";
 const REFRESH_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
+const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";
 
 type AuthUser = {
   id: string;
@@ -66,6 +67,28 @@ async function getUserFromAccessToken(accessToken: string) {
   return data.user;
 }
 
+async function uploadGymPhoto(file: Express.Multer.File, userId: string) {
+  const fileExt = file.originalname.includes(".")
+    ? file.originalname.split(".").pop()?.toLowerCase()
+    : "jpg";
+  const safeExt = fileExt || "jpg";
+  const objectPath = `admins/${userId}/${Date.now()}.${safeExt}`;
+
+  const { error } = await supabase.storage
+    .from(GYM_PHOTO_BUCKET)
+    .upload(objectPath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: true,
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const { data } = supabase.storage.from(GYM_PHOTO_BUCKET).getPublicUrl(objectPath);
+  return data.publicUrl;
+}
+
 async function refreshSession(refreshToken: string) {
   const { data, error } = await supabase.auth.refreshSession({
     refresh_token: refreshToken,
@@ -115,11 +138,24 @@ function toAuthUser(user: { id: string; email?: string | null }): AuthUser {
 }
 
 export async function signup(req: Request, res: Response) {
-  const { email, password, gym_name, owner_name, phone, address } = req.body;
+  const {
+    email,
+    password,
+    gym_name,
+    owner_name,
+    phone,
+    address,
+    website,
+    facebook_page,
+    business_registration_name,
+    owner_email,
+    gym_email,
+  } = req.body;
+  const gymPhotoFile = req.file;
 
-  if (!email || !password || !gym_name || !owner_name) {
+  if (!email || !password || !gym_name || !owner_name || !phone) {
     return res.status(400).json({
-      message: "email, password, gym_name, and owner_name are required",
+      message: "email, password, gym_name, owner_name, and phone are required",
     });
   }
 
@@ -129,12 +165,24 @@ export async function signup(req: Request, res: Response) {
   }
 
   if (data.user) {
+    let gymPhotoUrl: string | null = null;
+
+    if (gymPhotoFile) {
+      gymPhotoUrl = await uploadGymPhoto(gymPhotoFile, data.user.id);
+    }
+
     const { error: adminError } = await supabase.from("admins").insert({
       user_id: data.user.id,
       gym_name,
       owner_name,
       phone: phone || null,
+      email: gym_email || null,
+      website: website || null,
+      facebook_page: facebook_page || null,
       address: address || null,
+      business_registration_name: business_registration_name || null,
+      owner_email: owner_email || null,
+      gym_photo_url: gymPhotoUrl,
     });
 
     if (adminError) {

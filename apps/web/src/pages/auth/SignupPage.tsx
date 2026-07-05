@@ -4,15 +4,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dumbbell, Check, Eye, EyeOff, Building2, User, Lock } from 'lucide-react';
+import { Dumbbell, Check, Eye, EyeOff, Building2, User, Lock, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const STEPS = [
-  { id: 1, title: 'Gym Info', description: 'Tell us about your gym', icon: Building2 },
-  { id: 2, title: 'Owner Details', description: 'Your personal info', icon: User },
-  { id: 3, title: 'Account', description: 'Create your login', icon: Lock },
+  { id: 1, title: 'Gym Profile', description: 'Basic gym and business details', icon: Building2 },
+  { id: 2, title: 'Owner & Contact', description: 'Who runs the gym and how to reach them', icon: User },
+  { id: 3, title: 'Account & Media', description: 'Login details and latest gym photo', icon: Lock },
 ];
+
+const MAX_PHOTO_SIZE = 10 * 1024 * 1024;
 
 export default function SignupPage() {
   const { signUp } = useAuth();
@@ -23,13 +25,19 @@ export default function SignupPage() {
 
   const [formData, setFormData] = useState({
     gym_name: '',
+    business_registration_name: '',
+    gym_email: '',
+    website: '',
+    facebook_page: '',
     address: '',
     owner_name: '',
     phone: '',
+    owner_email: '',
     email: '',
     password: '',
     confirmPassword: '',
   });
+  const [gymPhoto, setGymPhoto] = useState<File | null>(null);
 
   const update = (field: string, value: string) =>
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -37,15 +45,21 @@ export default function SignupPage() {
   const validateStep = () => {
     if (step === 1) {
       if (!formData.gym_name.trim()) { toast.error('Gym name is required'); return false; }
+      if (!formData.business_registration_name.trim()) { toast.error('Business registration name is required'); return false; }
+      if (!formData.gym_email.trim()) { toast.error('Gym email address is required'); return false; }
     }
     if (step === 2) {
       if (!formData.owner_name.trim()) { toast.error('Owner name is required'); return false; }
       if (!formData.phone.trim()) { toast.error('Phone number is required'); return false; }
+      if (!formData.address.trim()) { toast.error('Gym full address is required'); return false; }
+      if (!formData.owner_email.trim()) { toast.error('Owner email address is required'); return false; }
     }
     if (step === 3) {
       if (!formData.email.trim()) { toast.error('Email is required'); return false; }
       if (formData.password.length < 6) { toast.error('Password must be at least 6 characters'); return false; }
       if (formData.password !== formData.confirmPassword) { toast.error('Passwords do not match'); return false; }
+      if (!gymPhoto) { toast.error('Gym latest photograph is required'); return false; }
+      if (gymPhoto.size > MAX_PHOTO_SIZE) { toast.error('Photograph must be 10 MB or smaller'); return false; }
     }
     return true;
   };
@@ -57,12 +71,23 @@ export default function SignupPage() {
     e.preventDefault();
     if (!validateStep()) return;
     setLoading(true);
-    const { error, authenticated } = await signUp(formData.email, formData.password, {
-      gym_name: formData.gym_name,
-      owner_name: formData.owner_name,
-      phone: formData.phone,
-      address: formData.address,
-    });
+    const payload = new FormData();
+    payload.append('gym_name', formData.gym_name);
+    payload.append('business_registration_name', formData.business_registration_name);
+    payload.append('gym_email', formData.gym_email);
+    payload.append('website', formData.website);
+    payload.append('facebook_page', formData.facebook_page);
+    payload.append('address', formData.address);
+    payload.append('owner_name', formData.owner_name);
+    payload.append('phone', formData.phone);
+    payload.append('owner_email', formData.owner_email);
+    payload.append('email', formData.email);
+    payload.append('password', formData.password);
+    if (gymPhoto) {
+      payload.append('gym_photo', gymPhoto);
+    }
+
+    const { error, authenticated } = await signUp(payload);
     setLoading(false);
     if (error) {
       toast.error(error.message || 'Sign up failed');
@@ -173,10 +198,10 @@ export default function SignupPage() {
 
           <form onSubmit={step === 3 ? handleSubmit : e => { e.preventDefault(); nextStep(); }}>
             {/* Step 1: Gym Info */}
-            {step === 1 && (
-              <div className="space-y-5">
-                <div className="space-y-1.5">
-                  <Label htmlFor="gym_name">Gym Name *</Label>
+             {step === 1 && (
+               <div className="space-y-5">
+                 <div className="space-y-1.5">
+                   <Label htmlFor="gym_name">Gym Name *</Label>
                   <Input
                     id="gym_name"
                     value={formData.gym_name}
@@ -186,12 +211,42 @@ export default function SignupPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="address">Address</Label>
+                  <Label htmlFor="business_registration_name">Business Registration Name *</Label>
                   <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={e => update('address', e.target.value)}
-                    placeholder="Gym address"
+                    id="business_registration_name"
+                    value={formData.business_registration_name}
+                    onChange={e => update('business_registration_name', e.target.value)}
+                    placeholder="Registered business name"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="gym_email">Gym Email Address *</Label>
+                  <Input
+                    id="gym_email"
+                    type="email"
+                    value={formData.gym_email}
+                    onChange={e => update('gym_email', e.target.value)}
+                    placeholder="contact@yourgym.com"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    value={formData.website}
+                    onChange={e => update('website', e.target.value)}
+                    placeholder="https://yourgym.com"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="facebook_page">Facebook Page</Label>
+                  <Input
+                    id="facebook_page"
+                    value={formData.facebook_page}
+                    onChange={e => update('facebook_page', e.target.value)}
+                    placeholder="https://facebook.com/yourgym"
                   />
                 </div>
               </div>
@@ -217,6 +272,27 @@ export default function SignupPage() {
                     value={formData.phone}
                     onChange={e => update('phone', e.target.value)}
                     placeholder="+91 9876543210"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="owner_email">Owner Email Address *</Label>
+                  <Input
+                    id="owner_email"
+                    type="email"
+                    value={formData.owner_email}
+                    onChange={e => update('owner_email', e.target.value)}
+                    placeholder="owner@yourgym.com"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="address">Gym Full Address *</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={e => update('address', e.target.value)}
+                    placeholder="Full gym address"
                     required
                   />
                 </div>
@@ -268,6 +344,28 @@ export default function SignupPage() {
                     placeholder="Repeat your password"
                     required
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="gym_photo">Gym Latest Photograph *</Label>
+                  <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4">
+                    <label htmlFor="gym_photo" className="flex cursor-pointer items-center gap-3 text-sm">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600">
+                        <Upload className="h-5 w-5" />
+                      </span>
+                      <span>
+                        {gymPhoto
+                          ? gymPhoto.name
+                          : 'Upload a recent gym image (max 10 MB)'}
+                      </span>
+                    </label>
+                    <Input
+                      id="gym_photo"
+                      type="file"
+                      accept="image/*"
+                      className="mt-3"
+                      onChange={e => setGymPhoto(e.target.files?.[0] || null)}
+                    />
+                  </div>
                 </div>
               </div>
             )}
