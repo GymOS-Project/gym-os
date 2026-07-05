@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Star, Plus } from "lucide-react";
 import { toast } from "sonner";
-import type { Review, Member } from "@/types";
+import type { Review } from "@/types";
 
 export default function ReviewsPage() {
   const { admin } = useAuth();
