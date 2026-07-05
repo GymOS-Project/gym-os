@@ -5,16 +5,11 @@ import type {
 
 const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || "http://localhost:3001";
 
-function getToken(): string | null {
-  return localStorage.getItem("access_token");
-}
-
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = getToken();
   const res = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options?.headers || {}),
     },
     ...options,
@@ -42,9 +37,10 @@ function qs(params: Record<string, string | number | undefined>): string {
 }
 
 export interface LoginResult {
-  session: { access_token: string; refresh_token: string };
-  user: { id: string; email: string };
+  user: { id: string; email: string } | null;
   admin: Admin | null;
+  authenticated: boolean;
+  message?: string;
 }
 
 export interface DashboardStats {
@@ -64,10 +60,10 @@ export const api = {
   // Auth
   login: (email: string, password: string) =>
     request<LoginResult>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
-  signup: (email: string, password: string, adminData: { gym_name: string; owner_name: string; phone?: string; address?: string }) =>
-    request<{ message: string }>("/auth/signup", { method: "POST", body: JSON.stringify({ email, password, ...adminData }) }),
+  signup: (email: string, password: string, adminData: { gym_name: string; owner_name: string; email?: string, phone?: string; address?: string}) =>
+    request<LoginResult>("/auth/signup", { method: "POST", body: JSON.stringify({ email, password, ...adminData }) }),
   signout: () => request<{ message: string }>("/auth/signout", { method: "POST" }),
-  me: () => request<{ user: { id: string; email: string }; admin: Admin | null }>("/auth/me"),
+  me: () => request<LoginResult>("/auth/me"),
 
   // Members
   getMembers: (admin_id: string) => request<(Member & { member_packages?: { status: string; end_date: string; package_name: string }[] })[]>(`/members${qs({ admin_id })}`),

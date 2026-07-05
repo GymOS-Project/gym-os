@@ -57,7 +57,7 @@ export default function SignupPage() {
     e.preventDefault();
     if (!validateStep()) return;
     setLoading(true);
-    const { error } = await signUp(formData.email, formData.password, {
+    const { error, authenticated } = await signUp(formData.email, formData.password, {
       gym_name: formData.gym_name,
       owner_name: formData.owner_name,
       phone: formData.phone,
@@ -67,8 +67,12 @@ export default function SignupPage() {
     if (error) {
       toast.error(error.message || 'Sign up failed');
     } else {
-      toast.success('Account created! Welcome to GymPro.');
-      navigate('/');
+      toast.success(
+        authenticated
+          ? 'Account created! Welcome to GymOs.'
+          : 'Account created! Please sign in to continue.'
+      );
+      navigate(authenticated ? '/' : '/login');
     }
   };
 
@@ -97,7 +101,7 @@ export default function SignupPage() {
               <Dumbbell className="h-10 w-10 text-teal-400" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-4">Join GymPro</h1>
+          <h1 className="text-3xl font-bold text-white mb-4">Join GymOs</h1>
           <p className="text-slate-300 leading-relaxed">
             Set up your gym management system in just a few steps and start managing your members today.
           </p>
@@ -145,7 +149,7 @@ export default function SignupPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500">
               <Dumbbell className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-2xl font-bold">GymPro</h1>
+            <h1 className="text-2xl font-bold">GymOs</h1>
           </div>
 
           {/* Mobile step progress */}
