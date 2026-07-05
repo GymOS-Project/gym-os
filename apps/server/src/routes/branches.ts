@@ -1,13 +1,8 @@
 import { Router } from "express";
-import { db } from "../db/client";
-import { branches } from "../db/schema";
+import { listBranches } from "../controllers/branches";
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
-  const all = await db.select().from(branches);
-  res.json(all);
-});
+router.get("/", listBranches);
 
 export default router;
-

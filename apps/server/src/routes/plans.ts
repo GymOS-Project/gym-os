@@ -1,13 +1,8 @@
 import { Router } from "express";
-import { db } from "../db/client";
-import { plans } from "../db/schema";
+import { listPlans } from "../controllers/plans";
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
-  const all = await db.select().from(plans);
-  res.json(all);
-});
+router.get("/", listPlans);
 
 export default router;
-
