@@ -1,122 +1,170 @@
 import type { Request, Response } from "express";
-import { eq } from "drizzle-orm";
-import { z } from "zod";
-import { db } from "../db/client";
-import { members } from "../db/schema";
-import { sendWhatsAppMessage } from "../services/whatsapp";
+import { supabase } from "../supabase";
 
-const memberBodySchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email(),
-  phone: z.string().min(5),
-  branch: z.enum(["X", "Y", "Z"]),
-  plan: z.enum(["1_month", "3_month", "6_month", "12_month"]),
-  subscriptionStart: z.string(),
-  subscriptionEnd: z.string(),
-});
+export async function listMembers(req: Request, res: Response) {
+  const admin_id = req.query.admin_id as string;
 
-function computeStatus(subscriptionEnd: string): "active" | "expired" | "expiring_soon" {
-  const today = new Date();
-  const end = new Date(subscriptionEnd);
-  const diffDays = Math.floor(
-    (end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  let query = supabase
+    .from("members")
+    .select("*, member_packages(status, end_date, package_name)");
 
-  if (diffDays < 0) return "expired";
-  if (diffDays <= 7) return "expiring_soon";
+  if (admin_id) {
+    query = query.eq("admin_id", admin_id);
+  }
 
-  return "active";
+  const { data, error } = await query.order("created_at", { ascending: false });
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+
+  return res.json(data);
 }
 
-export async function listMembers(_req: Request, res: Response) {
-  const all = await db.select().from(members);
-  res.json(all);
+export async function listActiveMembers(req: Request, res: Response) {
+  const admin_id = req.query.admin_id as string;
+  if (!admin_id) {
+    return res.status(400).json({ message: "admin_id is required" });
+  }
+
+  const { data, error } = await supabase
+    .from("members")
+    .select("id, name, phone")
+    .eq("admin_id", admin_id)
+    .eq("is_active", true);
+
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+
+  return res.json(data);
 }
 
 export async function getMember(req: Request, res: Response) {
-  const [member] = await db
-    .select()
-    .from(members)
-    .where(eq(members.id, req.params.id));
+  const { data, error } = await supabase
+    .from("members")
+    .select("*")
+    .eq("id", req.params.id)
+    .maybeSingle();
 
-  if (!member) {
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+  if (!data) {
     return res.status(404).json({ message: "Member not found" });
   }
 
-  res.json(member);
+  return res.json(data);
 }
 
 export async function createMember(req: Request, res: Response) {
-  const parseResult = memberBodySchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return res.status(400).json({ errors: parseResult.error.flatten() });
+  const {
+    name,
+    email,
+    phone,
+    gender,
+    date_of_birth,
+    address,
+    emergency_contact,
+    shift,
+    notes,
+    reference_member_id,
+    admin_id,
+  } = req.body;
+
+  if (!name || !phone || !admin_id) {
+    return res.status(400).json({ message: "name, phone, and admin_id are required" });
   }
 
-  const data = parseResult.data;
-  const status = computeStatus(data.subscriptionEnd);
-
-  const [created] = await db
-    .insert(members)
-    .values({
-      ...data,
-      status,
+  const { data, error } = await supabase
+    .from("members")
+    .insert({
+      name,
+      email,
+      phone,
+      gender,
+      date_of_birth,
+      address,
+      emergency_contact,
+      shift,
+      notes,
+      reference_member_id,
+      admin_id,
     })
-    .returning();
+    .select()
+    .single();
 
-  sendWhatsAppMessage(
-    created.phone,
-    `Welcome to the gym, ${created.name}! Your plan (${created.plan}) is active until ${created.subscriptionEnd}.`
-  ).catch((err) =>
-    console.error("[whatsapp] Failed to send welcome message", err)
-  );
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
 
-  res.status(201).json(created);
+  return res.status(201).json(data);
 }
 
 export async function updateMember(req: Request, res: Response) {
-  const parseResult = memberBodySchema.partial().safeParse(req.body);
-  if (!parseResult.success) {
-    return res.status(400).json({ errors: parseResult.error.flatten() });
-  }
+  const {
+    name,
+    email,
+    phone,
+    gender,
+    date_of_birth,
+    address,
+    emergency_contact,
+    shift,
+    notes,
+    is_active,
+  } = req.body;
 
-  const data = parseResult.data;
-
-  const [existing] = await db
-    .select()
-    .from(members)
-    .where(eq(members.id, req.params.id));
+  const { data: existing } = await supabase
+    .from("members")
+    .select("id")
+    .eq("id", req.params.id)
+    .maybeSingle();
 
   if (!existing) {
     return res.status(404).json({ message: "Member not found" });
   }
 
-  const subscriptionEnd = data.subscriptionEnd ?? existing.subscriptionEnd.toString();
-  const status = computeStatus(subscriptionEnd);
-
-  const [updated] = await db
-    .update(members)
-    .set({
-      ...existing,
-      ...data,
-      status,
-      updatedAt: new Date(),
+  const { data, error } = await supabase
+    .from("members")
+    .update({
+      name,
+      email,
+      phone,
+      gender,
+      date_of_birth,
+      address,
+      emergency_contact,
+      shift,
+      notes,
+      is_active,
+      updated_at: new Date().toISOString(),
     })
-    .where(eq(members.id, req.params.id))
-    .returning();
+    .eq("id", req.params.id)
+    .select()
+    .single();
 
-  res.json(updated);
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+
+  return res.json(data);
 }
 
 export async function deleteMember(req: Request, res: Response) {
-  const [existing] = await db
-    .select()
-    .from(members)
-    .where(eq(members.id, req.params.id));
+  const { data: existing } = await supabase
+    .from("members")
+    .select("id")
+    .eq("id", req.params.id)
+    .maybeSingle();
 
   if (!existing) {
     return res.status(404).json({ message: "Member not found" });
   }
 
-  await db.delete(members).where(eq(members.id, req.params.id));
-  res.status(204).send();
+  const { error } = await supabase.from("members").delete().eq("id", req.params.id);
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+
+  return res.status(204).send();
 }

@@ -1,8 +1,11 @@
 import { Router } from "express";
-import { listPlans } from "../controllers/plans";
+import { createPlan, deletePlan, listPlans, updatePlan } from "../controllers/plans";
 
 const router = Router();
 
 router.get("/", listPlans);
+router.post("/", createPlan);
+router.put("/:id", updatePlan);
+router.delete("/:id", deletePlan);
 
 export default router;

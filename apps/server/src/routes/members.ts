@@ -3,6 +3,7 @@ import {
   createMember,
   deleteMember,
   getMember,
+  listActiveMembers,
   listMembers,
   updateMember,
 } from "../controllers/members";
@@ -10,6 +11,7 @@ import {
 const router = Router();
 
 router.get("/", listMembers);
+router.get("/active", listActiveMembers);
 router.get("/:id", getMember);
 router.post("/", createMember);
 router.put("/:id", updateMember);
