@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (
     email: string,
     password: string,
-    adminData: { gym_name: string; owner_name: string; phone?: string; address?: string }
+    adminData: { gym_name: string; owner_name: string; phone?: string; address?: string, email?: string }
   ) => {
     try {
       const result = await api.signup(email, password, adminData);
