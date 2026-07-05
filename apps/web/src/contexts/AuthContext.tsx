@@ -12,11 +12,7 @@ interface AuthContextType {
   admin: Admin | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (
-    email: string,
-    password: string,
-    adminData: { gym_name: string; owner_name: string; phone?: string; address?: string }
-  ) => Promise<{ error: Error | null; authenticated: boolean }>;
+  signUp: (data: FormData) => Promise<{ error: Error | null; authenticated: boolean }>;
   signOut: () => Promise<void>;
   refreshAdmin: () => Promise<void>;
 }
@@ -60,13 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    adminData: { gym_name: string; owner_name: string; phone?: string; address?: string, email?: string }
-  ) => {
+  const signUp = async (data: FormData) => {
     try {
-      const result = await api.signup(email, password, adminData);
+      const result = await api.signup(data);
 
       if (result.authenticated && result.user) {
         setUser(result.user);
