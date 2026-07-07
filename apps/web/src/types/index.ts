@@ -8,7 +8,7 @@ export interface Admin {
   phone: string | null;
   email: string | null;
   website: string | null;
-  facebook_page: string | null;
+  instagram_page: string | null;
   address: string | null;
   business_registration_name: string | null;
   owner_email: string | null;

@@ -4,17 +4,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dumbbell, Check, Eye, EyeOff, Building2, User, Lock, Upload } from 'lucide-react';
+import { Dumbbell, Check, Eye, EyeOff, Building2, User, Lock, Upload, X, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const STEPS = [
   { id: 1, title: 'Gym Profile', description: 'Basic gym and business details', icon: Building2 },
   { id: 2, title: 'Owner & Contact', description: 'Who runs the gym and how to reach them', icon: User },
-  { id: 3, title: 'Account & Media', description: 'Login details and latest gym photo', icon: Lock },
+  { id: 3, title: 'Account & Media', description: 'Login details and gym photos', icon: Lock },
 ];
 
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024;
+const MIN_PHOTOS = 8;
+const MAX_PHOTOS = 10;
 
 export default function SignupPage() {
   const { signUp } = useAuth();
@@ -28,16 +30,15 @@ export default function SignupPage() {
     business_registration_name: '',
     gym_email: '',
     website: '',
-    facebook_page: '',
+    instagram_page: '',
     address: '',
     owner_name: '',
     phone: '',
     owner_email: '',
-    email: '',
     password: '',
     confirmPassword: '',
   });
-  const [gymPhoto, setGymPhoto] = useState<File | null>(null);
+  const [gymPhotos, setGymPhotos] = useState<File[]>([]);
 
   const update = (field: string, value: string) =>
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -55,17 +56,41 @@ export default function SignupPage() {
       if (!formData.owner_email.trim()) { toast.error('Owner email address is required'); return false; }
     }
     if (step === 3) {
-      if (!formData.email.trim()) { toast.error('Email is required'); return false; }
       if (formData.password.length < 6) { toast.error('Password must be at least 6 characters'); return false; }
       if (formData.password !== formData.confirmPassword) { toast.error('Passwords do not match'); return false; }
-      if (!gymPhoto) { toast.error('Gym latest photograph is required'); return false; }
-      if (gymPhoto.size > MAX_PHOTO_SIZE) { toast.error('Photograph must be 10 MB or smaller'); return false; }
+      if (gymPhotos.length < MIN_PHOTOS) { toast.error(`Please upload at least ${MIN_PHOTOS} gym photographs`); return false; }
+      if (gymPhotos.length > MAX_PHOTOS) { toast.error(`You can upload a maximum of ${MAX_PHOTOS} gym photographs`); return false; }
+      for (const photo of gymPhotos) {
+        if (photo.size > MAX_PHOTO_SIZE) { toast.error(`"${photo.name}" exceeds 10 MB limit`); return false; }
+      }
     }
     return true;
   };
 
   const nextStep = () => { if (validateStep()) setStep(s => s + 1); };
   const prevStep = () => setStep(s => s - 1);
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const totalPhotos = gymPhotos.length + files.length;
+
+    if (totalPhotos > MAX_PHOTOS) {
+      toast.error(`You can only upload up to ${MAX_PHOTOS} photos. You already have ${gymPhotos.length}.`);
+      return;
+    }
+
+    const oversized = files.filter(f => f.size > MAX_PHOTO_SIZE);
+    if (oversized.length > 0) {
+      toast.error(`${oversized.length} file(s) exceed 10 MB limit and were skipped.`);
+    }
+
+    const validFiles = files.filter(f => f.size <= MAX_PHOTO_SIZE);
+    setGymPhotos(prev => [...prev, ...validFiles]);
+  };
+
+  const removePhoto = (index: number) => {
+    setGymPhotos(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,16 +101,15 @@ export default function SignupPage() {
     payload.append('business_registration_name', formData.business_registration_name);
     payload.append('gym_email', formData.gym_email);
     payload.append('website', formData.website);
-    payload.append('facebook_page', formData.facebook_page);
+    payload.append('instagram', formData.instagram_page);
     payload.append('address', formData.address);
     payload.append('owner_name', formData.owner_name);
     payload.append('phone', formData.phone);
     payload.append('owner_email', formData.owner_email);
-    payload.append('email', formData.email);
     payload.append('password', formData.password);
-    if (gymPhoto) {
-      payload.append('gym_photo', gymPhoto);
-    }
+    gymPhotos.forEach((photo, index) => {
+      payload.append(`gym_photos[${index}]`, photo);
+    });
 
     const { error, authenticated } = await signUp(payload);
     setLoading(false);
@@ -198,10 +222,10 @@ export default function SignupPage() {
 
           <form onSubmit={step === 3 ? handleSubmit : e => { e.preventDefault(); nextStep(); }}>
             {/* Step 1: Gym Info */}
-             {step === 1 && (
-               <div className="space-y-5">
-                 <div className="space-y-1.5">
-                   <Label htmlFor="gym_name">Gym Name *</Label>
+            {step === 1 && (
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="gym_name">Gym Name *</Label>
                   <Input
                     id="gym_name"
                     value={formData.gym_name}
@@ -241,12 +265,12 @@ export default function SignupPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="facebook_page">Facebook Page</Label>
+                  <Label htmlFor="instagram_page">Instagram Page</Label>
                   <Input
-                    id="facebook_page"
-                    value={formData.facebook_page}
-                    onChange={e => update('facebook_page', e.target.value)}
-                    placeholder="https://facebook.com/yourgym"
+                    id="instagram_page"
+                    value={formData.instagram_page}
+                    onChange={e => update('instagram_page', e.target.value)}
+                    placeholder="https://instagram.com/yourgym"
                   />
                 </div>
               </div>
@@ -299,20 +323,9 @@ export default function SignupPage() {
               </div>
             )}
 
-            {/* Step 3: Account */}
+            {/* Step 3: Account & Photos */}
             {step === 3 && (
               <div className="space-y-5">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={e => update('email', e.target.value)}
-                    placeholder="admin@yourgym.com"
-                    required
-                  />
-                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="password">Password *</Label>
                   <div className="relative">
@@ -346,26 +359,74 @@ export default function SignupPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="gym_photo">Gym Latest Photograph *</Label>
+                  <Label>
+                    Gym Photographs *
+                    <span className="text-muted-foreground font-normal ml-1">
+                      ({gymPhotos.length}/{MAX_PHOTOS} uploaded, min {MIN_PHOTOS})
+                    </span>
+                  </Label>
                   <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4">
-                    <label htmlFor="gym_photo" className="flex cursor-pointer items-center gap-3 text-sm">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600">
-                        <Upload className="h-5 w-5" />
-                      </span>
-                      <span>
-                        {gymPhoto
-                          ? gymPhoto.name
-                          : 'Upload a recent gym image (max 10 MB)'}
-                      </span>
-                    </label>
-                    <Input
-                      id="gym_photo"
-                      type="file"
-                      accept="image/*"
-                      className="mt-3"
-                      onChange={e => setGymPhoto(e.target.files?.[0] || null)}
-                    />
+                    <div className="flex flex-col gap-3">
+                      {/* Photo grid */}
+                      {gymPhotos.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {gymPhotos.map((photo, index) => (
+                            <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border border-border bg-background">
+                              <img
+                                src={URL.createObjectURL(photo)}
+                                alt={photo.name}
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removePhoto(index)}
+                                className="absolute top-1 right-1 h-6 w-6 flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                              <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-1.5 py-0.5 truncate">
+                                {photo.name}
+                              </span>
+                            </div>
+                          ))}
+                          {gymPhotos.length < MAX_PHOTOS && (
+                            <label
+                              htmlFor="gym_photo"
+                              className="flex flex-col items-center justify-center aspect-square rounded-lg border-2 border-dashed border-teal-500/30 bg-teal-500/5 cursor-pointer hover:bg-teal-500/10 hover:border-teal-500/50 transition-colors"
+                            >
+                              <ImagePlus className="h-6 w-6 text-teal-600 mb-1" />
+                              <span className="text-xs text-teal-600 font-medium">Add Photo</span>
+                            </label>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Empty state */}
+                      {gymPhotos.length === 0 && (
+                        <label htmlFor="gym_photo" className="flex flex-col items-center justify-center py-6 cursor-pointer">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-500/10 text-teal-600 mb-3">
+                            <Upload className="h-6 w-6" />
+                          </div>
+                          <p className="text-sm font-medium text-foreground">Upload gym photographs</p>
+                          <p className="text-xs text-muted-foreground mt-1">Upload {MIN_PHOTOS}-{MAX_PHOTOS} photos, max 10 MB each</p>
+                        </label>
+                      )}
+                      
+                      <Input
+                        id="gym_photo"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handlePhotoSelect}
+                      />
+                    </div>
                   </div>
+                  {gymPhotos.length > 0 && gymPhotos.length < MIN_PHOTOS && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Please upload at least {MIN_PHOTOS - gymPhotos.length} more photo{MIN_PHOTOS - gymPhotos.length > 1 ? 's' : ''}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
