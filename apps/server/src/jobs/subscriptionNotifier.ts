@@ -1,6 +1,10 @@
 import { Queue, Worker } from "bullmq";
 import { supabase } from "../supabase";
 
+import dotenv from "dotenv";
+
+dotenv.config();
+
 const redisUrl = new URL(process.env.REDIS_URL || "redis://localhost:6379");
 const connection = {
   host: redisUrl.hostname,
