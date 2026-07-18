@@ -6,6 +6,11 @@ import { createSupabaseAuthClient, supabase } from "../supabase";
 export const SESSION_COOKIE_NAME = "sessionToken";
 export const REFRESH_COOKIE_NAME = "refreshToken";
 const REFRESH_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const COOKIE_SAME_SITE = (process.env.SESSION_COOKIE_SAME_SITE || (IS_PRODUCTION ? "none" : "lax")).toLowerCase();
+const COOKIE_SECURE = process.env.SESSION_COOKIE_SECURE
+  ? process.env.SESSION_COOKIE_SECURE === "true"
+  : IS_PRODUCTION;
 const COOKIE_ENCRYPTION_SECRET =
   process.env.SESSION_COOKIE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -29,10 +34,17 @@ export type AuthSessionUser = {
 };
 
 export function getCookieOptions(maxAge?: number): CookieOptions {
+  const sameSite: CookieOptions["sameSite"] =
+    COOKIE_SAME_SITE === "strict"
+      ? "strict"
+      : COOKIE_SAME_SITE === "none"
+        ? "none"
+        : "lax";
+
   return {
     httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    sameSite,
+    secure: COOKIE_SECURE,
     path: "/",
     ...(maxAge ? { maxAge } : {}),
   };
