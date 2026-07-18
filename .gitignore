@@ -26,3 +26,4 @@ apps/*/.env*
 *.sln
 *.sw?
 *.turbo
+target/
