@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, ClipboardList, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -76,8 +77,8 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150',
           depth > 0 ? 'ml-4 pl-3' : '',
           isActive
-            ? 'bg-teal-500/20 text-teal-400 font-medium'
-            : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+            ? 'bg-primary/15 text-primary font-medium shadow-sm'
+            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
         )}
       >
         <item.icon className="h-4 w-4 shrink-0" />
@@ -92,7 +93,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
         onClick={() => setOpen(!open)}
         className={cn(
           'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150',
-          open ? 'text-slate-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+          open ? 'text-sidebar-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
         )}
       >
         <item.icon className="h-4 w-4 shrink-0" />
@@ -127,15 +128,15 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   };
 
   const Sidebar = () => (
-    <div className="flex h-full flex-col bg-slate-900 text-white">
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-700/50">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-500">
-          <Dumbbell className="h-5 w-5 text-white" />
+      <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-5">
+        <div className="gradient-primary flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground shadow-md">
+          <Dumbbell className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <p className="font-bold text-white truncate">{admin?.gym_name || 'GymOs'}</p>
-          <p className="text-xs text-slate-400 truncate">{admin?.owner_name || 'Admin Panel'}</p>
+          <p className="truncate font-bold text-sidebar-foreground">{admin?.gym_name || 'GymOs'}</p>
+          <p className="truncate text-xs text-sidebar-foreground/70">{admin?.owner_name || 'Admin Panel'}</p>
         </div>
       </div>
 
@@ -147,10 +148,10 @@ export function AppLayout({ children, title }: AppLayoutProps) {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-slate-700/50 p-3">
+      <div className="border-t border-sidebar-border p-3">
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-colors"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
         >
           <LogOut className="h-4 w-4" />
           <span>Sign Out</span>
@@ -178,7 +179,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
 
       {/* Main */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-background px-4 lg:px-6">
+        <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border/80 bg-background/85 px-4 backdrop-blur-xl lg:px-6">
           <button
             className="lg:hidden text-muted-foreground hover:text-foreground"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -187,11 +188,12 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           </button>
           {title && <h1 className="font-semibold text-foreground">{title}</h1>}
           <div className="ml-auto flex items-center gap-3">
+            <ThemeToggle className="scale-90 sm:scale-100" />
             <div className="hidden sm:block text-right">
               <p className="text-sm font-medium text-foreground">{admin?.owner_name}</p>
               <p className="text-xs text-muted-foreground">{admin?.gym_name}</p>
             </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-500 text-white text-sm font-medium">
+            <div className="gradient-primary flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-primary-foreground shadow-sm">
               {(admin?.owner_name || 'A')[0].toUpperCase()}
             </div>
           </div>

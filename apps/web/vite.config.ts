@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => ({
           "Professional gym management system for tracking members and subscriptions",
         start_url: "/",
         display: "standalone",
-        background_color: "#f8fafc",
-        theme_color: "#1a2332",
+        background_color: "#f9fde9",
+        theme_color: "#b7f516",
         orientation: "portrait-primary",
       },
       workbox: {

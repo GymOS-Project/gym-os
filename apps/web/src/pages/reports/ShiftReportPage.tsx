@@ -33,7 +33,7 @@ export default function ShiftReportPage() {
     <AppLayout title="Report by Shift">
       <div className="space-y-5">
         <div className="flex items-center gap-3">
-          <Clock className="h-6 w-6 text-teal-600" />
+          <Clock className="h-6 w-6 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Report by Shift</h1>
             <p className="text-muted-foreground mt-0.5">Members organized by training shift</p>
@@ -79,7 +79,7 @@ export default function ShiftReportPage() {
                     <TableCell className="text-sm">{m.phone}</TableCell>
                     <TableCell>{m.shift ? <Badge variant="outline" className="capitalize">{m.shift}</Badge> : <span className="text-muted-foreground text-sm">—</span>}</TableCell>
                     <TableCell className="text-sm">{pkg?.package_name || "—"}</TableCell>
-                    <TableCell>{pkg ? <Badge className={pkg.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>{pkg.status}</Badge> : <span className="text-muted-foreground text-sm">—</span>}</TableCell>
+                    <TableCell>{pkg ? <Badge className={pkg.status === "active" ? "badge-success" : "badge-destructive"}>{pkg.status}</Badge> : <span className="text-muted-foreground text-sm">—</span>}</TableCell>
                   </TableRow>
                 );
               })}

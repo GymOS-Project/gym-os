@@ -1,5 +1,5 @@
 import type { CookieOptions, Request, Response } from "express";
-import { supabase } from "../supabase";
+import { createSupabaseAuthClient, supabase } from "../supabase";
 
 const SESSION_COOKIE_NAME = "sessionToken";
 const REFRESH_COOKIE_NAME = "refreshToken";
@@ -59,7 +59,8 @@ async function getAdminByUserId(userId: string) {
 }
 
 async function getUserFromAccessToken(accessToken: string) {
-  const { data, error } = await supabase.auth.getUser(accessToken);
+  const authClient = createSupabaseAuthClient();
+  const { data, error } = await authClient.auth.getUser(accessToken);
   if (error || !data.user) {
     return null;
   }
@@ -89,8 +90,17 @@ async function uploadGymPhoto(file: Express.Multer.File, userId: string) {
   return data.publicUrl;
 }
 
+function getSignupFiles(req: Request) {
+  const files = Array.isArray(req.files) ? req.files : [];
+
+  return files
+    .filter((file) => file.fieldname === "gym_photo" || /^gym_photos(?:\[\d+\])?$/.test(file.fieldname))
+    .slice(0, 10);
+}
+
 async function refreshSession(refreshToken: string) {
-  const { data, error } = await supabase.auth.refreshSession({
+  const authClient = createSupabaseAuthClient();
+  const { data, error } = await authClient.auth.refreshSession({
     refresh_token: refreshToken,
   });
 
@@ -146,20 +156,24 @@ export async function signup(req: Request, res: Response) {
     phone,
     address,
     website,
+    instagram,
     instagram_page,
     business_registration_name,
     owner_email,
     gym_email,
   } = req.body;
-  const gymPhotoFile = req.file;
+  const authEmail = email || owner_email || gym_email;
+  const gymPhotoFiles = getSignupFiles(req);
+  const gymPhotoFile = gymPhotoFiles[0];
 
-  if (!email || !password || !gym_name || !owner_name || !phone) {
+  if (!authEmail || !password || !gym_name || !owner_name || !phone) {
     return res.status(400).json({
       message: "email, password, gym_name, owner_name, and phone are required",
     });
   }
 
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const signupClient = createSupabaseAuthClient();
+  const { data, error } = await signupClient.auth.signUp({ email: authEmail, password });
   if (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -178,7 +192,7 @@ export async function signup(req: Request, res: Response) {
       phone: phone || null,
       email: gym_email || null,
       website: website || null,
-      instagram_page: instagram_page || null,
+      instagram_page: instagram_page || instagram || null,
       address: address || null,
       business_registration_name: business_registration_name || null,
       owner_email: owner_email || null,
@@ -190,7 +204,8 @@ export async function signup(req: Request, res: Response) {
     }
   }
 
-  const signInResult = await supabase.auth.signInWithPassword({ email, password });
+  const signInClient = createSupabaseAuthClient();
+  const signInResult = await signInClient.auth.signInWithPassword({ email: authEmail, password });
 
   if (signInResult.error || !signInResult.data.session || !signInResult.data.user) {
     return res.status(201).json({
@@ -220,7 +235,8 @@ export async function login(req: Request, res: Response) {
     return res.status(400).json({ message: "email and password are required" });
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const authClient = createSupabaseAuthClient();
+  const { data, error } = await authClient.auth.signInWithPassword({ email, password });
   if (error) {
     return res.status(401).json({ message: error.message });
   }

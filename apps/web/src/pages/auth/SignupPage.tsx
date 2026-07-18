@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Dumbbell, Check, Eye, EyeOff, Building2, User, Lock, Upload, X, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -99,9 +100,10 @@ export default function SignupPage() {
     const payload = new FormData();
     payload.append('gym_name', formData.gym_name);
     payload.append('business_registration_name', formData.business_registration_name);
+    payload.append('email', formData.owner_email || formData.gym_email);
     payload.append('gym_email', formData.gym_email);
     payload.append('website', formData.website);
-    payload.append('instagram', formData.instagram_page);
+    payload.append('instagram_page', formData.instagram_page);
     payload.append('address', formData.address);
     payload.append('owner_name', formData.owner_name);
     payload.append('phone', formData.phone);
@@ -126,14 +128,18 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="relative min-h-screen flex">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4">
+        <ThemeToggle className="pointer-events-auto" />
+      </div>
+
       {/* Left Panel */}
-      <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 flex-col items-center justify-center p-12 relative overflow-hidden">
+      <div className="gradient-accent relative hidden overflow-hidden p-12 lg:flex lg:w-2/5 lg:flex-col lg:items-center lg:justify-center">
         <div className="absolute inset-0 opacity-10">
           {Array.from({ length: 15 }).map((_, i) => (
             <div
               key={i}
-              className="absolute rounded-full border border-teal-400"
+              className="absolute rounded-full border border-primary/60"
               style={{
                 width: `${Math.random() * 200 + 50}px`,
                 height: `${Math.random() * 200 + 50}px`,
@@ -146,12 +152,12 @@ export default function SignupPage() {
         </div>
         <div className="relative z-10 text-center max-w-sm">
           <div className="flex items-center justify-center mb-8">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-teal-500/20 border border-teal-500/30 backdrop-blur">
-              <Dumbbell className="h-10 w-10 text-teal-400" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/25 bg-primary/15 backdrop-blur">
+              <Dumbbell className="h-10 w-10 text-primary" />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-white mb-4">Join GymOs</h1>
-          <p className="text-slate-300 leading-relaxed">
+          <p className="leading-relaxed text-white/75">
             Set up your gym management system in just a few steps and start managing your members today.
           </p>
 
@@ -162,28 +168,28 @@ export default function SignupPage() {
                 key={s.id}
                 className={cn(
                   'flex items-center gap-4 rounded-xl p-4 transition-all',
-                  step === s.id ? 'bg-white/10 border border-white/20' : 'opacity-50'
+                  step === s.id ? 'border border-white/20 bg-white/10 backdrop-blur-sm' : 'opacity-55'
                 )}
               >
                 <div
                   className={cn(
                     'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2',
                     step > s.id
-                      ? 'bg-teal-500 border-teal-500'
+                      ? 'border-primary bg-primary'
                       : step === s.id
-                      ? 'border-teal-400 bg-teal-500/20'
-                      : 'border-slate-600'
+                      ? 'border-primary bg-primary/15'
+                      : 'border-white/20'
                   )}
                 >
                   {step > s.id ? (
                     <Check className="h-5 w-5 text-white" />
                   ) : (
-                    <s.icon className="h-5 w-5 text-teal-400" />
+                    <s.icon className="h-5 w-5 text-primary" />
                   )}
                 </div>
                 <div className="text-left">
                   <p className="text-white font-medium">{s.title}</p>
-                  <p className="text-slate-400 text-sm">{s.description}</p>
+                  <p className="text-sm text-white/60">{s.description}</p>
                 </div>
               </div>
             ))}
@@ -193,10 +199,10 @@ export default function SignupPage() {
 
       {/* Right Panel */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card/85 p-8 shadow-elevated backdrop-blur-xl">
           <div className="flex items-center gap-3 mb-2 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500">
-              <Dumbbell className="h-5 w-5 text-white" />
+            <div className="gradient-primary flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground shadow-sm">
+              <Dumbbell className="h-5 w-5" />
             </div>
             <h1 className="text-2xl font-bold">GymOs</h1>
           </div>
@@ -208,14 +214,14 @@ export default function SignupPage() {
                 key={s.id}
                 className={cn(
                   'h-1.5 flex-1 rounded-full transition-all',
-                  step >= s.id ? 'bg-teal-500' : 'bg-muted'
+                  step >= s.id ? 'bg-primary' : 'bg-muted'
                 )}
               />
             ))}
           </div>
 
           <div className="mb-8">
-            <p className="text-sm text-teal-600 font-medium uppercase tracking-wide">Step {step} of 3</p>
+            <p className="text-sm font-medium uppercase tracking-wide text-primary">Step {step} of 3</p>
             <h2 className="text-3xl font-bold text-foreground mt-1">{STEPS[step - 1].title}</h2>
             <p className="text-muted-foreground mt-1">{STEPS[step - 1].description}</p>
           </div>
@@ -392,10 +398,10 @@ export default function SignupPage() {
                           {gymPhotos.length < MAX_PHOTOS && (
                             <label
                               htmlFor="gym_photo"
-                              className="flex flex-col items-center justify-center aspect-square rounded-lg border-2 border-dashed border-teal-500/30 bg-teal-500/5 cursor-pointer hover:bg-teal-500/10 hover:border-teal-500/50 transition-colors"
+                              className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 transition-colors hover:border-primary/50 hover:bg-primary/10"
                             >
-                              <ImagePlus className="h-6 w-6 text-teal-600 mb-1" />
-                              <span className="text-xs text-teal-600 font-medium">Add Photo</span>
+                              <ImagePlus className="mb-1 h-6 w-6 text-primary" />
+                              <span className="text-xs font-medium text-primary">Add Photo</span>
                             </label>
                           )}
                         </div>
@@ -404,7 +410,7 @@ export default function SignupPage() {
                       {/* Empty state */}
                       {gymPhotos.length === 0 && (
                         <label htmlFor="gym_photo" className="flex flex-col items-center justify-center py-6 cursor-pointer">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-500/10 text-teal-600 mb-3">
+                          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                             <Upload className="h-6 w-6" />
                           </div>
                           <p className="text-sm font-medium text-foreground">Upload gym photographs</p>
@@ -423,7 +429,7 @@ export default function SignupPage() {
                     </div>
                   </div>
                   {gymPhotos.length > 0 && gymPhotos.length < MIN_PHOTOS && (
-                    <p className="text-xs text-amber-600 mt-1">
+                    <p className="mt-1 text-xs text-warning">
                       Please upload at least {MIN_PHOTOS - gymPhotos.length} more photo{MIN_PHOTOS - gymPhotos.length > 1 ? 's' : ''}
                     </p>
                   )}
@@ -439,7 +445,8 @@ export default function SignupPage() {
               )}
               <Button
                 type="submit"
-                className="flex-1 h-11 bg-teal-600 hover:bg-teal-700 text-white"
+                variant="gradient"
+                className="flex-1 h-11"
                 disabled={loading}
               >
                 {step === 3 ? (loading ? 'Creating account...' : 'Create Account') : 'Continue'}
@@ -449,7 +456,7 @@ export default function SignupPage() {
 
           <p className="text-center mt-6 text-muted-foreground text-sm">
             Already have an account?{' '}
-            <Link to="/login" className="text-teal-600 hover:text-teal-700 font-medium">
+            <Link to="/login" className="font-medium text-primary hover:text-primary/80">
               Sign in
             </Link>
           </p>

@@ -55,9 +55,9 @@ export default function MemberListPage() {
 
   const statusBadge = (status: string) => {
     switch (status) {
-      case "active": return <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>;
-      case "expiring": return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Expiring Soon</Badge>;
-      case "expired": return <Badge className="bg-red-100 text-red-700 border-red-200">Expired</Badge>;
+      case "active": return <Badge className="badge-success">Active</Badge>;
+      case "expiring": return <Badge className="badge-warning">Expiring Soon</Badge>;
+      case "expired": return <Badge className="badge-destructive">Expired</Badge>;
       default: return <Badge variant="outline">No Package</Badge>;
     }
   };
@@ -91,7 +91,7 @@ export default function MemberListPage() {
       <div className="space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <h1 className="text-2xl font-bold flex-1">Member List</h1>
-          <Button onClick={() => navigate("/members/add")} className="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+          <Button onClick={() => navigate("/members/add")} variant="gradient" className="gap-2">
             <Plus className="h-4 w-4" /> Add Member
           </Button>
         </div>
@@ -136,7 +136,7 @@ export default function MemberListPage() {
                   <TableRow key={m.id} className="hover:bg-muted/30">
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-500/15 text-teal-600 font-semibold text-sm shrink-0">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
                           {m.name[0].toUpperCase()}
                         </div>
                         <div>
@@ -154,13 +154,13 @@ export default function MemberListPage() {
                     <TableCell className="text-sm">{pkg?.end_date ? new Date(pkg.end_date).toLocaleDateString() : "—"}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:bg-blue-50" onClick={() => window.open(`tel:${m.phone}`)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${m.phone}`)}>
                           <Phone className="h-3.5 w-3.5" />
                         </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleActive(m)}>
-                          {m.is_active ? <UserX className="h-3.5 w-3.5 text-amber-500" /> : <UserCheck className="h-3.5 w-3.5 text-green-500" />}
+                          {m.is_active ? <UserX className="h-3.5 w-3.5 text-warning" /> : <UserCheck className="h-3.5 w-3.5 text-success" />}
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-red-50" onClick={() => setDeleteId(m.id)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteId(m.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -182,7 +182,7 @@ export default function MemberListPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

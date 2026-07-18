@@ -72,7 +72,7 @@ export default function ReviewsPage() {
             <h1 className="text-2xl font-bold">Member Reviews</h1>
             <p className="text-muted-foreground mt-1">Feedback and ratings from your members</p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} className="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+          <Button onClick={() => setDialogOpen(true)} variant="gradient" className="gap-2">
             <Plus className="h-4 w-4" /> Add Review
           </Button>
         </div>
@@ -146,7 +146,7 @@ export default function ReviewsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white">{saving ? "Saving..." : "Add Review"}</Button>
+            <Button onClick={handleSave} variant="gradient" disabled={saving}>{saving ? "Saving..." : "Add Review"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

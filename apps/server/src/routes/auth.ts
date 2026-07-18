@@ -15,7 +15,7 @@ const authWriteLimiter = createRateLimit({
   skip: (req) => req.method === "OPTIONS",
 });
 
-router.post("/signup", authWriteLimiter, upload.single("gym_photo"), signup);
+router.post("/signup", authWriteLimiter, upload.any(), signup);
 router.post("/login", authWriteLimiter, login);
 router.post("/signout", signout);
 router.get("/me", me);

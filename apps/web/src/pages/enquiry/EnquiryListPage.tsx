@@ -44,11 +44,11 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
 
   const statusBadge = (s: string) => {
     const cfg: Record<string, string> = {
-      new: "bg-blue-100 text-blue-700 border-blue-200",
-      contacted: "bg-violet-100 text-violet-700 border-violet-200",
-      follow_up: "bg-amber-100 text-amber-700 border-amber-200",
-      converted: "bg-green-100 text-green-700 border-green-200",
-      not_interested: "bg-red-100 text-red-700 border-red-200",
+      new: "badge-primary",
+      contacted: "badge-secondary",
+      follow_up: "badge-warning",
+      converted: "badge-success",
+      not_interested: "badge-destructive",
     };
     const labels: Record<string, string> = { new: "New", contacted: "Contacted", follow_up: "Follow Up", converted: "Converted", not_interested: "Not Interested" };
     return <Badge className={cfg[s] || ""}>{labels[s] || s}</Badge>;
@@ -100,7 +100,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
             <p className="text-muted-foreground mt-1">{description}</p>
           </div>
           {!filterStatus && (
-            <Button onClick={() => navigate("/enquiry/add")} className="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+            <Button onClick={() => navigate("/enquiry/add")} variant="gradient" className="gap-2">
               <Plus className="h-4 w-4" /> Add Enquiry
             </Button>
           )}
@@ -133,7 +133,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
                 <TableRow key={e.id} className="hover:bg-muted/30">
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold text-sm shrink-0">{e.name[0].toUpperCase()}</div>
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">{e.name[0].toUpperCase()}</div>
                       <p className="font-medium">{e.name}</p>
                     </div>
                   </TableCell>
@@ -144,18 +144,18 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
                   <TableCell>{statusBadge(e.status)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500" onClick={() => window.open(`tel:${e.phone}`)}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${e.phone}`)}>
                         <Phone className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-amber-500" onClick={() => { setFollowupDialog(e); setFuForm({ next_followup_date: "", notes: "", status: "done" }); }}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-warning hover:bg-warning/10 hover:text-warning" onClick={() => { setFollowupDialog(e); setFuForm({ next_followup_date: "", notes: "", status: "done" }); }}>
                         <PhoneCall className="h-3.5 w-3.5" />
                       </Button>
                       {e.status !== "converted" && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500" onClick={() => updateStatus(e.id, "converted")}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-success hover:bg-success/10 hover:text-success" onClick={() => updateStatus(e.id, "converted")}>
                           <UserCheck className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(e.id)}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteId(e.id)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -193,7 +193,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFollowupDialog(null)}>Cancel</Button>
-            <Button onClick={handleFollowup} disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white">{saving ? "Saving..." : "Save Follow-up"}</Button>
+            <Button onClick={handleFollowup} variant="gradient" disabled={saving}>{saving ? "Saving..." : "Save Follow-up"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -206,7 +206,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

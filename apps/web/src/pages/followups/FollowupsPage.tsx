@@ -69,9 +69,9 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
 
   const statusBadge = (s: string) => {
     switch (s) {
-      case "done": return <Badge className="bg-green-100 text-green-700 border-green-200">Done</Badge>;
-      case "no_response": return <Badge className="bg-slate-100 text-slate-700 border-slate-200">No Response</Badge>;
-      default: return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Pending</Badge>;
+      case "done": return <Badge className="badge-success">Done</Badge>;
+      case "no_response": return <Badge className="badge-secondary">No Response</Badge>;
+      default: return <Badge className="badge-warning">Pending</Badge>;
     }
   };
 
@@ -83,7 +83,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
             <h1 className="text-2xl font-bold">{title}</h1>
             <p className="text-muted-foreground mt-1">{description}</p>
           </div>
-          <Button onClick={openAdd} className="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+          <Button onClick={openAdd} variant="gradient" className="gap-2">
             <Plus className="h-4 w-4" /> Add Follow-up
           </Button>
         </div>
@@ -119,12 +119,12 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       {fu.members && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500" onClick={() => window.open(`tel:${fu.members!.phone}`)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${fu.members!.phone}`)}>
                           <Phone className="h-3.5 w-3.5" />
                         </Button>
                       )}
                       {fu.status === "pending" && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500" onClick={() => markDone(fu.id)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-success hover:bg-success/10 hover:text-success" onClick={() => markDone(fu.id)}>
                           <Check className="h-3.5 w-3.5" />
                         </Button>
                       )}
@@ -182,7 +182,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white">{saving ? "Saving..." : editFu ? "Update" : "Add"}</Button>
+            <Button onClick={handleSave} variant="gradient" disabled={saving}>{saving ? "Saving..." : editFu ? "Update" : "Add"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -10,4 +10,21 @@ if (!supabaseUrl || !supabaseServiceKey) {
   throw new Error('Supabase URL or Service Role Key is not set in the environment variables.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const resolvedSupabaseUrl = supabaseUrl;
+const resolvedSupabaseServiceKey = supabaseServiceKey;
+
+function createSupabaseServerClient() {
+  return createClient(resolvedSupabaseUrl, resolvedSupabaseServiceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
+
+export const supabase = createSupabaseServerClient();
+
+export function createSupabaseAuthClient() {
+  return createSupabaseServerClient();
+}
