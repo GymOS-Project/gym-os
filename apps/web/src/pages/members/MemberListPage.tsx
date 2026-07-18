@@ -35,7 +35,7 @@ export default function MemberListPage() {
     if (!admin) return;
     setLoading(true);
     try {
-      const data = await api.getMembers(admin.id);
+      const data = await api.getMembers();
       setMembers(data);
     } catch { toast.error("Failed to load members"); }
     setLoading(false);

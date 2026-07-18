@@ -29,7 +29,7 @@ export default function PackageTypesPage() {
   const fetchPackages = async () => {
     if (!admin) return;
     setLoading(true);
-    try { setPackages(await api.getPlans(admin.id)); }
+    try { setPackages(await api.getPlans()); }
     catch { toast.error("Failed to load packages"); }
     setLoading(false);
   };
@@ -52,7 +52,6 @@ export default function PackageTypesPage() {
     if (!admin || !form.name || !form.price) { toast.error("Name and price are required"); return; }
     setSaving(true);
     const payload = {
-      admin_id: admin.id,
       name: form.name,
       duration_months: isCustom ? null : (parseInt(form.duration_months) || null),
       duration_days: isCustom ? (parseInt(form.duration_days) || null) : null,

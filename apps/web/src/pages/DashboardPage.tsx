@@ -23,7 +23,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!admin) return;
     setLoading(true);
-    api.getDashboardStats(admin.id)
+    api.getDashboardStats()
       .then((data) => setStats(data as any))
       .catch(console.error)
       .finally(() => setLoading(false));

@@ -1,126 +1,33 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
-import type { CookieOptions, Request, Response } from "express";
+import type { Request, Response } from "express";
 import { createSupabaseAuthClient, supabase } from "../supabase";
+import {
+  clearSessionCookies,
+  decryptCookieValue,
+  getAdminByAuthId,
+  resolveAuthenticatedUser,
+  setSessionCookies,
+} from "../services/authSession.service";
+import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 
 const SESSION_COOKIE_NAME = "sessionToken";
-const REFRESH_COOKIE_NAME = "refreshToken";
-const REFRESH_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";
-const COOKIE_ENCRYPTION_SECRET =
-  process.env.SESSION_COOKIE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!COOKIE_ENCRYPTION_SECRET) {
-  throw new Error("SESSION_COOKIE_SECRET or SUPABASE_SERVICE_ROLE_KEY must be set.");
-}
-
-const COOKIE_ENCRYPTION_KEY = createHash("sha256")
-  .update(COOKIE_ENCRYPTION_SECRET)
-  .digest();
+const ADMIN_LOGO_BUCKET = process.env.SUPABASE_ADMIN_LOGO_BUCKET || GYM_PHOTO_BUCKET;
 
 type AuthUser = {
   id: string;
   email: string;
 };
 
-function encryptCookieValue(value: string) {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", COOKIE_ENCRYPTION_KEY, iv);
-  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
 
-  return Buffer.concat([iv, tag, encrypted]).toString("base64url");
-}
-
-function decryptCookieValue(value?: string) {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    const payload = Buffer.from(value, "base64url");
-    if (payload.length <= 28) {
-      return null;
-    }
-
-    const iv = payload.subarray(0, 12);
-    const tag = payload.subarray(12, 28);
-    const encrypted = payload.subarray(28);
-    const decipher = createDecipheriv("aes-256-gcm", COOKIE_ENCRYPTION_KEY, iv);
-
-    decipher.setAuthTag(tag);
-
-    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
-  } catch {
-    return null;
-  }
-}
-
-function getCookieOptions(maxAge?: number): CookieOptions {
-  return {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    ...(maxAge ? { maxAge } : {}),
-  };
-}
-
-function setSessionCookies(
-  res: Response,
-  session: { access_token: string; refresh_token: string; expires_in?: number }
-) {
-  const accessMaxAge = session.expires_in ? session.expires_in * 1000 : 1000 * 60 * 60;
-
-  res.cookie(
-    SESSION_COOKIE_NAME,
-    encryptCookieValue(session.access_token),
-    getCookieOptions(accessMaxAge)
-  );
-  res.cookie(
-    REFRESH_COOKIE_NAME,
-    encryptCookieValue(session.refresh_token),
-    getCookieOptions(REFRESH_COOKIE_MAX_AGE)
-  );
-}
-
-function clearSessionCookies(res: Response) {
-  res.clearCookie(SESSION_COOKIE_NAME, getCookieOptions());
-  res.clearCookie(REFRESH_COOKIE_NAME, getCookieOptions());
-}
-
-async function getAdminByUserId(userId: string) {
-  const { data: admin, error } = await supabase
-    .from("admins")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return admin;
-}
-
-async function getUserFromAccessToken(accessToken: string) {
-  const authClient = createSupabaseAuthClient();
-  const { data, error } = await authClient.auth.getUser(accessToken);
-  if (error || !data.user) {
-    return null;
-  }
-
-  return data.user;
-}
-
-async function uploadGymPhoto(file: Express.Multer.File, userId: string) {
+async function uploadAdminImage(file: Express.Multer.File, userId: string, bucket: string, folder: string) {
   const fileExt = file.originalname.includes(".")
     ? file.originalname.split(".").pop()?.toLowerCase()
     : "jpg";
   const safeExt = fileExt || "jpg";
-  const objectPath = `admins/${userId}/${Date.now()}.${safeExt}`;
+  const objectPath = `admins/${userId}/${folder}/${Date.now()}.${safeExt}`;
 
   const { error } = await supabase.storage
-    .from(GYM_PHOTO_BUCKET)
+    .from(bucket)
     .upload(objectPath, file.buffer, {
       contentType: file.mimetype,
       upsert: true,
@@ -130,8 +37,16 @@ async function uploadGymPhoto(file: Express.Multer.File, userId: string) {
     throw new Error(error.message);
   }
 
-  const { data } = supabase.storage.from(GYM_PHOTO_BUCKET).getPublicUrl(objectPath);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
   return data.publicUrl;
+}
+
+async function uploadGymPhoto(file: Express.Multer.File, userId: string) {
+  return uploadAdminImage(file, userId, GYM_PHOTO_BUCKET, "gym-photos");
+}
+
+async function uploadAdminLogo(file: Express.Multer.File, userId: string) {
+  return uploadAdminImage(file, userId, ADMIN_LOGO_BUCKET, "logos");
 }
 
 function getSignupFiles(req: Request) {
@@ -142,53 +57,22 @@ function getSignupFiles(req: Request) {
     .slice(0, 10);
 }
 
-async function refreshSession(refreshToken: string) {
-  const authClient = createSupabaseAuthClient();
-  const { data, error } = await authClient.auth.refreshSession({
-    refresh_token: refreshToken,
-  });
-
-  if (error || !data.session || !data.user) {
-    return null;
-  }
-
-  return {
-    session: data.session,
-    user: data.user,
-  };
+function getUploadedFile(req: Request, ...fieldNames: string[]) {
+  const files = Array.isArray(req.files) ? req.files : [];
+  return files.find((file) => fieldNames.includes(file.fieldname));
 }
 
-async function resolveAuthenticatedUser(req: Request, res: Response) {
-  const accessCookie = req.cookies[SESSION_COOKIE_NAME] as string | undefined;
-  const refreshCookie = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
-  const accessToken = decryptCookieValue(accessCookie);
-  const refreshToken = decryptCookieValue(refreshCookie);
+function hasOwn(body: Record<string, unknown>, key: string) {
+  return Object.prototype.hasOwnProperty.call(body, key);
+}
 
-  if ((accessCookie && !accessToken) || (refreshCookie && !refreshToken)) {
-    clearSessionCookies(res);
-    return null;
+function normalizeOptionalString(value: unknown) {
+  if (typeof value !== "string") {
+    return value == null ? null : String(value);
   }
 
-  const accessUser = accessToken
-    ? await getUserFromAccessToken(accessToken)
-    : null;
-
-  if (accessUser) {
-    return accessUser;
-  }
-
-  if (!refreshToken) {
-    return null;
-  }
-
-  const refreshed = await refreshSession(refreshToken);
-  if (!refreshed) {
-    clearSessionCookies(res);
-    return null;
-  }
-
-  setSessionCookies(res, refreshed.session);
-  return refreshed.user;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
 }
 
 function toAuthUser(user: { id: string; email?: string | null }): AuthUser {
@@ -237,7 +121,7 @@ export async function signup(req: Request, res: Response) {
     }
 
     const { error: adminError } = await supabase.from("admins").insert({
-      user_id: data.user.id,
+      auth_id: data.user.id,
       gym_name,
       owner_name,
       phone: phone || null,
@@ -269,7 +153,7 @@ export async function signup(req: Request, res: Response) {
 
   setSessionCookies(res, signInResult.data.session);
 
-  const admin = await getAdminByUserId(signInResult.data.user.id);
+  const admin = await getAdminByAuthId(signInResult.data.user.id);
 
   return res.status(201).json({
     message: "Account created successfully.",
@@ -298,7 +182,7 @@ export async function login(req: Request, res: Response) {
 
   setSessionCookies(res, data.session);
 
-  const admin = await getAdminByUserId(data.user.id);
+  const admin = await getAdminByAuthId(data.user.id);
 
   return res.json({ user: toAuthUser(data.user), admin, authenticated: true });
 }
@@ -322,7 +206,86 @@ export async function me(req: Request, res: Response) {
     return res.status(401).json({ message: "Not authenticated" });
   }
 
-  const admin = await getAdminByUserId(user.id);
+  const admin = await getAdminByAuthId(user.id);
 
   return res.json({ user: toAuthUser(user), admin, authenticated: true });
+}
+
+export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
+  const adminId = req.admin?.id;
+  const userId = req.authUser?.id;
+
+  if (!adminId || !userId) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  const body = req.body as Record<string, unknown>;
+  const updates: Record<string, unknown> = {};
+
+  const requiredFields = [
+    { key: "owner_name", label: "owner_name" },
+    { key: "gym_name", label: "gym_name" },
+  ];
+
+  for (const field of requiredFields) {
+    if (hasOwn(body, field.key)) {
+      const value = normalizeOptionalString(body[field.key]);
+      if (!value) {
+        return res.status(400).json({ message: `${field.label} cannot be empty` });
+      }
+      updates[field.key] = value;
+    }
+  }
+
+  const optionalFields = [
+    "phone",
+    "email",
+    "website",
+    "instagram_page",
+    "address",
+    "business_registration_name",
+    "owner_email",
+  ];
+
+  for (const field of optionalFields) {
+    if (hasOwn(body, field)) {
+      updates[field] = normalizeOptionalString(body[field]);
+    }
+  }
+
+  const profileImageFile = getUploadedFile(req, "profile_image", "logo_image", "logo");
+  const gymPhotoFile = getUploadedFile(req, "gym_photo", "cover_image");
+
+  try {
+    if (profileImageFile) {
+      updates.logo_url = await uploadAdminLogo(profileImageFile, userId);
+    }
+
+    if (gymPhotoFile) {
+      updates.gym_photo_url = await uploadGymPhoto(gymPhotoFile, userId);
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to upload image" });
+  }
+
+  if (Object.keys(updates).length === 0) {
+    const admin = await getAdminByAuthId(userId);
+    return res.json(admin);
+  }
+
+  updates.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("admins")
+    .update(updates)
+    .eq("id", adminId)
+    .eq("auth_id", userId)
+    .select("*")
+    .single();
+
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+
+  return res.json(data);
 }

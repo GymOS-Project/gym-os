@@ -30,8 +30,8 @@ export default function AddMemberPage() {
 
   useEffect(() => {
     if (!admin) return;
-    api.getPlans(admin.id).then((data) => setPackages(data.filter((p) => p.is_active)));
-    api.getActiveMembers(admin.id).then(setMembers);
+    api.getPlans().then((data) => setPackages(data.filter((p) => p.is_active)));
+    api.getActiveMembers().then(setMembers);
   }, [admin]);
 
   const selectedPkg = packages.find((p) => p.id === form.package_type_id);
@@ -52,7 +52,6 @@ export default function AddMemberPage() {
     setLoading(true);
     try {
       const member = await api.createMember({
-        admin_id: admin.id,
         name: form.name,
         email: form.email || undefined,
         phone: form.phone,
@@ -70,7 +69,6 @@ export default function AddMemberPage() {
 
       if (form.package_type_id && endDate) {
         await api.createMemberPackage({
-          admin_id: admin.id,
           member_id: member.id,
           package_type_id: form.package_type_id,
           package_name: selectedPkg!.name,
@@ -80,7 +78,6 @@ export default function AddMemberPage() {
           payment_mode: form.payment_mode as any,
         });
         await api.createTransaction({
-          admin_id: admin.id,
           member_id: member.id,
           type: "payment",
           amount: parseFloat(form.amount_paid) || selectedPkg!.price,

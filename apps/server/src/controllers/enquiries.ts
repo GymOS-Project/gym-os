@@ -1,13 +1,25 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { attachEnquiriesByEnquiryId } from "../services/relatedRecords.service";
 import { supabase } from "../supabase";
 
-export async function listEnquiries(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+function getAdminId(req: AuthenticatedRequest, res: Response) {
+  const adminId = req.admin?.id;
+  if (!adminId) {
+    res.status(401).json({ message: "Not authenticated" });
+    return null;
   }
 
-  let query = supabase.from("enquiries").select("*").eq("admin_id", admin_id);
+  return adminId;
+}
+
+export async function listEnquiries(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
+  let query = supabase.from("enquiries").select("*").eq("admin_id", adminId);
   const status = req.query.status as string;
 
   if (status) {
@@ -22,9 +34,13 @@ export async function listEnquiries(req: Request, res: Response) {
   return res.json(data);
 }
 
-export async function createEnquiry(req: Request, res: Response) {
+export async function createEnquiry(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
   const {
-    admin_id,
     name,
     phone,
     email,
@@ -35,14 +51,14 @@ export async function createEnquiry(req: Request, res: Response) {
     notes,
   } = req.body;
 
-  if (!admin_id || !name || !phone) {
-    return res.status(400).json({ message: "admin_id, name, and phone are required" });
+  if (!name || !phone) {
+    return res.status(400).json({ message: "name and phone are required" });
   }
 
   const { data, error } = await supabase
     .from("enquiries")
     .insert({
-      admin_id,
+      admin_id: adminId,
       name,
       phone,
       email: email || null,
@@ -63,13 +79,19 @@ export async function createEnquiry(req: Request, res: Response) {
   return res.status(201).json(data);
 }
 
-export async function updateEnquiry(req: Request, res: Response) {
+export async function updateEnquiry(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
   const { status, next_followup_date } = req.body;
 
   const { data, error } = await supabase
     .from("enquiries")
     .update({ status, next_followup_date: next_followup_date || null })
     .eq("id", req.params.id)
+    .eq("admin_id", adminId)
     .select()
     .single();
 
@@ -80,8 +102,13 @@ export async function updateEnquiry(req: Request, res: Response) {
   return res.json(data);
 }
 
-export async function deleteEnquiry(req: Request, res: Response) {
-  const { error } = await supabase.from("enquiries").delete().eq("id", req.params.id);
+export async function deleteEnquiry(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
+  const { error } = await supabase.from("enquiries").delete().eq("id", req.params.id).eq("admin_id", adminId);
 
   if (error) {
     return res.status(500).json({ message: error.message });
@@ -90,13 +117,18 @@ export async function deleteEnquiry(req: Request, res: Response) {
   return res.status(204).send();
 }
 
-export async function createEnquiryFollowup(req: Request, res: Response) {
-  const { admin_id, followup_date, next_followup_date, notes, status } = req.body;
+export async function createEnquiryFollowup(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
+  const { followup_date, next_followup_date, notes, status } = req.body;
 
   const { data, error } = await supabase
     .from("enquiry_followups")
     .insert({
-      admin_id,
+      admin_id: adminId,
       enquiry_id: req.params.id,
       followup_date,
       next_followup_date: next_followup_date || null,
@@ -113,21 +145,25 @@ export async function createEnquiryFollowup(req: Request, res: Response) {
   return res.status(201).json(data);
 }
 
-export async function listEnquiryFollowups(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+export async function listEnquiryFollowups(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
   }
 
   const { data, error } = await supabase
     .from("enquiry_followups")
-    .select("*, enquiries(name, phone, status)")
-    .eq("admin_id", admin_id)
+    .select("*")
+    .eq("admin_id", adminId)
     .order("followup_date", { ascending: false });
 
   if (error) {
     return res.status(500).json({ message: error.message });
   }
 
-  return res.json(data);
+  try {
+    return res.json(await attachEnquiriesByEnquiryId(data || []));
+  } catch (attachError) {
+    return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load enquiry followups" });
+  }
 }

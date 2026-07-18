@@ -18,7 +18,7 @@ export default function ReferenceMembersPage() {
   const fetchData = async () => {
     if (!admin) return;
     setLoading(true);
-    try { setData(await api.getReferenceMembers(admin.id)); }
+    try { setData(await api.getReferenceMembers()); }
     catch { toast.error("Failed to load"); }
     setLoading(false);
   };

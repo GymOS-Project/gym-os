@@ -20,7 +20,7 @@ export default function EnquiryFollowupListPage() {
   const fetchData = async () => {
     if (!admin) return;
     setLoading(true);
-    try { setFollowups(await api.getEnquiryFollowups(admin.id)); }
+    try { setFollowups(await api.getEnquiryFollowups()); }
     catch { toast.error("Failed to load"); }
     setLoading(false);
   };

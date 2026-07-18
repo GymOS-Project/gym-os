@@ -7,8 +7,11 @@ import {
   listMembers,
   updateMember,
 } from "../controllers/members";
+import { requireAuthenticatedAdmin } from "../middleware/sessionAuth.middleware";
 
 const router = Router();
+
+router.use(requireAuthenticatedAdmin);
 
 router.get("/", listMembers);
 router.get("/active", listActiveMembers);

@@ -65,65 +65,67 @@ export const api = {
     request<LoginResult>("/auth/signup", { method: "POST", body: data }),
   signout: () => request<{ message: string }>("/auth/signout", { method: "POST" }),
   me: () => request<LoginResult>("/auth/me"),
+  updateAdmin: (data: FormData) =>
+    request<Admin>("/auth/admin", { method: "PUT", body: data }),
 
   // Members
-  getMembers: (admin_id: string) => request<(Member & { member_packages?: { status: string; end_date: string; package_name: string }[] })[]>(`/members${qs({ admin_id })}`),
-  getActiveMembers: (admin_id: string) => request<{ id: string; name: string; phone: string }[]>(`/members/active${qs({ admin_id })}`),
-  createMember: (data: Partial<Member> & { admin_id: string }) =>
+  getMembers: () => request<(Member & { member_packages?: { status: string; end_date: string; package_name: string }[] })[]>("/members"),
+  getActiveMembers: () => request<{ id: string; name: string; phone: string }[]>("/members/active"),
+  createMember: (data: Partial<Member>) =>
     request<Member>("/members", { method: "POST", body: JSON.stringify(data) }),
   updateMember: (id: string, data: Partial<Member>) =>
     request<Member>(`/members/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteMember: (id: string) => request<void>(`/members/${id}`, { method: "DELETE" }),
 
   // Plans (package_types)
-  getPlans: (admin_id: string) => request<PackageType[]>(`/plans${qs({ admin_id })}`),
-  createPlan: (data: Partial<PackageType> & { admin_id: string }) =>
+  getPlans: () => request<PackageType[]>("/plans"),
+  createPlan: (data: Partial<PackageType>) =>
     request<PackageType>("/plans", { method: "POST", body: JSON.stringify(data) }),
   updatePlan: (id: string, data: Partial<PackageType>) =>
     request<PackageType>(`/plans/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deletePlan: (id: string) => request<void>(`/plans/${id}`, { method: "DELETE" }),
 
   // Member packages
-  getMemberPackages: (admin_id: string) => request<(MemberPackage & { members?: { name: string; phone: string } })[]>(`/reports/packages${qs({ admin_id })}`),
-  createMemberPackage: (data: Partial<MemberPackage> & { admin_id: string }) =>
+  getMemberPackages: () => request<(MemberPackage & { members?: { name: string; phone: string } })[]>("/reports/packages"),
+  createMemberPackage: (data: Partial<MemberPackage>) =>
     request<MemberPackage>("/reports/packages", { method: "POST", body: JSON.stringify(data) }),
 
   // Transactions
-  getTransactions: (admin_id: string) => request<(Transaction & { members?: { name: string; phone: string } })[]>(`/reports/transactions${qs({ admin_id })}`),
-  createTransaction: (data: Partial<Transaction> & { admin_id: string }) =>
+  getTransactions: () => request<(Transaction & { members?: { name: string; phone: string } })[]>("/reports/transactions"),
+  createTransaction: (data: Partial<Transaction>) =>
     request<Transaction>("/reports/transactions", { method: "POST", body: JSON.stringify(data) }),
 
   // Followups
-  getFollowups: (admin_id: string, type?: string) =>
-    request<(Followup & { members: Member | null })[]>(`/followups${qs({ admin_id, type })}`),
-  createFollowup: (data: Partial<Followup> & { admin_id: string }) =>
+  getFollowups: (type?: string) =>
+    request<(Followup & { members: Member | null })[]>(`/followups${qs({ type })}`),
+  createFollowup: (data: Partial<Followup>) =>
     request<Followup>("/followups", { method: "POST", body: JSON.stringify(data) }),
   updateFollowup: (id: string, data: Partial<Followup>) =>
     request<Followup>(`/followups/${id}`, { method: "PUT", body: JSON.stringify(data) }),
 
   // Enquiries
-  getEnquiries: (admin_id: string, status?: string) =>
-    request<Enquiry[]>(`/enquiries${qs({ admin_id, status })}`),
-  createEnquiry: (data: Partial<Enquiry> & { admin_id: string }) =>
+  getEnquiries: (status?: string) =>
+    request<Enquiry[]>(`/enquiries${qs({ status })}`),
+  createEnquiry: (data: Partial<Enquiry>) =>
     request<Enquiry>("/enquiries", { method: "POST", body: JSON.stringify(data) }),
   updateEnquiry: (id: string, data: Partial<Enquiry>) =>
     request<Enquiry>(`/enquiries/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteEnquiry: (id: string) => request<void>(`/enquiries/${id}`, { method: "DELETE" }),
-  addEnquiryFollowup: (enquiry_id: string, data: Partial<EnquiryFollowup> & { admin_id: string }) =>
+  addEnquiryFollowup: (enquiry_id: string, data: Partial<EnquiryFollowup>) =>
     request<EnquiryFollowup>(`/enquiries/${enquiry_id}/followups`, { method: "POST", body: JSON.stringify(data) }),
-  getEnquiryFollowups: (admin_id: string) =>
-    request<(EnquiryFollowup & { enquiries?: { name: string; phone: string; status: string } })[]>(`/enquiries/followup-list${qs({ admin_id })}`),
+  getEnquiryFollowups: () =>
+    request<(EnquiryFollowup & { enquiries?: { name: string; phone: string; status: string } })[]>("/enquiries/followup-list"),
 
   // Reports
-  getDashboardStats: (admin_id: string) => request<DashboardStats>(`/stats/dashboard${qs({ admin_id })}`),
-  getNearToExpire: (admin_id: string, days: number) =>
-    request<(MemberPackage & { members?: { id: string; name: string; phone: string; email: string | null; shift: string | null } })[]>(`/reports/near-to-expire${qs({ admin_id, days })}`),
-  getReviews: (admin_id: string) =>
-    request<(Review & { members?: { name: string; phone: string } })[]>(`/reports/reviews${qs({ admin_id })}`),
-  createReview: (data: Partial<Review> & { admin_id: string }) =>
+  getDashboardStats: () => request<DashboardStats>("/stats/dashboard"),
+  getNearToExpire: (days: number) =>
+    request<(MemberPackage & { members?: { id: string; name: string; phone: string; email: string | null; shift: string | null } })[]>(`/reports/near-to-expire${qs({ days })}`),
+  getReviews: () =>
+    request<(Review & { members?: { name: string; phone: string } })[]>("/reports/reviews"),
+  createReview: (data: Partial<Review>) =>
     request<Review>("/reports/reviews", { method: "POST", body: JSON.stringify(data) }),
-  getReferenceMembers: (admin_id: string) =>
-    request<{ ref: { id: string; name: string; phone: string }; referrals: { id: string; name: string; phone: string }[] }[]>(`/reports/reference-members${qs({ admin_id })}`),
-  getShiftReport: (admin_id: string) =>
-    request<(Member & { member_packages?: { status: string; end_date: string; package_name: string }[] })[]>(`/reports/shift-report${qs({ admin_id })}`),
+  getReferenceMembers: () =>
+    request<{ ref: { id: string; name: string; phone: string }; referrals: { id: string; name: string; phone: string }[] }[]>("/reports/reference-members"),
+  getShiftReport: () =>
+    request<(Member & { member_packages?: { status: string; end_date: string; package_name: string }[] })[]>("/reports/shift-report"),
 };

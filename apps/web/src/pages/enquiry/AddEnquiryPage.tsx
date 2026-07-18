@@ -27,7 +27,6 @@ export default function AddEnquiryPage() {
     setLoading(true);
     try {
       await api.createEnquiry({
-        admin_id: admin.id,
         name: form.name,
         phone: form.phone,
         email: form.email || undefined,

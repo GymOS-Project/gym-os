@@ -1,35 +1,50 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { attachMemberPackages } from "../services/memberPackages.service";
 import { supabase } from "../supabase";
 
-export async function listMembers(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-
-  let query = supabase
-    .from("members")
-    .select("*, member_packages(status, end_date, package_name)");
-
-  if (admin_id) {
-    query = query.eq("admin_id", admin_id);
+function getAdminId(req: AuthenticatedRequest, res: Response) {
+  const adminId = req.admin?.id;
+  if (!adminId) {
+    res.status(401).json({ message: "Not authenticated" });
+    return null;
   }
 
-  const { data, error } = await query.order("created_at", { ascending: false });
+  return adminId;
+}
+
+export async function listMembers(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("members")
+    .select("*")
+    .eq("admin_id", adminId)
+    .order("created_at", { ascending: false });
   if (error) {
     return res.status(500).json({ message: error.message });
   }
 
-  return res.json(data);
+  try {
+    return res.json(await attachMemberPackages(data || [], adminId));
+  } catch (attachError) {
+    return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load members" });
+  }
 }
 
-export async function listActiveMembers(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+export async function listActiveMembers(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
   }
 
   const { data, error } = await supabase
     .from("members")
     .select("id, name, phone")
-    .eq("admin_id", admin_id)
+    .eq("admin_id", adminId)
     .eq("is_active", true);
 
   if (error) {
@@ -39,11 +54,17 @@ export async function listActiveMembers(req: Request, res: Response) {
   return res.json(data);
 }
 
-export async function getMember(req: Request, res: Response) {
+export async function getMember(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
   const { data, error } = await supabase
     .from("members")
     .select("*")
     .eq("id", req.params.id)
+    .eq("admin_id", adminId)
     .maybeSingle();
 
   if (error) {
@@ -56,7 +77,12 @@ export async function getMember(req: Request, res: Response) {
   return res.json(data);
 }
 
-export async function createMember(req: Request, res: Response) {
+export async function createMember(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
   const {
     name,
     email,
@@ -68,11 +94,10 @@ export async function createMember(req: Request, res: Response) {
     shift,
     notes,
     reference_member_id,
-    admin_id,
   } = req.body;
 
-  if (!name || !phone || !admin_id) {
-    return res.status(400).json({ message: "name, phone, and admin_id are required" });
+  if (!name || !phone) {
+    return res.status(400).json({ message: "name and phone are required" });
   }
 
   const { data, error } = await supabase
@@ -88,7 +113,7 @@ export async function createMember(req: Request, res: Response) {
       shift,
       notes,
       reference_member_id,
-      admin_id,
+      admin_id: adminId,
     })
     .select()
     .single();
@@ -100,7 +125,12 @@ export async function createMember(req: Request, res: Response) {
   return res.status(201).json(data);
 }
 
-export async function updateMember(req: Request, res: Response) {
+export async function updateMember(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
   const {
     name,
     email,
@@ -118,6 +148,7 @@ export async function updateMember(req: Request, res: Response) {
     .from("members")
     .select("id")
     .eq("id", req.params.id)
+    .eq("admin_id", adminId)
     .maybeSingle();
 
   if (!existing) {
@@ -140,6 +171,7 @@ export async function updateMember(req: Request, res: Response) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", req.params.id)
+    .eq("admin_id", adminId)
     .select()
     .single();
 
@@ -150,18 +182,24 @@ export async function updateMember(req: Request, res: Response) {
   return res.json(data);
 }
 
-export async function deleteMember(req: Request, res: Response) {
+export async function deleteMember(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
   const { data: existing } = await supabase
     .from("members")
     .select("id")
     .eq("id", req.params.id)
+    .eq("admin_id", adminId)
     .maybeSingle();
 
   if (!existing) {
     return res.status(404).json({ message: "Member not found" });
   }
 
-  const { error } = await supabase.from("members").delete().eq("id", req.params.id);
+  const { error } = await supabase.from("members").delete().eq("id", req.params.id).eq("admin_id", adminId);
   if (error) {
     return res.status(500).json({ message: error.message });
   }

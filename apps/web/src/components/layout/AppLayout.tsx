@@ -3,8 +3,9 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, ClipboardList, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, Settings, UserRound, X } from 'lucide-react';
+import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, ClipboardList, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface NavItem {
@@ -59,7 +60,17 @@ const navItems: NavItem[] = [
   },
 ];
 
-function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }) {
+function NavItemComponent({
+  item,
+  depth = 0,
+  collapsed = false,
+  onExpand,
+}: {
+  item: NavItem;
+  depth?: number;
+  collapsed?: boolean;
+  onExpand?: () => void;
+}) {
   const location = useLocation();
   const [open, setOpen] = useState(() => {
     if (!item.children) return false;
@@ -74,8 +85,10 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
     return (
       <NavLink
         to={item.href}
+        title={collapsed ? item.label : undefined}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150',
+          collapsed ? 'justify-center px-2' : '',
           depth > 0 ? 'ml-4 pl-3' : '',
           isActive
             ? 'bg-primary/15 text-primary font-medium shadow-sm'
@@ -83,7 +96,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
         )}
       >
         <item.icon className="h-4 w-4 shrink-0" />
-        <span>{item.label}</span>
+        {!collapsed && <span>{item.label}</span>}
       </NavLink>
     );
   }
@@ -91,17 +104,25 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
   return (
     <div>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (collapsed) {
+            onExpand?.();
+            return;
+          }
+          setOpen(!open);
+        }}
+        title={collapsed ? item.label : undefined}
         className={cn(
           'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150',
+          collapsed ? 'justify-center px-2' : '',
           open ? 'text-sidebar-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
         )}
       >
         <item.icon className="h-4 w-4 shrink-0" />
-        <span className="flex-1 text-left">{item.label}</span>
-        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
+        {!collapsed && (open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
       </button>
-      {open && (
+      {open && !collapsed && (
         <div className="mt-0.5 space-y-0.5">
           {item.children?.map(child => (
             <NavItemComponent key={child.href} item={child} depth={depth + 1} />
@@ -121,10 +142,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const { admin, signOut } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const showComingSoon = (label: string) => {
-    toast(`${label} is coming soon`);
-  };
+  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -132,23 +150,25 @@ export function AppLayout({ children, title }: AppLayoutProps) {
     navigate('/login');
   };
 
-  const Sidebar = () => (
+  const Sidebar = ({ collapsed = false }: { collapsed?: boolean }) => (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Logo */}
-      <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-5">
+      <div className={cn('flex h-14 items-center border-b border-sidebar-border px-4', collapsed ? 'justify-center' : 'gap-3')}>
         <div className="gradient-primary flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground shadow-md">
           <Dumbbell className="h-5 w-5" />
         </div>
-        <div className="min-w-0">
-          <p className="truncate font-bold text-sidebar-foreground">{admin?.gym_name || 'GymOs'}</p>
-          <p className="truncate text-xs text-sidebar-foreground/70">{admin?.owner_name || 'Admin Panel'}</p>
-        </div>
+        {!collapsed && (
+          <div className="min-w-0">
+            <p className="truncate font-bold text-sidebar-foreground">{admin?.gym_name || 'GymOs'}</p>
+            <p className="truncate text-xs text-sidebar-foreground/70">{admin?.owner_name || 'Admin Panel'}</p>
+          </div>
+        )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+      <nav className={cn('flex-1 overflow-y-auto py-4 space-y-0.5', collapsed ? 'px-2' : 'px-3')}>
         {navItems.map(item => (
-          <NavItemComponent key={item.label} item={item} />
+          <NavItemComponent key={item.label} item={item} collapsed={collapsed} onExpand={() => setDesktopCollapsed(false)} />
         ))}
       </nav>
     </div>
@@ -157,8 +177,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-64 shrink-0 border-r border-border overflow-hidden">
-        <Sidebar />
+      <aside className={cn('hidden shrink-0 overflow-hidden border-r border-border transition-[width] duration-200 lg:block', desktopCollapsed ? 'w-20' : 'w-64')}>
+        <Sidebar collapsed={desktopCollapsed} />
       </aside>
 
       {/* Mobile Sidebar */}
@@ -180,6 +200,14 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
+          <button
+            type="button"
+            className="hidden text-muted-foreground transition-colors hover:text-foreground lg:inline-flex"
+            onClick={() => setDesktopCollapsed((value) => !value)}
+            aria-label={desktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {desktopCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+          </button>
           {title && <h1 className="font-semibold text-foreground">{title}</h1>}
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle className="scale-90 sm:scale-100" />
@@ -192,10 +220,15 @@ export function AppLayout({ children, title }: AppLayoutProps) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="gradient-primary flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-primary-foreground shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="rounded-full transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Open account menu"
                 >
-                  {(admin?.owner_name || 'A')[0].toUpperCase()}
+                  <Avatar className="h-8 w-8 border border-border/60 shadow-sm">
+                    <AvatarImage src={admin?.logo_url || undefined} alt={admin?.owner_name || 'Admin'} className="object-cover" />
+                    <AvatarFallback className="gradient-primary text-sm font-medium text-primary-foreground">
+                      {(admin?.owner_name || 'A')[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -206,11 +239,11 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => showComingSoon('Profile')}>
+                <DropdownMenuItem onSelect={() => navigate('/profile')}>
                   <UserRound className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => showComingSoon('Settings')}>
+                <DropdownMenuItem onSelect={() => navigate('/settings')}>
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </DropdownMenuItem>
