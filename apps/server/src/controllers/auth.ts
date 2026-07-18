@@ -6,10 +6,6 @@ const SESSION_COOKIE_NAME = "sessionToken";
 const REFRESH_COOKIE_NAME = "refreshToken";
 const REFRESH_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";
-const AUTH_READ_RATE_LIMIT_WINDOW_MS = Number(process.env.AUTH_READ_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
-const AUTH_READ_RATE_LIMIT_MAX_REQUESTS = Number(process.env.AUTH_READ_RATE_LIMIT_MAX_REQUESTS) || 100;
-const AUTH_WRITE_RATE_LIMIT_WINDOW_MS = Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
-const AUTH_WRITE_RATE_LIMIT_MAX_REQUESTS = Number(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS) || 20;
 const COOKIE_ENCRYPTION_SECRET =
   process.env.SESSION_COOKIE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -25,121 +21,6 @@ type AuthUser = {
   id: string;
   email: string;
 };
-
-type RateLimitEntry = {
-  count: number;
-  resetTime: number;
-};
-
-type RateLimitResult = {
-  allowed: boolean;
-  remaining: number;
-  resetTime: number;
-  retryAfterSeconds: number;
-};
-
-const authReadEntries = new Map<string, RateLimitEntry>();
-const authWriteEntries = new Map<string, RateLimitEntry>();
-
-function hashValue(value: string) {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-function getRequestSource(req: Request) {
-  return req.ip || req.socket.remoteAddress || "unknown";
-}
-
-function pruneExpiredRateLimits(entries: Map<string, RateLimitEntry>, now: number) {
-  for (const [key, entry] of entries.entries()) {
-    if (entry.resetTime <= now) {
-      entries.delete(key);
-    }
-  }
-}
-
-function consumeRateLimit(
-  entries: Map<string, RateLimitEntry>,
-  key: string,
-  windowMs: number,
-  maxRequests: number,
-): RateLimitResult {
-  const now = Date.now();
-  pruneExpiredRateLimits(entries, now);
-
-  const currentEntry = entries.get(key);
-  if (!currentEntry || currentEntry.resetTime <= now) {
-    const resetTime = now + windowMs;
-    entries.set(key, { count: 1, resetTime });
-
-    return {
-      allowed: true,
-      remaining: Math.max(maxRequests - 1, 0),
-      resetTime,
-      retryAfterSeconds: Math.max(1, Math.ceil(windowMs / 1000)),
-    };
-  }
-
-  currentEntry.count += 1;
-
-  return {
-    allowed: currentEntry.count <= maxRequests,
-    remaining: Math.max(maxRequests - currentEntry.count, 0),
-    resetTime: currentEntry.resetTime,
-    retryAfterSeconds: Math.max(1, Math.ceil((currentEntry.resetTime - now) / 1000)),
-  };
-}
-
-function applyRateLimitHeaders(
-  res: Response,
-  maxRequests: number,
-  result: RateLimitResult,
-) {
-  res.setHeader("X-RateLimit-Limit", String(maxRequests));
-  res.setHeader("X-RateLimit-Remaining", String(result.remaining));
-  res.setHeader("X-RateLimit-Reset", String(Math.ceil(result.resetTime / 1000)));
-}
-
-function enforceRateLimit(
-  res: Response,
-  entries: Map<string, RateLimitEntry>,
-  key: string,
-  windowMs: number,
-  maxRequests: number,
-  message: string,
-) {
-  const result = consumeRateLimit(entries, key, windowMs, maxRequests);
-  applyRateLimitHeaders(res, maxRequests, result);
-
-  if (!result.allowed) {
-    res.setHeader("Retry-After", String(result.retryAfterSeconds));
-    res.status(429).json({ message });
-    return false;
-  }
-
-  return true;
-}
-
-function enforceAuthReadLimit(res: Response, key: string) {
-  return enforceRateLimit(
-    res,
-    authReadEntries,
-    key,
-    AUTH_READ_RATE_LIMIT_WINDOW_MS,
-    AUTH_READ_RATE_LIMIT_MAX_REQUESTS,
-    "Too many authentication requests. Please try again later.",
-  );
-}
-
-function enforceAuthWriteLimit(res: Response, key: string) {
-  return enforceRateLimit(
-    res,
-    authWriteEntries,
-    key,
-    AUTH_WRITE_RATE_LIMIT_WINDOW_MS,
-    AUTH_WRITE_RATE_LIMIT_MAX_REQUESTS,
-    "Too many authentication attempts. Please try again later.",
-  );
-}
 
 function encryptCookieValue(value: string) {
   const iv = randomBytes(12);
@@ -221,11 +102,7 @@ async function getAdminByUserId(userId: string) {
   return admin;
 }
 
-async function getUserFromAccessToken(accessToken: string, requestSource: string, res: Response) {
-  if (!enforceAuthReadLimit(res, `access:${requestSource}:${hashValue(accessToken)}`)) {
-    return null;
-  }
-
+async function getUserFromAccessToken(accessToken: string) {
   const authClient = createSupabaseAuthClient();
   const { data, error } = await authClient.auth.getUser(accessToken);
   if (error || !data.user) {
@@ -265,11 +142,7 @@ function getSignupFiles(req: Request) {
     .slice(0, 10);
 }
 
-async function refreshSession(refreshToken: string, requestSource: string, res: Response) {
-  if (!enforceAuthReadLimit(res, `refresh:${requestSource}:${hashValue(refreshToken)}`)) {
-    return null;
-  }
-
+async function refreshSession(refreshToken: string) {
   const authClient = createSupabaseAuthClient();
   const { data, error } = await authClient.auth.refreshSession({
     refresh_token: refreshToken,
@@ -286,7 +159,6 @@ async function refreshSession(refreshToken: string, requestSource: string, res: 
 }
 
 async function resolveAuthenticatedUser(req: Request, res: Response) {
-  const requestSource = getRequestSource(req);
   const accessCookie = req.cookies[SESSION_COOKIE_NAME] as string | undefined;
   const refreshCookie = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
   const accessToken = decryptCookieValue(accessCookie);
@@ -298,12 +170,8 @@ async function resolveAuthenticatedUser(req: Request, res: Response) {
   }
 
   const accessUser = accessToken
-    ? await getUserFromAccessToken(accessToken, requestSource, res)
+    ? await getUserFromAccessToken(accessToken)
     : null;
-
-  if (res.headersSent) {
-    return null;
-  }
 
   if (accessUser) {
     return accessUser;
@@ -313,11 +181,7 @@ async function resolveAuthenticatedUser(req: Request, res: Response) {
     return null;
   }
 
-  const refreshed = await refreshSession(refreshToken, requestSource, res);
-  if (res.headersSent) {
-    return null;
-  }
-
+  const refreshed = await refreshSession(refreshToken);
   if (!refreshed) {
     clearSessionCookies(res);
     return null;
@@ -357,10 +221,6 @@ export async function signup(req: Request, res: Response) {
     return res.status(400).json({
       message: "email, password, gym_name, owner_name, and phone are required",
     });
-  }
-
-  if (!enforceAuthWriteLimit(res, `signup:${getRequestSource(req)}:${authEmail.toLowerCase()}`)) {
-    return;
   }
 
   const signupClient = createSupabaseAuthClient();
@@ -426,10 +286,6 @@ export async function login(req: Request, res: Response) {
     return res.status(400).json({ message: "email and password are required" });
   }
 
-  if (!enforceAuthWriteLimit(res, `login:${getRequestSource(req)}:${email.toLowerCase()}`)) {
-    return;
-  }
-
   const authClient = createSupabaseAuthClient();
   const { data, error } = await authClient.auth.signInWithPassword({ email, password });
   if (error) {
@@ -461,10 +317,6 @@ export async function signout(req: Request, res: Response) {
 
 export async function me(req: Request, res: Response) {
   const user = await resolveAuthenticatedUser(req, res);
-
-  if (res.headersSent) {
-    return;
-  }
 
   if (!user) {
     return res.status(401).json({ message: "Not authenticated" });
