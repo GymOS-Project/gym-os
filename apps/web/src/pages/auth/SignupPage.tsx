@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ const MIN_PHOTOS = 8;
 const MAX_PHOTOS = 10;
 
 export default function SignupPage() {
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -127,6 +127,12 @@ export default function SignupPage() {
     }
   };
 
+
+  useEffect(() => {
+    if (!user) navigate("/")
+
+  }, [])
+
   return (
     <div className="relative min-h-screen flex">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4">
@@ -177,8 +183,8 @@ export default function SignupPage() {
                     step > s.id
                       ? 'border-primary bg-primary'
                       : step === s.id
-                      ? 'border-primary bg-primary/15'
-                      : 'border-white/20'
+                        ? 'border-primary bg-primary/15'
+                        : 'border-white/20'
                   )}
                 >
                   {step > s.id ? (
@@ -406,7 +412,7 @@ export default function SignupPage() {
                           )}
                         </div>
                       )}
-                      
+
                       {/* Empty state */}
                       {gymPhotos.length === 0 && (
                         <label htmlFor="gym_photo" className="flex flex-col items-center justify-center py-6 cursor-pointer">
@@ -417,7 +423,7 @@ export default function SignupPage() {
                           <p className="text-xs text-muted-foreground mt-1">Upload {MIN_PHOTOS}-{MAX_PHOTOS} photos, max 10 MB each</p>
                         </label>
                       )}
-                      
+
                       <Input
                         id="gym_photo"
                         type="file"

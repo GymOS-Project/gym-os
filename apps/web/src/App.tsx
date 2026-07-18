@@ -26,6 +26,8 @@ import ReviewsPage from "@/pages/reports/ReviewsPage";
 import ReferenceMembersPage from "@/pages/reports/ReferenceMembersPage";
 import ShiftReportPage from "@/pages/reports/ShiftReportPage";
 import NearToExpirePage from "@/pages/reports/NearToExpirePage";
+import ProfilePage from "@/pages/account/ProfilePage";
+import SettingsPage from "@/pages/account/SettingsPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -125,6 +127,8 @@ const routes = [
   },
   { path: "/reports/shift", element: <ShiftReportPage />, protected: true },
   { path: "/reports/expiring", element: <NearToExpirePage />, protected: true },
+  { path: "/profile", element: <ProfilePage />, protected: true },
+  { path: "/settings", element: <SettingsPage />, protected: true },
   { path: "*", element: <NotFound /> },
 ];
 

@@ -21,7 +21,7 @@ export default function ShiftReportPage() {
   const fetchData = async () => {
     if (!admin) return;
     setLoading(true);
-    try { setMembers(await api.getShiftReport(admin.id)); }
+    try { setMembers(await api.getShiftReport()); }
     catch { toast.error("Failed to load"); }
     setLoading(false);
   };

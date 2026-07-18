@@ -1,7 +1,8 @@
 import { Router } from "express";
 import multer from "multer";
-import { login, me, signout, signup } from "../controllers/auth";
+import { login, me, signout, signup, updateAdmin } from "../controllers/auth";
 import { createRateLimit } from "../middleware/rateLimit.middleware";
+import { requireAuthenticatedAdmin } from "../middleware/sessionAuth.middleware";
 
 const router = Router();
 const upload = multer({
@@ -27,5 +28,6 @@ router.post("/signup", authWriteLimiter, upload.any(), signup);
 router.post("/login", authWriteLimiter, login);
 router.post("/signout", signout);
 router.get("/me", me);
+router.put("/admin", authWriteLimiter, requireAuthenticatedAdmin, upload.any(), updateAdmin);
 
 export default router;

@@ -22,7 +22,7 @@ export default function SalesHistoryPage() {
   const fetchSales = async () => {
     if (!admin) return;
     setLoading(true);
-    try { setSales(await api.getMemberPackages(admin.id)); }
+    try { setSales(await api.getMemberPackages()); }
     catch { toast.error("Failed to load"); }
     setLoading(false);
   };

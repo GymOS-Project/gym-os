@@ -21,7 +21,7 @@ export default function NearToExpirePage() {
   const fetchData = async () => {
     if (!admin) return;
     setLoading(true);
-    try { setMembers(await api.getNearToExpire(admin.id, parseInt(daysFilter))); }
+    try { setMembers(await api.getNearToExpire(parseInt(daysFilter))); }
     catch { toast.error("Failed to load"); }
     setLoading(false);
   };

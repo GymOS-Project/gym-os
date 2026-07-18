@@ -1,16 +1,28 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { attachMembersByMemberId } from "../services/relatedRecords.service";
 import { supabase } from "../supabase";
 
-export async function listFollowups(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+function getAdminId(req: AuthenticatedRequest, res: Response) {
+  const adminId = req.admin?.id;
+  if (!adminId) {
+    res.status(401).json({ message: "Not authenticated" });
+    return null;
+  }
+
+  return adminId;
+}
+
+export async function listFollowups(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
   }
 
   let query = supabase
     .from("followups")
-    .select("*, members(id, name, phone)")
-    .eq("admin_id", admin_id);
+    .select("*")
+    .eq("admin_id", adminId);
 
   const type = req.query.type as string;
   if (type) {
@@ -22,20 +34,29 @@ export async function listFollowups(req: Request, res: Response) {
     return res.status(500).json({ message: error.message });
   }
 
-  return res.json(data);
+  try {
+    return res.json(await attachMembersByMemberId(data || []));
+  } catch (attachError) {
+    return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load followups" });
+  }
 }
 
-export async function createFollowup(req: Request, res: Response) {
-  const { admin_id, type, member_id, followup_date, next_followup_date, notes, status } = req.body;
+export async function createFollowup(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
 
-  if (!admin_id || !followup_date) {
-    return res.status(400).json({ message: "admin_id and followup_date are required" });
+  const { type, member_id, followup_date, next_followup_date, notes, status } = req.body;
+
+  if (!followup_date) {
+    return res.status(400).json({ message: "followup_date is required" });
   }
 
   const { data, error } = await supabase
     .from("followups")
     .insert({
-      admin_id,
+      admin_id: adminId,
       type,
       member_id: member_id || null,
       followup_date,
@@ -53,7 +74,12 @@ export async function createFollowup(req: Request, res: Response) {
   return res.status(201).json(data);
 }
 
-export async function updateFollowup(req: Request, res: Response) {
+export async function updateFollowup(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
   const { member_id, followup_date, next_followup_date, notes, status } = req.body;
 
   const { data, error } = await supabase
@@ -66,6 +92,7 @@ export async function updateFollowup(req: Request, res: Response) {
       status,
     })
     .eq("id", req.params.id)
+    .eq("admin_id", adminId)
     .select()
     .single();
 

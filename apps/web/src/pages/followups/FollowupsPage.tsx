@@ -36,14 +36,14 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
   const fetchFollowups = async () => {
     if (!admin) return;
     setLoading(true);
-    try { setFollowups(await api.getFollowups(admin.id, type)); }
+    try { setFollowups(await api.getFollowups(type)); }
     catch { toast.error("Failed to load"); }
     setLoading(false);
   };
 
   const fetchMembers = async () => {
     if (!admin) return;
-    try { setMembers(await api.getActiveMembers(admin.id)); }
+    try { setMembers(await api.getActiveMembers()); }
     catch {}
   };
 
@@ -53,7 +53,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
   const handleSave = async () => {
     if (!admin) return;
     setSaving(true);
-    const payload = { admin_id: admin.id, type, member_id: form.member_id !== NO_MEMBER ? form.member_id : undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
+    const payload = { type, member_id: form.member_id !== NO_MEMBER ? form.member_id : undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
     try {
       if (editFu) await api.updateFollowup(editFu.id, payload);
       else await api.createFollowup(payload);

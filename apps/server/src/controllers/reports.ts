@@ -1,32 +1,54 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { attachMemberPackages } from "../services/memberPackages.service";
+import { attachMembersByMemberId } from "../services/relatedRecords.service";
 import { supabase } from "../supabase";
 
-export async function listMemberPackages(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+function getAdminId(req: AuthenticatedRequest, res: Response) {
+  const adminId = req.admin?.id;
+  if (!adminId) {
+    res.status(401).json({ message: "Not authenticated" });
+    return null;
+  }
+
+  return adminId;
+}
+
+export async function listMemberPackages(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
   }
 
   const { data, error } = await supabase
     .from("member_packages")
-    .select("*, members(name, phone)")
-    .eq("admin_id", admin_id)
+    .select("*")
+    .eq("admin_id", adminId)
     .order("created_at", { ascending: false });
 
   if (error) {
     return res.status(500).json({ message: error.message });
   }
 
-  return res.json(data);
+  try {
+    return res.json(await attachMembersByMemberId(data || []));
+  } catch (attachError) {
+    return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load packages" });
+  }
 }
 
-export async function createMemberPackage(req: Request, res: Response) {
-  const { admin_id, member_id, package_type_id, package_name, start_date, end_date, amount_paid, payment_mode } = req.body;
+export async function createMemberPackage(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
+  const { member_id, package_type_id, package_name, start_date, end_date, amount_paid, payment_mode } = req.body;
 
   const { data, error } = await supabase
     .from("member_packages")
     .insert({
-      admin_id,
+      admin_id: adminId,
       member_id,
       package_type_id,
       package_name,
@@ -45,12 +67,12 @@ export async function createMemberPackage(req: Request, res: Response) {
   return res.status(201).json(data);
 }
 
-export async function getNearToExpire(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
+export async function getNearToExpire(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
   const days = parseInt(req.query.days as string, 10) || 7;
 
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+  if (!adminId) {
+    return;
   }
 
   const today = new Date().toISOString().split("T")[0];
@@ -58,8 +80,8 @@ export async function getNearToExpire(req: Request, res: Response) {
 
   const { data, error } = await supabase
     .from("member_packages")
-    .select("*, members(id, name, phone, email, shift)")
-    .eq("admin_id", admin_id)
+    .select("*")
+    .eq("admin_id", adminId)
     .eq("status", "active")
     .gte("end_date", today)
     .lte("end_date", future)
@@ -69,35 +91,48 @@ export async function getNearToExpire(req: Request, res: Response) {
     return res.status(500).json({ message: error.message });
   }
 
-  return res.json(data);
+  try {
+    return res.json(await attachMembersByMemberId(data || [], "id, name, phone, email, shift"));
+  } catch (attachError) {
+    return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load expiring packages" });
+  }
 }
 
-export async function listTransactions(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+export async function listTransactions(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
   }
 
   const { data, error } = await supabase
     .from("transactions")
-    .select("*, members(name, phone)")
-    .eq("admin_id", admin_id)
+    .select("*")
+    .eq("admin_id", adminId)
     .order("transaction_date", { ascending: false });
 
   if (error) {
     return res.status(500).json({ message: error.message });
   }
 
-  return res.json(data);
+  try {
+    return res.json(await attachMembersByMemberId(data || []));
+  } catch (attachError) {
+    return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load transactions" });
+  }
 }
 
-export async function createTransaction(req: Request, res: Response) {
-  const { admin_id, member_id, type, amount, payment_mode, description } = req.body;
+export async function createTransaction(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
+  const { member_id, type, amount, payment_mode, description } = req.body;
 
   const { data, error } = await supabase
     .from("transactions")
     .insert({
-      admin_id,
+      admin_id: adminId,
       member_id,
       type,
       amount,
@@ -114,32 +149,41 @@ export async function createTransaction(req: Request, res: Response) {
   return res.status(201).json(data);
 }
 
-export async function listReviews(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+export async function listReviews(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
   }
 
   const { data, error } = await supabase
     .from("reviews")
-    .select("*, members(name, phone)")
-    .eq("admin_id", admin_id)
+    .select("*")
+    .eq("admin_id", adminId)
     .order("review_date", { ascending: false });
 
   if (error) {
     return res.status(500).json({ message: error.message });
   }
 
-  return res.json(data);
+  try {
+    return res.json(await attachMembersByMemberId(data || []));
+  } catch (attachError) {
+    return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load reviews" });
+  }
 }
 
-export async function createReview(req: Request, res: Response) {
-  const { admin_id, member_id, rating, comment, review_date } = req.body;
+export async function createReview(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
+  const { member_id, rating, comment, review_date } = req.body;
 
   const { data, error } = await supabase
     .from("reviews")
     .insert({
-      admin_id,
+      admin_id: adminId,
       member_id: member_id || null,
       rating,
       comment: comment || null,
@@ -155,16 +199,16 @@ export async function createReview(req: Request, res: Response) {
   return res.status(201).json(data);
 }
 
-export async function listReferenceMembers(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+export async function listReferenceMembers(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
   }
 
   const { data: members, error } = await supabase
     .from("members")
     .select("id, name, phone, reference_member_id")
-    .eq("admin_id", admin_id)
+    .eq("admin_id", adminId)
     .not("reference_member_id", "is", null);
 
   if (error) {
@@ -190,21 +234,25 @@ export async function listReferenceMembers(req: Request, res: Response) {
   return res.json(Object.values(grouped));
 }
 
-export async function getShiftReport(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+export async function getShiftReport(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
   }
 
   const { data, error } = await supabase
     .from("members")
-    .select("id, name, phone, shift, is_active, member_packages(status, end_date, package_name)")
-    .eq("admin_id", admin_id)
+    .select("id, name, phone, shift, is_active")
+    .eq("admin_id", adminId)
     .order("shift");
 
   if (error) {
     return res.status(500).json({ message: error.message });
   }
 
-  return res.json(data);
+  try {
+    return res.json(await attachMemberPackages(data || [], adminId));
+  } catch (attachError) {
+    return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load shift report" });
+  }
 }

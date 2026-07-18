@@ -1,16 +1,27 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { supabase } from "../supabase";
 
-export async function listPlans(req: Request, res: Response) {
-  const admin_id = req.query.admin_id as string;
-  if (!admin_id) {
-    return res.status(400).json({ message: "admin_id is required" });
+function getAdminId(req: AuthenticatedRequest, res: Response) {
+  const adminId = req.admin?.id;
+  if (!adminId) {
+    res.status(401).json({ message: "Not authenticated" });
+    return null;
+  }
+
+  return adminId;
+}
+
+export async function listPlans(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
   }
 
   const { data, error } = await supabase
     .from("package_types")
     .select("*")
-    .eq("admin_id", admin_id)
+    .eq("admin_id", adminId)
     .order("created_at");
 
   if (error) {
@@ -20,17 +31,22 @@ export async function listPlans(req: Request, res: Response) {
   return res.json(data);
 }
 
-export async function createPlan(req: Request, res: Response) {
-  const { admin_id, name, duration_months, duration_days, price, description } = req.body;
+export async function createPlan(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
 
-  if (!admin_id || !name || price == null) {
-    return res.status(400).json({ message: "admin_id, name, and price are required" });
+  const { name, duration_months, duration_days, price, description } = req.body;
+
+  if (!name || price == null) {
+    return res.status(400).json({ message: "name and price are required" });
   }
 
   const { data, error } = await supabase
     .from("package_types")
     .insert({
-      admin_id,
+      admin_id: adminId,
       name,
       duration_months: duration_months || null,
       duration_days: duration_days || null,
@@ -47,20 +63,32 @@ export async function createPlan(req: Request, res: Response) {
   return res.status(201).json(data);
 }
 
-export async function updatePlan(req: Request, res: Response) {
+export async function updatePlan(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
   const { name, duration_months, duration_days, price, description, is_active } = req.body;
+
+  const updatePayload: Record<string, any> = {};
+  if (name !== undefined) updatePayload.name = name;
+  if (price !== undefined) updatePayload.price = price;
+
+  if (duration_months !== undefined) updatePayload.duration_months = duration_months;
+  if (duration_days !== undefined) updatePayload.duration_days = duration_days;
+  if (description !== undefined) updatePayload.description = description;
+  if (is_active !== undefined) updatePayload.is_active = is_active;
+
+  if (Object.keys(updatePayload).length === 0) {
+    return res.status(400).json({ message: "No valid fields provided for update" });
+  }
 
   const { data, error } = await supabase
     .from("package_types")
-    .update({
-      name,
-      duration_months: duration_months || null,
-      duration_days: duration_days || null,
-      price,
-      description: description || null,
-      is_active,
-    })
+    .update(updatePayload)
     .eq("id", req.params.id)
+    .eq("admin_id", adminId)
     .select()
     .single();
 
@@ -71,8 +99,13 @@ export async function updatePlan(req: Request, res: Response) {
   return res.json(data);
 }
 
-export async function deletePlan(req: Request, res: Response) {
-  const { error } = await supabase.from("package_types").delete().eq("id", req.params.id);
+export async function deletePlan(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
+  const { error } = await supabase.from("package_types").delete().eq("id", req.params.id).eq("admin_id", adminId);
 
   if (error) {
     return res.status(500).json({ message: error.message });

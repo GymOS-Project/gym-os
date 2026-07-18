@@ -7,8 +7,11 @@ import {
   listEnquiryFollowups,
   updateEnquiry,
 } from "../controllers/enquiries";
+import { requireAuthenticatedAdmin } from "../middleware/sessionAuth.middleware";
 
 const router = Router();
+
+router.use(requireAuthenticatedAdmin);
 
 router.get("/", listEnquiries);
 router.post("/", createEnquiry);

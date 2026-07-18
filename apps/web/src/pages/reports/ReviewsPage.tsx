@@ -27,14 +27,14 @@ export default function ReviewsPage() {
   const fetchReviews = async () => {
     if (!admin) return;
     setLoading(true);
-    try { setReviews(await api.getReviews(admin.id)); }
+    try { setReviews(await api.getReviews()); }
     catch { toast.error("Failed to load reviews"); }
     setLoading(false);
   };
 
   const fetchMembers = async () => {
     if (!admin) return;
-    try { setMembers(await api.getActiveMembers(admin.id)); }
+    try { setMembers(await api.getActiveMembers()); }
     catch {}
   };
 
@@ -43,7 +43,6 @@ export default function ReviewsPage() {
     setSaving(true);
     try {
         await api.createReview({
-          admin_id: admin.id,
           member_id: form.member_id !== ANONYMOUS_MEMBER ? form.member_id : undefined,
           rating: parseInt(form.rating),
           comment: form.comment || undefined,

@@ -22,7 +22,7 @@ export default function TransactionsPage() {
   const fetchTxns = async () => {
     if (!admin) return;
     setLoading(true);
-    try { setTxns(await api.getTransactions(admin.id)); }
+    try { setTxns(await api.getTransactions()); }
     catch { toast.error("Failed to load transactions"); }
     setLoading(false);
   };

@@ -37,7 +37,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
   const fetchEnquiries = async () => {
     if (!admin) return;
     setLoading(true);
-    try { setEnquiries(await api.getEnquiries(admin.id, filterStatus)); }
+    try { setEnquiries(await api.getEnquiries(filterStatus)); }
     catch { toast.error("Failed to load enquiries"); }
     setLoading(false);
   };
@@ -71,7 +71,6 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
     setSaving(true);
     try {
       await api.addEnquiryFollowup(followupDialog.id, {
-        admin_id: admin.id,
         followup_date: new Date().toISOString().split("T")[0],
         next_followup_date: fuForm.next_followup_date || undefined,
         notes: fuForm.notes || undefined,
