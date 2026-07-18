@@ -1,3 +1,4 @@
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import type { CookieOptions, Request, Response } from "express";
 import { createSupabaseAuthClient, supabase } from "../supabase";
 
@@ -5,11 +6,54 @@ const SESSION_COOKIE_NAME = "sessionToken";
 const REFRESH_COOKIE_NAME = "refreshToken";
 const REFRESH_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";
+const COOKIE_ENCRYPTION_SECRET =
+  process.env.SESSION_COOKIE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!COOKIE_ENCRYPTION_SECRET) {
+  throw new Error("SESSION_COOKIE_SECRET or SUPABASE_SERVICE_ROLE_KEY must be set.");
+}
+
+const COOKIE_ENCRYPTION_KEY = createHash("sha256")
+  .update(COOKIE_ENCRYPTION_SECRET)
+  .digest();
 
 type AuthUser = {
   id: string;
   email: string;
 };
+
+function encryptCookieValue(value: string) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", COOKIE_ENCRYPTION_KEY, iv);
+  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+
+  return Buffer.concat([iv, tag, encrypted]).toString("base64url");
+}
+
+function decryptCookieValue(value?: string) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const payload = Buffer.from(value, "base64url");
+    if (payload.length <= 28) {
+      return null;
+    }
+
+    const iv = payload.subarray(0, 12);
+    const tag = payload.subarray(12, 28);
+    const encrypted = payload.subarray(28);
+    const decipher = createDecipheriv("aes-256-gcm", COOKIE_ENCRYPTION_KEY, iv);
+
+    decipher.setAuthTag(tag);
+
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+  } catch {
+    return null;
+  }
+}
 
 function getCookieOptions(maxAge?: number): CookieOptions {
   return {
@@ -29,12 +73,12 @@ function setSessionCookies(
 
   res.cookie(
     SESSION_COOKIE_NAME,
-    session.access_token,
+    encryptCookieValue(session.access_token),
     getCookieOptions(accessMaxAge)
   );
   res.cookie(
     REFRESH_COOKIE_NAME,
-    session.refresh_token,
+    encryptCookieValue(session.refresh_token),
     getCookieOptions(REFRESH_COOKIE_MAX_AGE)
   );
 }
@@ -115,8 +159,15 @@ async function refreshSession(refreshToken: string) {
 }
 
 async function resolveAuthenticatedUser(req: Request, res: Response) {
-  const accessToken = req.cookies[SESSION_COOKIE_NAME] as string | undefined;
-  const refreshToken = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
+  const accessCookie = req.cookies[SESSION_COOKIE_NAME] as string | undefined;
+  const refreshCookie = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
+  const accessToken = decryptCookieValue(accessCookie);
+  const refreshToken = decryptCookieValue(refreshCookie);
+
+  if ((accessCookie && !accessToken) || (refreshCookie && !refreshToken)) {
+    clearSessionCookies(res);
+    return null;
+  }
 
   const accessUser = accessToken
     ? await getUserFromAccessToken(accessToken)
@@ -253,7 +304,7 @@ export async function login(req: Request, res: Response) {
 }
 
 export async function signout(req: Request, res: Response) {
-  const token = req.cookies[SESSION_COOKIE_NAME] as string | undefined;
+  const token = decryptCookieValue(req.cookies[SESSION_COOKIE_NAME] as string | undefined);
 
   clearSessionCookies(res);
 

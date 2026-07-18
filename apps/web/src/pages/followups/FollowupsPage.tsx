@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Followup, Member } from "@/types";
 
+const NO_MEMBER = "__none__";
+
 interface FollowupsPageProps {
   type: "general" | "payment_due" | "renewal";
   title: string;
@@ -27,7 +29,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editFu, setEditFu] = useState<Followup | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ member_id: "", followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" });
+  const [form, setForm] = useState({ member_id: NO_MEMBER, followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" });
 
   useEffect(() => { if (admin) { fetchFollowups(); fetchMembers(); } }, [admin, type]);
 
@@ -45,13 +47,13 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
     catch {}
   };
 
-  const openAdd = () => { setEditFu(null); setForm({ member_id: "", followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
-  const openEdit = (fu: Followup) => { setEditFu(fu); setForm({ member_id: fu.member_id || "", followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || "", notes: fu.notes || "", status: fu.status }); setDialogOpen(true); };
+  const openAdd = () => { setEditFu(null); setForm({ member_id: NO_MEMBER, followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
+  const openEdit = (fu: Followup) => { setEditFu(fu); setForm({ member_id: fu.member_id || NO_MEMBER, followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || "", notes: fu.notes || "", status: fu.status }); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!admin) return;
     setSaving(true);
-    const payload = { admin_id: admin.id, type, member_id: form.member_id || undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
+    const payload = { admin_id: admin.id, type, member_id: form.member_id !== NO_MEMBER ? form.member_id : undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
     try {
       if (editFu) await api.updateFollowup(editFu.id, payload);
       else await api.createFollowup(payload);
@@ -146,13 +148,13 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Member</Label>
-              <Select value={form.member_id} onValueChange={(v) => setForm((p) => ({ ...p, member_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None</SelectItem>
-                  {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.phone}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                <Select value={form.member_id} onValueChange={(v) => setForm((p) => ({ ...p, member_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_MEMBER}>None</SelectItem>
+                    {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.phone}</SelectItem>)}
+                  </SelectContent>
+                </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">

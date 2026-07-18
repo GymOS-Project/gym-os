@@ -3,7 +3,8 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, ClipboardList, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, X } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, ClipboardList, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, Settings, UserRound, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface NavItem {
@@ -121,6 +122,10 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const showComingSoon = (label: string) => {
+    toast(`${label} is coming soon`);
+  };
+
   const handleSignOut = async () => {
     await signOut();
     toast.success('Signed out successfully');
@@ -146,17 +151,6 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           <NavItemComponent key={item.label} item={item} />
         ))}
       </nav>
-
-      {/* Footer */}
-      <div className="border-t border-sidebar-border p-3">
-        <button
-          onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Sign Out</span>
-        </button>
-      </div>
     </div>
   );
 
@@ -193,9 +187,40 @@ export function AppLayout({ children, title }: AppLayoutProps) {
               <p className="text-sm font-medium text-foreground">{admin?.owner_name}</p>
               <p className="text-xs text-muted-foreground">{admin?.gym_name}</p>
             </div>
-            <div className="gradient-primary flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-primary-foreground shadow-sm">
-              {(admin?.owner_name || 'A')[0].toUpperCase()}
-            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="gradient-primary flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-primary-foreground shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Open account menu"
+                >
+                  {(admin?.owner_name || 'A')[0].toUpperCase()}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium text-foreground">{admin?.owner_name || 'Admin'}</p>
+                    <p className="text-xs font-normal text-muted-foreground">{admin?.gym_name || 'GymOs'}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => showComingSoon('Profile')}>
+                  <UserRound className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => showComingSoon('Settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">

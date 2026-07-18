@@ -11,6 +11,8 @@ import { Star, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { Review } from "@/types";
 
+const ANONYMOUS_MEMBER = "__anonymous__";
+
 export default function ReviewsPage() {
   const { admin } = useAuth();
   const [reviews, setReviews] = useState<(Review & { members?: { name: string; phone: string } })[]>([]);
@@ -18,7 +20,7 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ member_id: "", rating: "5", comment: "", review_date: new Date().toISOString().split("T")[0] });
+  const [form, setForm] = useState({ member_id: ANONYMOUS_MEMBER, rating: "5", comment: "", review_date: new Date().toISOString().split("T")[0] });
 
   useEffect(() => { if (admin) { fetchReviews(); fetchMembers(); } }, [admin]);
 
@@ -40,12 +42,12 @@ export default function ReviewsPage() {
     if (!admin) return;
     setSaving(true);
     try {
-      await api.createReview({
-        admin_id: admin.id,
-        member_id: form.member_id || undefined,
-        rating: parseInt(form.rating),
-        comment: form.comment || undefined,
-        review_date: form.review_date,
+        await api.createReview({
+          admin_id: admin.id,
+          member_id: form.member_id !== ANONYMOUS_MEMBER ? form.member_id : undefined,
+          rating: parseInt(form.rating),
+          comment: form.comment || undefined,
+          review_date: form.review_date,
       });
       toast.success("Review added");
       setDialogOpen(false);
@@ -120,13 +122,13 @@ export default function ReviewsPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Member</Label>
-              <Select value={form.member_id} onValueChange={(v) => setForm((p) => ({ ...p, member_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Anonymous</SelectItem>
-                  {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                <Select value={form.member_id} onValueChange={(v) => setForm((p) => ({ ...p, member_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ANONYMOUS_MEMBER}>Anonymous</SelectItem>
+                    {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Rating</Label>
