@@ -34,6 +34,13 @@ router.post("/signup", authWriteLimiter, upload.any(), signup);
 router.post("/login", authWriteLimiter, login);
 router.post("/signout", signout);
 router.get("/me", me);
-router.put("/admin", authWriteLimiter, adminAuthLimiter, requireAuthenticatedAdmin, upload.any(), updateAdmin);
+router.put(
+  "/admin",
+  authWriteLimiter,
+  adminAuthLimiter,
+  requireAuthenticatedAdmin,
+  upload.any(),
+  updateAdmin
+);
 
 export default router;
