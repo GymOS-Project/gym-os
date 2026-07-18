@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Dumbbell, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,14 +29,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="relative min-h-screen flex">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4">
+        <ThemeToggle className="pointer-events-auto" />
+      </div>
+
       {/* Left Panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 flex-col items-center justify-center p-12 relative overflow-hidden">
+      <div className="gradient-accent relative hidden overflow-hidden p-12 lg:flex lg:w-1/2 lg:flex-col lg:items-center lg:justify-center">
         <div className="absolute inset-0 opacity-10">
           {Array.from({ length: 20 }).map((_, i) => (
             <div
               key={i}
-              className="absolute rounded-full border border-teal-400"
+              className="absolute rounded-full border border-primary/60"
               style={{
                 width: `${Math.random() * 200 + 50}px`,
                 height: `${Math.random() * 200 + 50}px`,
@@ -48,19 +53,19 @@ export default function LoginPage() {
         </div>
         <div className="relative z-10 text-center max-w-md">
           <div className="flex items-center justify-center mb-8">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-teal-500/20 border border-teal-500/30 backdrop-blur">
-              <Dumbbell className="h-10 w-10 text-teal-400" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/25 bg-primary/15 backdrop-blur">
+              <Dumbbell className="h-10 w-10 text-primary" />
             </div>
           </div>
           <h1 className="text-4xl font-bold text-white mb-4">GymOs Admin</h1>
-          <p className="text-slate-300 text-lg leading-relaxed">
+          <p className="text-lg leading-relaxed text-white/75">
             Your complete gym management solution. Manage members, track revenue, follow up leads — all in one place.
           </p>
           <div className="mt-10 grid grid-cols-3 gap-4 text-center">
             {[['Members', '∞'], ['Reports', '📊'], ['Follow-ups', '🔔']].map(([label, icon]) => (
-              <div key={label} className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <div key={label} className="rounded-xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm">
                 <div className="text-2xl mb-1">{icon}</div>
-                <div className="text-sm text-slate-400">{label}</div>
+                <div className="text-sm text-white/65">{label}</div>
               </div>
             ))}
           </div>
@@ -69,10 +74,10 @@ export default function LoginPage() {
 
       {/* Right Panel */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card/85 p-8 shadow-elevated backdrop-blur-xl">
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500">
-              <Dumbbell className="h-5 w-5 text-white" />
+            <div className="gradient-primary flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground shadow-sm">
+              <Dumbbell className="h-5 w-5" />
             </div>
             <h1 className="text-2xl font-bold">GymOs</h1>
           </div>
@@ -115,14 +120,14 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full h-11 bg-teal-600 hover:bg-teal-700 text-white" disabled={loading}>
+            <Button type="submit" variant="gradient" className="w-full h-11" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
 
           <p className="text-center mt-6 text-muted-foreground text-sm">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-teal-600 hover:text-teal-700 font-medium">
+            <Link to="/signup" className="font-medium text-primary hover:text-primary/80">
               Create one
             </Link>
           </p>

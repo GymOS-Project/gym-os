@@ -32,7 +32,7 @@ export default function ReferenceMembersPage() {
     <AppLayout title="Reference Members">
       <div className="space-y-5">
         <div className="flex items-center gap-3">
-          <Share2 className="h-6 w-6 text-teal-600" />
+          <Share2 className="h-6 w-6 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Reference Members</h1>
             <p className="text-muted-foreground mt-0.5">Members who referred others to your gym</p>

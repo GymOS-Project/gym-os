@@ -11,10 +11,10 @@ interface StatCardProps {
 
 const variantStyles = {
   default: { card: 'bg-card', icon: 'bg-muted text-foreground' },
-  primary: { card: 'bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800', icon: 'bg-teal-500 text-white' },
-  success: { card: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800', icon: 'bg-green-500 text-white' },
-  warning: { card: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800', icon: 'bg-amber-500 text-white' },
-  destructive: { card: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800', icon: 'bg-red-500 text-white' },
+  primary: { card: 'border-primary/20 bg-primary/10', icon: 'gradient-primary text-primary-foreground' },
+  success: { card: 'border-success/20 bg-success/10', icon: 'bg-success text-success-foreground' },
+  warning: { card: 'border-warning/20 bg-warning/10', icon: 'bg-warning text-warning-foreground' },
+  destructive: { card: 'border-destructive/20 bg-destructive/10', icon: 'bg-destructive text-destructive-foreground' },
 };
 
 export function StatCard({ title, value, subtitle, icon: Icon, variant = 'default' }: StatCardProps) {

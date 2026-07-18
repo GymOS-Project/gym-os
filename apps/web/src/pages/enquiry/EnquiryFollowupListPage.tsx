@@ -31,7 +31,7 @@ export default function EnquiryFollowupListPage() {
   );
 
   const statusBadge = (s: string) => {
-    const cfg: Record<string, string> = { done: "bg-green-100 text-green-700", no_response: "bg-slate-100 text-slate-700", pending: "bg-amber-100 text-amber-700" };
+    const cfg: Record<string, string> = { done: "badge-success", no_response: "badge-secondary", pending: "badge-warning" };
     return <Badge className={cfg[s] || ""}>{s.replace("_", " ")}</Badge>;
   };
 
@@ -39,7 +39,7 @@ export default function EnquiryFollowupListPage() {
     <AppLayout title="Enquiry Follow Up List">
       <div className="space-y-5">
         <div className="flex items-center gap-3">
-          <Bell className="h-6 w-6 text-teal-600" />
+          <Bell className="h-6 w-6 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Enquiry Follow Up List</h1>
             <p className="text-muted-foreground mt-0.5">All follow-up records for enquiries</p>

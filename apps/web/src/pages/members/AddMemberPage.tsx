@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import type { PackageType } from "@/types";
 import { addDays, addMonths, format } from "date-fns";
 
+const NO_REFERENCE_MEMBER = "__none__";
+
 export default function AddMemberPage() {
   const { admin } = useAuth();
   const navigate = useNavigate();
@@ -21,7 +23,7 @@ export default function AddMemberPage() {
   const [form, setForm] = useState({
     name: "", email: "", phone: "", gender: "", date_of_birth: "",
     address: "", emergency_contact: "", shift: "", notes: "",
-    reference_member_id: "",
+    reference_member_id: NO_REFERENCE_MEMBER,
     package_type_id: "", start_date: format(new Date(), "yyyy-MM-dd"),
     amount_paid: "", payment_mode: "cash",
   });
@@ -60,7 +62,10 @@ export default function AddMemberPage() {
         emergency_contact: form.emergency_contact || undefined,
         shift: form.shift || undefined,
         notes: form.notes || undefined,
-        reference_member_id: form.reference_member_id || undefined,
+        reference_member_id:
+          form.reference_member_id && form.reference_member_id !== NO_REFERENCE_MEMBER
+            ? form.reference_member_id
+            : undefined,
       });
 
       if (form.package_type_id && endDate) {
@@ -156,7 +161,7 @@ export default function AddMemberPage() {
                 <Select value={form.reference_member_id} onValueChange={(v) => set("reference_member_id", v)}>
                   <SelectTrigger><SelectValue placeholder="Select reference" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value={NO_REFERENCE_MEMBER}>None</SelectItem>
                     {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -177,7 +182,7 @@ export default function AddMemberPage() {
                   <SelectTrigger><SelectValue placeholder="Select package" /></SelectTrigger>
                   <SelectContent>
                     {packages.length === 0
-                      ? <SelectItem value="" disabled>No packages. Add from Members &gt; Package Types.</SelectItem>
+                      ? <SelectItem value="__no_packages__" disabled>No packages. Add from Members &gt; Package Types.</SelectItem>
                       : packages.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} — ₹{p.price}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -214,7 +219,7 @@ export default function AddMemberPage() {
 
           <div className="flex gap-3">
             <Button type="button" variant="outline" onClick={() => navigate("/members")}>Cancel</Button>
-            <Button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white" disabled={loading}>
+            <Button type="submit" variant="gradient" disabled={loading}>
               {loading ? "Adding..." : "Add Member"}
             </Button>
           </div>

@@ -96,7 +96,7 @@ export default function PackageTypesPage() {
             <h1 className="text-2xl font-bold">Package Types</h1>
             <p className="text-muted-foreground mt-1">Define your gym subscription packages</p>
           </div>
-          <Button onClick={openAdd} className="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+          <Button onClick={openAdd} variant="gradient" className="gap-2">
             <Plus className="h-4 w-4" /> Add Package
           </Button>
         </div>
@@ -126,11 +126,11 @@ export default function PackageTypesPage() {
                     {pkg.duration_months ? `${pkg.duration_months} month${pkg.duration_months > 1 ? "s" : ""}` : pkg.duration_days ? `${pkg.duration_days} days` : "Custom"}
                   </p>
                 </div>
-                <Badge variant={pkg.is_active ? "default" : "secondary"} className={pkg.is_active ? "bg-teal-100 text-teal-700 border-teal-200" : ""}>
+                <Badge variant={pkg.is_active ? "default" : "secondary"} className={pkg.is_active ? "badge-primary" : ""}>
                   {pkg.is_active ? "Active" : "Inactive"}
                 </Badge>
               </div>
-              <p className="text-2xl font-bold text-teal-600">₹{Number(pkg.price).toLocaleString()}</p>
+              <p className="text-2xl font-bold text-primary">₹{Number(pkg.price).toLocaleString()}</p>
               {pkg.description && <p className="text-sm text-muted-foreground mt-1">{pkg.description}</p>}
               <div className="flex items-center justify-between mt-4 pt-3 border-t">
                 <Switch checked={pkg.is_active} onCheckedChange={() => toggleActive(pkg)} />
@@ -178,7 +178,7 @@ export default function PackageTypesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white">{saving ? "Saving..." : editPkg ? "Update" : "Add Package"}</Button>
+            <Button onClick={handleSave} variant="gradient" disabled={saving}>{saving ? "Saving..." : editPkg ? "Update" : "Add Package"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -191,7 +191,7 @@ export default function PackageTypesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

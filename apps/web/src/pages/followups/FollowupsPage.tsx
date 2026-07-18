@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Followup, Member } from "@/types";
 
+const NO_MEMBER = "__none__";
+
 interface FollowupsPageProps {
   type: "general" | "payment_due" | "renewal";
   title: string;
@@ -27,7 +29,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editFu, setEditFu] = useState<Followup | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ member_id: "", followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" });
+  const [form, setForm] = useState({ member_id: NO_MEMBER, followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" });
 
   useEffect(() => { if (admin) { fetchFollowups(); fetchMembers(); } }, [admin, type]);
 
@@ -45,13 +47,13 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
     catch {}
   };
 
-  const openAdd = () => { setEditFu(null); setForm({ member_id: "", followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
-  const openEdit = (fu: Followup) => { setEditFu(fu); setForm({ member_id: fu.member_id || "", followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || "", notes: fu.notes || "", status: fu.status }); setDialogOpen(true); };
+  const openAdd = () => { setEditFu(null); setForm({ member_id: NO_MEMBER, followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
+  const openEdit = (fu: Followup) => { setEditFu(fu); setForm({ member_id: fu.member_id || NO_MEMBER, followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || "", notes: fu.notes || "", status: fu.status }); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!admin) return;
     setSaving(true);
-    const payload = { admin_id: admin.id, type, member_id: form.member_id || undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
+    const payload = { admin_id: admin.id, type, member_id: form.member_id !== NO_MEMBER ? form.member_id : undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
     try {
       if (editFu) await api.updateFollowup(editFu.id, payload);
       else await api.createFollowup(payload);
@@ -69,9 +71,9 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
 
   const statusBadge = (s: string) => {
     switch (s) {
-      case "done": return <Badge className="bg-green-100 text-green-700 border-green-200">Done</Badge>;
-      case "no_response": return <Badge className="bg-slate-100 text-slate-700 border-slate-200">No Response</Badge>;
-      default: return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Pending</Badge>;
+      case "done": return <Badge className="badge-success">Done</Badge>;
+      case "no_response": return <Badge className="badge-secondary">No Response</Badge>;
+      default: return <Badge className="badge-warning">Pending</Badge>;
     }
   };
 
@@ -83,7 +85,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
             <h1 className="text-2xl font-bold">{title}</h1>
             <p className="text-muted-foreground mt-1">{description}</p>
           </div>
-          <Button onClick={openAdd} className="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+          <Button onClick={openAdd} variant="gradient" className="gap-2">
             <Plus className="h-4 w-4" /> Add Follow-up
           </Button>
         </div>
@@ -119,12 +121,12 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       {fu.members && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500" onClick={() => window.open(`tel:${fu.members!.phone}`)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${fu.members!.phone}`)}>
                           <Phone className="h-3.5 w-3.5" />
                         </Button>
                       )}
                       {fu.status === "pending" && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500" onClick={() => markDone(fu.id)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-success hover:bg-success/10 hover:text-success" onClick={() => markDone(fu.id)}>
                           <Check className="h-3.5 w-3.5" />
                         </Button>
                       )}
@@ -146,13 +148,13 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Member</Label>
-              <Select value={form.member_id} onValueChange={(v) => setForm((p) => ({ ...p, member_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None</SelectItem>
-                  {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.phone}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                <Select value={form.member_id} onValueChange={(v) => setForm((p) => ({ ...p, member_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_MEMBER}>None</SelectItem>
+                    {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.phone}</SelectItem>)}
+                  </SelectContent>
+                </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -182,7 +184,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white">{saving ? "Saving..." : editFu ? "Update" : "Add"}</Button>
+            <Button onClick={handleSave} variant="gradient" disabled={saving}>{saving ? "Saving..." : editFu ? "Update" : "Add"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

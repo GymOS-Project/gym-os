@@ -58,8 +58,8 @@ export default function DashboardPage() {
                 <AreaChart data={stats.revenueChart}>
                   <defs>
                     <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(174, 72%, 40%)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(174, 72%, 40%)" stopOpacity={0} />
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -69,7 +69,7 @@ export default function DashboardPage() {
                     contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
                     formatter={(v: number) => [`₹${v.toLocaleString()}`, "Revenue"]}
                   />
-                  <Area type="monotone" dataKey="revenue" stroke="hsl(174, 72%, 40%)" fill="url(#revGrad)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fill="url(#revGrad)" strokeWidth={2.5} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -101,7 +101,7 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {recentMembers.map((m) => (
                 <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-500/20 text-teal-600 font-semibold text-sm">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary font-semibold text-sm">
                     {m.name[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">

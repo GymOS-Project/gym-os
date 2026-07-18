@@ -41,7 +41,7 @@ export default function SalesHistoryPage() {
   const totalRevenue = filtered.reduce((sum, s) => sum + Number(s.amount_paid || 0), 0);
 
   const statusBadge = (s: string) => {
-    const cfg: Record<string, string> = { active: "bg-green-100 text-green-700", expired: "bg-red-100 text-red-700", cancelled: "bg-slate-100 text-slate-700" };
+    const cfg: Record<string, string> = { active: "badge-success", expired: "badge-destructive", cancelled: "badge-secondary" };
     return <Badge className={cfg[s] || ""}>{s}</Badge>;
   };
 
@@ -49,7 +49,7 @@ export default function SalesHistoryPage() {
     <AppLayout title="Sales History">
       <div className="space-y-5">
         <div className="flex items-center gap-3">
-          <BarChart2 className="h-6 w-6 text-teal-600" />
+          <BarChart2 className="h-6 w-6 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Sales History</h1>
             <p className="text-muted-foreground mt-0.5">All membership sales and renewals</p>
@@ -58,7 +58,7 @@ export default function SalesHistoryPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border bg-card p-5">
             <p className="text-sm text-muted-foreground">Filtered Revenue</p>
-            <p className="text-2xl font-bold text-teal-600 mt-1">₹{totalRevenue.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-primary mt-1">₹{totalRevenue.toLocaleString()}</p>
           </div>
           <div className="rounded-xl border bg-card p-5">
             <p className="text-sm text-muted-foreground">Total Sales</p>
@@ -103,7 +103,7 @@ export default function SalesHistoryPage() {
                   <TableCell className="text-sm">{s.package_name}</TableCell>
                   <TableCell className="text-sm">{new Date(s.start_date).toLocaleDateString()}</TableCell>
                   <TableCell className="text-sm">{new Date(s.end_date).toLocaleDateString()}</TableCell>
-                  <TableCell className="font-medium text-teal-600">₹{Number(s.amount_paid).toLocaleString()}</TableCell>
+                  <TableCell className="font-medium text-primary">₹{Number(s.amount_paid).toLocaleString()}</TableCell>
                   <TableCell className="text-sm capitalize">{s.payment_mode}</TableCell>
                   <TableCell>{statusBadge(s.status)}</TableCell>
                 </TableRow>

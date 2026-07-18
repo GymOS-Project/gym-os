@@ -33,7 +33,7 @@ export default function NearToExpirePage() {
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-6 w-6 text-amber-500" />
+            <AlertTriangle className="h-6 w-6 text-warning" />
             <div>
               <h1 className="text-2xl font-bold">Near to Expire</h1>
               <p className="text-muted-foreground mt-0.5">Members whose packages are expiring soon</p>
@@ -49,9 +49,9 @@ export default function NearToExpirePage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="rounded-xl border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-4 flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
-          <p className="text-sm text-amber-700 dark:text-amber-400">
+        <div className="flex items-center gap-3 rounded-xl border border-warning/20 bg-warning/10 p-4">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
+          <p className="text-sm text-warning">
             <strong>{members.length}</strong> member{members.length !== 1 ? "s" : ""} expiring in the next {daysFilter} days.
           </p>
         </div>
@@ -82,13 +82,13 @@ export default function NearToExpirePage() {
                     <TableCell className="text-sm">{m.package_name}</TableCell>
                     <TableCell className="text-sm">{new Date(m.end_date).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <Badge className={days <= 3 ? "bg-red-100 text-red-700" : days <= 7 ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}>
+                      <Badge className={days <= 3 ? "badge-destructive" : days <= 7 ? "badge-warning" : "badge-primary"}>
                         {days === 0 ? "Today" : `${days}d`}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500" onClick={() => window.open(`tel:${m.members?.phone}`)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${m.members?.phone}`)}>
                           <Phone className="h-3.5 w-3.5" />
                         </Button>
                       </div>

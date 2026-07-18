@@ -98,7 +98,7 @@ export default function AddEnquiryPage() {
           </div>
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" onClick={() => navigate("/enquiry")}>Cancel</Button>
-            <Button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white" disabled={loading}>
+            <Button type="submit" variant="gradient" disabled={loading}>
               {loading ? "Adding..." : "Add Enquiry"}
             </Button>
           </div>

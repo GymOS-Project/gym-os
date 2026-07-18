@@ -1,15 +1,59 @@
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import type { CookieOptions, Request, Response } from "express";
-import { supabase } from "../supabase";
+import { createSupabaseAuthClient, supabase } from "../supabase";
 
 const SESSION_COOKIE_NAME = "sessionToken";
 const REFRESH_COOKIE_NAME = "refreshToken";
 const REFRESH_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";
+const COOKIE_ENCRYPTION_SECRET =
+  process.env.SESSION_COOKIE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!COOKIE_ENCRYPTION_SECRET) {
+  throw new Error("SESSION_COOKIE_SECRET or SUPABASE_SERVICE_ROLE_KEY must be set.");
+}
+
+const COOKIE_ENCRYPTION_KEY = createHash("sha256")
+  .update(COOKIE_ENCRYPTION_SECRET)
+  .digest();
 
 type AuthUser = {
   id: string;
   email: string;
 };
+
+function encryptCookieValue(value: string) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", COOKIE_ENCRYPTION_KEY, iv);
+  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+
+  return Buffer.concat([iv, tag, encrypted]).toString("base64url");
+}
+
+function decryptCookieValue(value?: string) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const payload = Buffer.from(value, "base64url");
+    if (payload.length <= 28) {
+      return null;
+    }
+
+    const iv = payload.subarray(0, 12);
+    const tag = payload.subarray(12, 28);
+    const encrypted = payload.subarray(28);
+    const decipher = createDecipheriv("aes-256-gcm", COOKIE_ENCRYPTION_KEY, iv);
+
+    decipher.setAuthTag(tag);
+
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+  } catch {
+    return null;
+  }
+}
 
 function getCookieOptions(maxAge?: number): CookieOptions {
   return {
@@ -29,12 +73,12 @@ function setSessionCookies(
 
   res.cookie(
     SESSION_COOKIE_NAME,
-    session.access_token,
+    encryptCookieValue(session.access_token),
     getCookieOptions(accessMaxAge)
   );
   res.cookie(
     REFRESH_COOKIE_NAME,
-    session.refresh_token,
+    encryptCookieValue(session.refresh_token),
     getCookieOptions(REFRESH_COOKIE_MAX_AGE)
   );
 }
@@ -59,7 +103,8 @@ async function getAdminByUserId(userId: string) {
 }
 
 async function getUserFromAccessToken(accessToken: string) {
-  const { data, error } = await supabase.auth.getUser(accessToken);
+  const authClient = createSupabaseAuthClient();
+  const { data, error } = await authClient.auth.getUser(accessToken);
   if (error || !data.user) {
     return null;
   }
@@ -89,8 +134,17 @@ async function uploadGymPhoto(file: Express.Multer.File, userId: string) {
   return data.publicUrl;
 }
 
+function getSignupFiles(req: Request) {
+  const files = Array.isArray(req.files) ? req.files : [];
+
+  return files
+    .filter((file) => file.fieldname === "gym_photo" || /^gym_photos(?:\[\d+\])?$/.test(file.fieldname))
+    .slice(0, 10);
+}
+
 async function refreshSession(refreshToken: string) {
-  const { data, error } = await supabase.auth.refreshSession({
+  const authClient = createSupabaseAuthClient();
+  const { data, error } = await authClient.auth.refreshSession({
     refresh_token: refreshToken,
   });
 
@@ -105,8 +159,15 @@ async function refreshSession(refreshToken: string) {
 }
 
 async function resolveAuthenticatedUser(req: Request, res: Response) {
-  const accessToken = req.cookies[SESSION_COOKIE_NAME] as string | undefined;
-  const refreshToken = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
+  const accessCookie = req.cookies[SESSION_COOKIE_NAME] as string | undefined;
+  const refreshCookie = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
+  const accessToken = decryptCookieValue(accessCookie);
+  const refreshToken = decryptCookieValue(refreshCookie);
+
+  if ((accessCookie && !accessToken) || (refreshCookie && !refreshToken)) {
+    clearSessionCookies(res);
+    return null;
+  }
 
   const accessUser = accessToken
     ? await getUserFromAccessToken(accessToken)
@@ -146,20 +207,24 @@ export async function signup(req: Request, res: Response) {
     phone,
     address,
     website,
+    instagram,
     instagram_page,
     business_registration_name,
     owner_email,
     gym_email,
   } = req.body;
-  const gymPhotoFile = req.file;
+  const authEmail = email || owner_email || gym_email;
+  const gymPhotoFiles = getSignupFiles(req);
+  const gymPhotoFile = gymPhotoFiles[0];
 
-  if (!email || !password || !gym_name || !owner_name || !phone) {
+  if (!authEmail || !password || !gym_name || !owner_name || !phone) {
     return res.status(400).json({
       message: "email, password, gym_name, owner_name, and phone are required",
     });
   }
 
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const signupClient = createSupabaseAuthClient();
+  const { data, error } = await signupClient.auth.signUp({ email: authEmail, password });
   if (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -178,7 +243,7 @@ export async function signup(req: Request, res: Response) {
       phone: phone || null,
       email: gym_email || null,
       website: website || null,
-      instagram_page: instagram_page || null,
+      instagram_page: instagram_page || instagram || null,
       address: address || null,
       business_registration_name: business_registration_name || null,
       owner_email: owner_email || null,
@@ -190,7 +255,8 @@ export async function signup(req: Request, res: Response) {
     }
   }
 
-  const signInResult = await supabase.auth.signInWithPassword({ email, password });
+  const signInClient = createSupabaseAuthClient();
+  const signInResult = await signInClient.auth.signInWithPassword({ email: authEmail, password });
 
   if (signInResult.error || !signInResult.data.session || !signInResult.data.user) {
     return res.status(201).json({
@@ -220,7 +286,8 @@ export async function login(req: Request, res: Response) {
     return res.status(400).json({ message: "email and password are required" });
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const authClient = createSupabaseAuthClient();
+  const { data, error } = await authClient.auth.signInWithPassword({ email, password });
   if (error) {
     return res.status(401).json({ message: error.message });
   }
@@ -237,7 +304,7 @@ export async function login(req: Request, res: Response) {
 }
 
 export async function signout(req: Request, res: Response) {
-  const token = req.cookies[SESSION_COOKIE_NAME] as string | undefined;
+  const token = decryptCookieValue(req.cookies[SESSION_COOKIE_NAME] as string | undefined);
 
   clearSessionCookies(res);
 

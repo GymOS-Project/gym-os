@@ -79,7 +79,7 @@ export async function getDashboardStats(req: Request, res: Response) {
     revenueChart.push({ month: label, revenue: monthRevenue });
   }
 
-  const colors = ["hsl(174, 72%, 40%)", "hsl(38, 92%, 50%)", "hsl(0, 84%, 60%)"];
+  const colors = ["hsl(77, 91%, 52%)", "hsl(36, 94%, 55%)", "hsl(0, 80%, 58%)"];
 
   return res.json({
     totalMembers: members.length,
