@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
 import { MoonStar, SunMedium } from "lucide-react";
 import { useTheme } from "next-themes";
-
+import { DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
-export function ThemeToggle({ className }: { className?: string }) {
+
+function ToggleComponent({ className }: { className: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -15,6 +16,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   const isDark = mounted && resolvedTheme === "dark";
 
   return (
+
     <div
       className={cn(
         "inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/85 p-1 shadow-sm backdrop-blur-xl",
@@ -46,5 +48,39 @@ export function ThemeToggle({ className }: { className?: string }) {
         <span>Dark</span>
       </button>
     </div>
+  )
+}
+
+
+function DropdownComponent() {
+  const { setTheme } = useTheme();
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger> Theme</DropdownMenuSubTrigger>
+      <DropdownMenuPortal>
+        <DropdownMenuSubContent>
+          <DropdownMenuItem onClick={() => setTheme("dark")}>
+            <MoonStar className="mr-2 h-4 w-4" />
+            Dark
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setTheme("light")}>
+            <SunMedium className="mr-2 h-4 w-4" />
+            Light
+          </DropdownMenuItem>
+        </DropdownMenuSubContent>
+
+      </DropdownMenuPortal>
+    </DropdownMenuSub>
+  )
+
+}
+
+export function ThemeToggle({ className, isToggle }: { className?: string, isToggle: boolean }) {
+  if (isToggle) {
+    return <ToggleComponent className={className} />
+  }
+
+  return (
+    <DropdownComponent />
   );
 }
