@@ -275,7 +275,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5">
-                  <ThemeToggle />
+                  <ThemeToggle/>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">

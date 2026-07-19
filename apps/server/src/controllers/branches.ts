@@ -10,7 +10,7 @@ export async function listBranches(req: AuthenticatedRequest, res: Response) {
 
   const query = supabase
     .from("gyms")
-    .select("id, admin_id, gym_name, gym_type, owner_name, phone, email, website, instagram_page, address, business_registration_name, owner_email, gym_photo_url, logo_url, created_at, updated_at")
+    .select("id, admin_id, gym_name, gym_type, owner_name, phone, email, website, instagram_page, address, business_registration_name, owner_email, gym_photo_url, gym_photo_urls, logo_url, created_at, updated_at")
     .eq("admin_id", adminId)
     .order("created_at", { ascending: true });
 

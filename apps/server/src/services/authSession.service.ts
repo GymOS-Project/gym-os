@@ -63,6 +63,11 @@ function mergeAdminWithGym(
     business_registration_name: gym.business_registration_name,
     owner_email: gym.owner_email,
     gym_photo_url: gym.gym_photo_url,
+    gym_photo_urls: Array.isArray(gym.gym_photo_urls)
+      ? gym.gym_photo_urls
+      : typeof gym.gym_photo_url === "string" && gym.gym_photo_url
+        ? [gym.gym_photo_url]
+        : [],
     logo_url: gym.logo_url,
     gym_type: gym.gym_type,
     created_at: admin.created_at ?? gym.created_at,

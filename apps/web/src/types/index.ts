@@ -14,6 +14,7 @@ export interface Gym {
   business_registration_name: string | null;
   owner_email: string | null;
   gym_photo_url: string | null;
+  gym_photo_urls: string[];
   logo_url: string | null;
   created_at: string;
   updated_at: string;
@@ -34,6 +35,7 @@ export interface Admin {
   business_registration_name: string | null;
   owner_email: string | null;
   gym_photo_url: string | null;
+  gym_photo_urls: string[];
   logo_url: string | null;
   created_at: string;
   updated_at: string;

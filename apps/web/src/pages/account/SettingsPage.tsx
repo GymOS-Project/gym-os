@@ -8,16 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Globe, ImageUp, Settings } from "lucide-react";
+import { Globe, ImageUp, ImagePlus, Settings, X } from "lucide-react";
 import { toast } from "sonner";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const MAX_GYM_PHOTOS = 10;
 
 export default function SettingsPage() {
   const { admin, selectedGym, selectedGymId, refreshAdmin } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [gymPhoto, setGymPhoto] = useState<File | null>(null);
+  const [gymPhotos, setGymPhotos] = useState<File[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [galleryPreviewUrls, setGalleryPreviewUrls] = useState<string[]>([]);
   const [form, setForm] = useState({
     gym_type: "single" as "single" | "branch",
     gym_name: "",
@@ -42,36 +44,47 @@ export default function SettingsPage() {
   }, [admin, selectedGym]);
 
   useEffect(() => {
-    if (!gymPhoto) {
+    if (gymPhotos.length === 0) {
       setPreviewUrl(selectedGym?.gym_photo_url || null);
+      setGalleryPreviewUrls(selectedGym?.gym_photo_urls || []);
       return;
     }
 
-    const objectUrl = URL.createObjectURL(gymPhoto);
-    setPreviewUrl(objectUrl);
+    const objectUrls = gymPhotos.map((photo) => URL.createObjectURL(photo));
+    setPreviewUrl(objectUrls[0] || null);
+    setGalleryPreviewUrls(objectUrls);
 
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [gymPhoto, selectedGym?.gym_photo_url]);
+    return () => objectUrls.forEach((url) => URL.revokeObjectURL(url));
+  }, [gymPhotos, selectedGym?.gym_photo_url, selectedGym?.gym_photo_urls]);
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
+    if (files.some((file) => !file.type.startsWith("image/"))) {
+      toast.error("Please upload only image files");
       return;
     }
 
-    if (file.size > MAX_IMAGE_SIZE) {
-      toast.error("Gym image must be smaller than 10 MB");
+    if (files.some((file) => file.size > MAX_IMAGE_SIZE)) {
+      toast.error("Each gym image must be smaller than 10 MB");
       return;
     }
 
-    setGymPhoto(file);
+    if (files.length > MAX_GYM_PHOTOS) {
+      toast.error(`You can upload up to ${MAX_GYM_PHOTOS} gym photos`);
+      return;
+    }
+
+    setGymPhotos(files.slice(0, MAX_GYM_PHOTOS));
+  };
+
+  const removeGymPhoto = (index: number) => {
+    setGymPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index));
   };
 
   const handleSave = async (event: React.FormEvent) => {
@@ -96,14 +109,14 @@ export default function SettingsPage() {
     payload.append("website", form.website);
     payload.append("instagram_page", form.instagram_page);
     payload.append("address", form.address);
-    if (gymPhoto) {
-      payload.append("gym_photo", gymPhoto);
-    }
+    gymPhotos.forEach((photo, index) => {
+      payload.append(`gym_photos[${index}]`, photo);
+    });
 
     try {
       await api.updateAdmin(payload);
       await refreshAdmin();
-      setGymPhoto(null);
+      setGymPhotos([]);
       toast.success("Settings updated successfully");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update settings");
@@ -212,8 +225,8 @@ export default function SettingsPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Gym Image</CardTitle>
-              <CardDescription>Update the image used for your gym profile.</CardDescription>
+              <CardTitle className="text-xl">Gym Photos</CardTitle>
+              <CardDescription>Upload up to 10 photos for this gym. The first photo is used as the cover image.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="overflow-hidden rounded-2xl border bg-muted/20">
@@ -225,9 +238,35 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
+              <div className="grid grid-cols-3 gap-2">
+                {galleryPreviewUrls.map((url, index) => (
+                  <div key={`${url}-${index}`} className="relative aspect-square overflow-hidden rounded-xl border bg-background">
+                    <img src={url} alt={`${form.gym_name || "Gym"} ${index + 1}`} className="h-full w-full object-cover" />
+                    {gymPhotos.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => removeGymPhoto(index)}
+                        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {galleryPreviewUrls.length < MAX_GYM_PHOTOS && (
+                  <label
+                    htmlFor="gym_photo"
+                    className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 text-center transition-colors hover:border-primary/50 hover:bg-primary/10"
+                  >
+                    <ImagePlus className="mb-2 h-6 w-6 text-primary" />
+                    <span className="px-2 text-xs font-medium text-primary">Add Photos</span>
+                  </label>
+                )}
+              </div>
               <div className="space-y-1.5">
-                <Label htmlFor="gym_photo">Cover Image</Label>
-                <Input id="gym_photo" type="file" accept="image/*" onChange={handleImageChange} />
+                <Label htmlFor="gym_photo">Gym Photo Gallery</Label>
+                <Input id="gym_photo" type="file" accept="image/*" multiple onChange={handleImageChange} />
+                <p className="text-xs text-muted-foreground">Selecting new files replaces the current gallery for this gym.</p>
               </div>
             </CardContent>
           </Card>
