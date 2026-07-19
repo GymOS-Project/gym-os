@@ -75,7 +75,7 @@ function DropdownComponent() {
 
 }
 
-export function ThemeToggle({ className, isToggle }: { className?: string, isToggle: boolean }) {
+export function ThemeToggle({ className, isToggle }: { className?: string, isToggle?: boolean }) {
   if (isToggle) {
     return <ToggleComponent className={className} />
   }

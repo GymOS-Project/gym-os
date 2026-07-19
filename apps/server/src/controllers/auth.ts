@@ -13,6 +13,7 @@ import { ensureGymBelongsToAdmin } from "../services/gymScope.service";
 const SESSION_COOKIE_NAME = "sessionToken";
 const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";
 const ADMIN_LOGO_BUCKET = process.env.SUPABASE_ADMIN_LOGO_BUCKET || GYM_PHOTO_BUCKET;
+const MAX_GYM_PHOTOS = 10;
 
 type AuthUser = {
   id: string;
@@ -58,16 +59,20 @@ async function uploadGymPhoto(file: Express.Multer.File, userId: string) {
   return uploadAdminImage(file, userId, GYM_PHOTO_BUCKET, "gym-photos");
 }
 
+async function uploadGymPhotos(files: Express.Multer.File[], userId: string) {
+  return Promise.all(files.map((file) => uploadGymPhoto(file, userId)));
+}
+
 async function uploadAdminLogo(file: Express.Multer.File, userId: string) {
   return uploadAdminImage(file, userId, ADMIN_LOGO_BUCKET, "logos");
 }
 
-function getSignupFiles(req: Request) {
+function getGymPhotoFiles(req: Request) {
   const files = Array.isArray(req.files) ? req.files : [];
 
   return files
     .filter((file) => file.fieldname === "gym_photo" || /^gym_photos(?:\[\d+\])?$/.test(file.fieldname))
-    .slice(0, 10);
+    .slice(0, MAX_GYM_PHOTOS);
 }
 
 function getUploadedFile(req: Request, ...fieldNames: string[]) {
@@ -179,8 +184,7 @@ export async function signup(req: Request, res: Response) {
 
   const primaryGym = gyms[0];
   const authEmail = email || account_email || primaryGym.owner_email || primaryGym.gym_email;
-  const gymPhotoFiles = getSignupFiles(req);
-  const gymPhotoFile = gymPhotoFiles[0];
+  const gymPhotoFiles = getGymPhotoFiles(req);
 
   if (!authEmail || !password || !gym_type) {
     return res.status(400).json({
@@ -200,9 +204,11 @@ export async function signup(req: Request, res: Response) {
 
   if (data.user) {
     let gymPhotoUrl: string | null = null;
+    let gymPhotoUrls: string[] = [];
 
-    if (gymPhotoFile) {
-      gymPhotoUrl = await uploadGymPhoto(gymPhotoFile, data.user.id);
+    if (gymPhotoFiles.length > 0) {
+      gymPhotoUrls = await uploadGymPhotos(gymPhotoFiles, data.user.id);
+      gymPhotoUrl = gymPhotoUrls[0] || null;
     }
 
     const { data: admin, error: adminError } = await supabase.from("admins").insert({
@@ -227,6 +233,7 @@ export async function signup(req: Request, res: Response) {
         business_registration_name: gym.business_registration_name,
         owner_email: gym.owner_email,
         gym_photo_url: index === 0 ? gymPhotoUrl : null,
+        gym_photo_urls: index === 0 ? gymPhotoUrls : [],
       })),
     );
 
@@ -356,7 +363,8 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
   }
 
   const profileImageFile = getUploadedFile(req, "profile_image", "logo_image", "logo");
-  const gymPhotoFile = getUploadedFile(req, "gym_photo", "cover_image");
+  const gymPhotoFiles = getGymPhotoFiles(req);
+  const gymPhotoFile = gymPhotoFiles[0] || getUploadedFile(req, "gym_photo", "cover_image");
 
   const targetGymId = typeof selectedGymId === "string"
     ? selectedGymId
@@ -382,8 +390,13 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
       gymUpdates.logo_url = await uploadAdminLogo(profileImageFile, userId);
     }
 
-    if (gymPhotoFile) {
+    if (gymPhotoFiles.length > 0) {
+      const uploadedGymPhotoUrls = await uploadGymPhotos(gymPhotoFiles, userId);
+      gymUpdates.gym_photo_urls = uploadedGymPhotoUrls;
+      gymUpdates.gym_photo_url = uploadedGymPhotoUrls[0] || null;
+    } else if (gymPhotoFile) {
       gymUpdates.gym_photo_url = await uploadGymPhoto(gymPhotoFile, userId);
+      gymUpdates.gym_photo_urls = gymUpdates.gym_photo_url ? [gymUpdates.gym_photo_url] : [];
     }
   } catch (error) {
     return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to upload image" });
