@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { attachMembersByMemberId } from "../services/relatedRecords.service";
+import { ensureMemberBelongsToGym, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { supabase } from "../supabase";
 
 function getAdminId(req: AuthenticatedRequest, res: Response) {
@@ -19,10 +20,19 @@ export async function listFollowups(req: AuthenticatedRequest, res: Response) {
     return;
   }
 
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) {
+    return;
+  }
+
   let query = supabase
     .from("followups")
     .select("*")
     .eq("admin_id", adminId);
+
+  if (gymScope.selectedGymId) {
+    query = query.eq("gym_id", gymScope.selectedGymId);
+  }
 
   const type = req.query.type as string;
   if (type) {
@@ -47,16 +57,37 @@ export async function createFollowup(req: AuthenticatedRequest, res: Response) {
     return;
   }
 
+  const gymId = await resolveWriteGymId(req, res);
+  if (!gymId) {
+    return;
+  }
+
   const { type, member_id, followup_date, next_followup_date, notes, status } = req.body;
 
   if (!followup_date) {
     return res.status(400).json({ message: "followup_date is required" });
   }
 
+  if (member_id) {
+    const validMember = await ensureMemberBelongsToGym(member_id, adminId, gymId).catch((error) => {
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to validate member" });
+      return null;
+    });
+
+    if (validMember === null) {
+      return;
+    }
+
+    if (!validMember) {
+      return res.status(400).json({ message: "Selected member does not belong to this gym" });
+    }
+  }
+
   const { data, error } = await supabase
     .from("followups")
     .insert({
       admin_id: adminId,
+      gym_id: gymId,
       type,
       member_id: member_id || null,
       followup_date,
@@ -80,9 +111,29 @@ export async function updateFollowup(req: AuthenticatedRequest, res: Response) {
     return;
   }
 
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) {
+    return;
+  }
+
   const { member_id, followup_date, next_followup_date, notes, status } = req.body;
 
-  const { data, error } = await supabase
+  if (member_id && gymScope.selectedGymId) {
+    const validMember = await ensureMemberBelongsToGym(member_id, adminId, gymScope.selectedGymId).catch((error) => {
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to validate member" });
+      return null;
+    });
+
+    if (validMember === null) {
+      return;
+    }
+
+    if (!validMember) {
+      return res.status(400).json({ message: "Selected member does not belong to this gym" });
+    }
+  }
+
+  let query = supabase
     .from("followups")
     .update({
       member_id: member_id || null,
@@ -92,9 +143,13 @@ export async function updateFollowup(req: AuthenticatedRequest, res: Response) {
       status,
     })
     .eq("id", req.params.id)
-    .eq("admin_id", adminId)
-    .select()
-    .single();
+    .eq("admin_id", adminId);
+
+  if (gymScope.selectedGymId) {
+    query = query.eq("gym_id", gymScope.selectedGymId);
+  }
+
+  const { data, error } = await query.select().single();
 
   if (error) {
     return res.status(500).json({ message: error.message });

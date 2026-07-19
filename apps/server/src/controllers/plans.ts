@@ -1,5 +1,6 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { supabase } from "../supabase";
 
 function getAdminId(req: AuthenticatedRequest, res: Response) {
@@ -18,11 +19,21 @@ export async function listPlans(req: AuthenticatedRequest, res: Response) {
     return;
   }
 
-  const { data, error } = await supabase
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) {
+    return;
+  }
+
+  let query = supabase
     .from("package_types")
     .select("*")
-    .eq("admin_id", adminId)
-    .order("created_at");
+    .eq("admin_id", adminId);
+
+  if (gymScope.selectedGymId) {
+    query = query.eq("gym_id", gymScope.selectedGymId);
+  }
+
+  const { data, error } = await query.order("created_at");
 
   if (error) {
     return res.status(500).json({ message: error.message });
@@ -37,6 +48,11 @@ export async function createPlan(req: AuthenticatedRequest, res: Response) {
     return;
   }
 
+  const gymId = await resolveWriteGymId(req, res);
+  if (!gymId) {
+    return;
+  }
+
   const { name, duration_months, duration_days, price, description } = req.body;
 
   if (!name || price == null) {
@@ -47,6 +63,7 @@ export async function createPlan(req: AuthenticatedRequest, res: Response) {
     .from("package_types")
     .insert({
       admin_id: adminId,
+      gym_id: gymId,
       name,
       duration_months: duration_months || null,
       duration_days: duration_days || null,
@@ -69,6 +86,11 @@ export async function updatePlan(req: AuthenticatedRequest, res: Response) {
     return;
   }
 
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) {
+    return;
+  }
+
   const { name, duration_months, duration_days, price, description, is_active } = req.body;
 
   const updatePayload: Record<string, any> = {};
@@ -84,13 +106,17 @@ export async function updatePlan(req: AuthenticatedRequest, res: Response) {
     return res.status(400).json({ message: "No valid fields provided for update" });
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("package_types")
     .update(updatePayload)
     .eq("id", req.params.id)
-    .eq("admin_id", adminId)
-    .select()
-    .single();
+    .eq("admin_id", adminId);
+
+  if (gymScope.selectedGymId) {
+    query = query.eq("gym_id", gymScope.selectedGymId);
+  }
+
+  const { data, error } = await query.select().single();
 
   if (error) {
     return res.status(500).json({ message: error.message });
@@ -105,7 +131,18 @@ export async function deletePlan(req: AuthenticatedRequest, res: Response) {
     return;
   }
 
-  const { error } = await supabase.from("package_types").delete().eq("id", req.params.id).eq("admin_id", adminId);
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) {
+    return;
+  }
+
+  let query = supabase.from("package_types").delete().eq("id", req.params.id).eq("admin_id", adminId);
+
+  if (gymScope.selectedGymId) {
+    query = query.eq("gym_id", gymScope.selectedGymId);
+  }
+
+  const { error } = await query;
 
   if (error) {
     return res.status(500).json({ message: error.message });

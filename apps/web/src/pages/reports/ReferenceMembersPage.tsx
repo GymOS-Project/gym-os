@@ -8,12 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 
 export default function ReferenceMembersPage() {
-  const { admin } = useAuth();
+  const { admin, selectedGymId } = useAuth();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  useEffect(() => { if (admin) fetchData(); }, [admin]);
+  useEffect(() => { if (admin) fetchData(); }, [admin, selectedGymId]);
 
   const fetchData = async () => {
     if (!admin) return;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
@@ -10,23 +10,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 
 export default function AddEnquiryPage() {
-  const { admin } = useAuth();
+  const { admin, gyms, selectedGymId } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
+    gym_id: selectedGymId !== "all" ? selectedGymId : "",
     name: "", phone: "", email: "", source: "", interest: "",
     assigned_to: "", next_followup_date: "", notes: "",
   });
 
+  const availableGyms = gyms.length > 0 ? gyms : [];
+
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      gym_id: selectedGymId !== "all" ? selectedGymId : current.gym_id || gyms[0]?.id || "",
+    }));
+  }, [gyms, selectedGymId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!admin) return;
+    if (!form.gym_id) { toast.error("Gym is required"); return; }
     if (!form.name || !form.phone) { toast.error("Name and phone are required"); return; }
     setLoading(true);
     try {
       await api.createEnquiry({
+        gym_id: form.gym_id,
         name: form.name,
         phone: form.phone,
         email: form.email || undefined,
@@ -51,6 +63,17 @@ export default function AddEnquiryPage() {
         </div>
         <form onSubmit={handleSubmit} className="rounded-xl border bg-card p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {availableGyms.length > 1 && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Gym *</Label>
+                <Select value={form.gym_id} onValueChange={(v) => set("gym_id", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
+                  <SelectContent>
+                    {availableGyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Full Name *</Label>
               <Input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Enquiry name" required />

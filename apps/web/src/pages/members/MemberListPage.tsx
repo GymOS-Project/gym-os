@@ -22,14 +22,14 @@ interface MemberWithPackage extends Member {
 }
 
 export default function MemberListPage() {
-  const { admin } = useAuth();
+  const { admin, gyms, selectedGymId } = useAuth();
   const navigate = useNavigate();
   const [members, setMembers] = useState<MemberWithPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [referenceMembers, setReferenceMembers] = useState<{ id: string; name: string }[]>([]);
+  const [referenceMembers, setReferenceMembers] = useState<{ id: string; name: string; gym_id: string }[]>([]);
   const [editMemberId, setEditMemberId] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
@@ -41,6 +41,7 @@ export default function MemberListPage() {
     date_of_birth: "",
     address: "",
     emergency_contact: "",
+    gym_id: "",
     shift: "",
     notes: "",
     reference_member_id: NO_REFERENCE_MEMBER,
@@ -50,7 +51,7 @@ export default function MemberListPage() {
     if (!admin) return;
     fetchMembers();
     api.getActiveMembers().then((data) => setReferenceMembers(data)).catch(() => {});
-  }, [admin]);
+  }, [admin, selectedGymId]);
 
   const fetchMembers = async () => {
     if (!admin) return;
@@ -125,6 +126,7 @@ export default function MemberListPage() {
         date_of_birth: member.date_of_birth || "",
         address: member.address || "",
         emergency_contact: member.emergency_contact || "",
+        gym_id: member.gym_id || "",
         shift: member.shift || "",
         notes: member.notes || "",
         reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER,
@@ -151,6 +153,7 @@ export default function MemberListPage() {
         name: editForm.name,
         email: editForm.email || null,
         phone: editForm.phone,
+        gym_id: editForm.gym_id || null,
         gender: (editForm.gender as Member["gender"]) || null,
         date_of_birth: editForm.date_of_birth || null,
         address: editForm.address || null,
@@ -300,6 +303,15 @@ export default function MemberListPage() {
                   <Input type="email" value={editForm.email} onChange={(e) => setEdit("email", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
+                  <Label>Gym *</Label>
+                  <Select value={editForm.gym_id} onValueChange={(value) => setEdit("gym_id", value)}>
+                    <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
+                    <SelectContent>
+                      {gyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
                   <Label>Gender</Label>
                   <Select value={editForm.gender} onValueChange={(value) => setEdit("gender", value)}>
                     <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
@@ -340,6 +352,7 @@ export default function MemberListPage() {
                     <SelectContent>
                       <SelectItem value={NO_REFERENCE_MEMBER}>None</SelectItem>
                       {referenceMembers
+                        .filter((member) => !editForm.gym_id || member.gym_id === editForm.gym_id)
                         .filter((member) => member.id !== editMemberId)
                         .map((member) => (
                           <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>

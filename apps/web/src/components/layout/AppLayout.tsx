@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -152,7 +153,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {
-  const { admin, signOut } = useAuth();
+  const { admin, gyms, selectedGymId, selectedGym, setSelectedGymId, signOut } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
@@ -172,7 +173,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className="truncate font-bold text-sidebar-foreground">{admin?.gym_name || 'GymOs'}</p>
+            <p className="truncate font-bold text-sidebar-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name) || 'GymOs'}</p>
             <p className="truncate text-xs text-sidebar-foreground/70">{admin?.owner_name || 'Admin Panel'}</p>
           </div>
         )}
@@ -223,9 +224,22 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           </button>
           {title && <h1 className="font-semibold text-foreground">{title}</h1>}
           <div className="ml-auto flex items-center gap-3">
+            {gyms.length > 1 && (
+              <Select value={selectedGymId} onValueChange={setSelectedGymId}>
+                <SelectTrigger className="w-[150px] sm:w-[180px]">
+                  <SelectValue placeholder="Filter gyms" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Gyms</SelectItem>
+                  {gyms.map((gym) => (
+                    <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <div className="hidden sm:block text-right">
               <p className="text-sm font-medium text-foreground">{admin?.owner_name}</p>
-              <p className="text-xs text-muted-foreground">{admin?.gym_name}</p>
+              <p className="text-xs text-muted-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name)}</p>
             </div>
 
             <DropdownMenu>
@@ -247,7 +261,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                 <DropdownMenuLabel>
                   <div className="space-y-0.5">
                     <p className="text-sm font-medium text-foreground">{admin?.owner_name || 'Admin'}</p>
-                    <p className="text-xs font-normal text-muted-foreground">{admin?.gym_name || 'GymOs'}</p>
+                    <p className="text-xs font-normal text-muted-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name) || 'GymOs'}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

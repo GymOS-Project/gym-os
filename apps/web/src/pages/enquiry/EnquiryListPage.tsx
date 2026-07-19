@@ -22,7 +22,7 @@ interface EnquiryListPageProps {
 }
 
 export default function EnquiryListPage({ filterStatus, title, description }: EnquiryListPageProps) {
-  const { admin } = useAuth();
+  const { admin, selectedGymId } = useAuth();
   const navigate = useNavigate();
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
   const [fuForm, setFuForm] = useState({ next_followup_date: "", notes: "", status: "done" as const });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { if (admin) fetchEnquiries(); }, [admin, filterStatus]);
+  useEffect(() => { if (admin) fetchEnquiries(); }, [admin, filterStatus, selectedGymId]);
 
   const fetchEnquiries = async () => {
     if (!admin) return;
@@ -71,6 +71,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
     setSaving(true);
     try {
       await api.addEnquiryFollowup(followupDialog.id, {
+        gym_id: followupDialog.gym_id,
         followup_date: new Date().toISOString().split("T")[0],
         next_followup_date: fuForm.next_followup_date || undefined,
         notes: fuForm.notes || undefined,

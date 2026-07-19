@@ -14,18 +14,19 @@ import { addDays, addMonths, format } from "date-fns";
 const NO_REFERENCE_MEMBER = "__none__";
 
 export default function AddMemberPage() {
-  const { admin } = useAuth();
+  const { admin, gyms, selectedGymId } = useAuth();
   const navigate = useNavigate();
   const { id: memberId } = useParams();
   const isEditing = Boolean(memberId);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [packages, setPackages] = useState<PackageType[]>([]);
-  const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
+  const [members, setMembers] = useState<{ id: string; name: string; gym_id: string }[]>([]);
 
   const [form, setForm] = useState({
     name: "", email: "", phone: "", gender: "", date_of_birth: "",
     address: "", emergency_contact: "", shift: "", notes: "",
+    gym_id: "",
     reference_member_id: NO_REFERENCE_MEMBER,
     package_type_id: "", start_date: format(new Date(), "yyyy-MM-dd"),
     amount_paid: "", payment_mode: "cash",
@@ -34,12 +35,18 @@ export default function AddMemberPage() {
   useEffect(() => {
     if (!admin) return;
     if (!isEditing) {
+      setForm((current) => ({
+        ...current,
+        gym_id: selectedGymId !== "all" ? selectedGymId : current.gym_id || gyms[0]?.id || "",
+      }));
+    }
+    if (!isEditing) {
       api.getPlans().then((data) => setPackages(data.filter((p) => p.is_active)));
     }
     api.getActiveMembers().then((data) => {
       setMembers(isEditing ? data.filter((member) => member.id !== memberId) : data);
     });
-  }, [admin, isEditing, memberId]);
+  }, [admin, gyms, isEditing, memberId, selectedGymId]);
 
   useEffect(() => {
     if (!admin || !memberId) return;
@@ -57,6 +64,7 @@ export default function AddMemberPage() {
           emergency_contact: member.emergency_contact || "",
           shift: member.shift || "",
           notes: member.notes || "",
+          gym_id: member.gym_id || "",
           reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER,
           package_type_id: "",
           start_date: format(new Date(), "yyyy-MM-dd"),
@@ -71,7 +79,8 @@ export default function AddMemberPage() {
       .finally(() => setPageLoading(false));
   }, [admin, memberId, navigate]);
 
-  const selectedPkg = packages.find((p) => p.id === form.package_type_id);
+  const availablePackages = packages.filter((pkg) => !form.gym_id || pkg.gym_id === form.gym_id);
+  const selectedPkg = availablePackages.find((p) => p.id === form.package_type_id);
   const endDate = selectedPkg
     ? selectedPkg.duration_months
       ? format(addMonths(new Date(form.start_date), selectedPkg.duration_months), "yyyy-MM-dd")
@@ -86,6 +95,7 @@ export default function AddMemberPage() {
     name: form.name,
     email: form.email || null,
     phone: form.phone,
+    gym_id: form.gym_id,
     gender: (form.gender as any) || null,
     date_of_birth: form.date_of_birth || null,
     address: form.address || null,
@@ -102,6 +112,7 @@ export default function AddMemberPage() {
     e.preventDefault();
     if (!admin) return;
     if (!form.name || !form.phone) { toast.error("Name and phone are required"); return; }
+    if (!form.gym_id) { toast.error("Gym selection is required"); return; }
     setLoading(true);
     try {
       if (isEditing && memberId) {
@@ -112,6 +123,7 @@ export default function AddMemberPage() {
 
         if (form.package_type_id && endDate) {
           await api.createMemberPackage({
+            gym_id: form.gym_id,
             member_id: member.id,
             package_type_id: form.package_type_id,
             package_name: selectedPkg!.name,
@@ -121,6 +133,7 @@ export default function AddMemberPage() {
             payment_mode: form.payment_mode as any,
           });
           await api.createTransaction({
+            gym_id: form.gym_id,
             member_id: member.id,
             type: "payment",
             amount: parseFloat(form.amount_paid) || selectedPkg!.price,
@@ -162,6 +175,17 @@ export default function AddMemberPage() {
           <div className="rounded-xl border bg-card p-6 space-y-4">
             <h2 className="font-semibold text-base border-b pb-3">Personal Information</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {gyms.length > 1 && (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>Gym *</Label>
+                  <Select value={form.gym_id} onValueChange={(v) => set("gym_id", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
+                    <SelectContent>
+                      {gyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Full Name *</Label>
                 <Input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Member name" required />
@@ -214,7 +238,7 @@ export default function AddMemberPage() {
                   <SelectTrigger><SelectValue placeholder="Select reference" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NO_REFERENCE_MEMBER}>None</SelectItem>
-                    {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                    {members.filter((m) => !form.gym_id || m.gym_id === form.gym_id).map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -234,9 +258,9 @@ export default function AddMemberPage() {
                   <Select value={form.package_type_id} onValueChange={(v) => { set("package_type_id", v); const p = packages.find((pkg) => pkg.id === v); if (p) set("amount_paid", String(p.price)); }}>
                     <SelectTrigger><SelectValue placeholder="Select package" /></SelectTrigger>
                     <SelectContent>
-                      {packages.length === 0
+                      {availablePackages.length === 0
                         ? <SelectItem value="__no_packages__" disabled>No packages. Add from Members &gt; Package Types.</SelectItem>
-                        : packages.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} — ₹{p.price}</SelectItem>)}
+                        : availablePackages.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} — ₹{p.price}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>

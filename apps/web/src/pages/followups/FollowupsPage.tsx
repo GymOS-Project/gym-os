@@ -22,16 +22,23 @@ interface FollowupsPageProps {
 }
 
 export default function FollowupsPage({ type, title, description }: FollowupsPageProps) {
-  const { admin } = useAuth();
+  const { admin, gyms, selectedGymId } = useAuth();
   const [followups, setFollowups] = useState<(Followup & { members: Member | null })[]>([]);
-  const [members, setMembers] = useState<{ id: string; name: string; phone: string }[]>([]);
+  const [members, setMembers] = useState<{ id: string; name: string; phone: string; gym_id: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editFu, setEditFu] = useState<Followup | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ member_id: NO_MEMBER, followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" });
+  const [form, setForm] = useState({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER, followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" });
 
-  useEffect(() => { if (admin) { fetchFollowups(); fetchMembers(); } }, [admin, type]);
+  useEffect(() => { if (admin) { fetchFollowups(); fetchMembers(); } }, [admin, selectedGymId, type]);
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      gym_id: selectedGymId !== "all" ? selectedGymId : current.gym_id || gyms[0]?.id || "",
+    }));
+  }, [gyms, selectedGymId]);
 
   const fetchFollowups = async () => {
     if (!admin) return;
@@ -47,13 +54,13 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
     catch {}
   };
 
-  const openAdd = () => { setEditFu(null); setForm({ member_id: NO_MEMBER, followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
-  const openEdit = (fu: Followup) => { setEditFu(fu); setForm({ member_id: fu.member_id || NO_MEMBER, followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || "", notes: fu.notes || "", status: fu.status }); setDialogOpen(true); };
+  const openAdd = () => { setEditFu(null); setForm({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER, followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
+  const openEdit = (fu: Followup) => { setEditFu(fu); setForm({ gym_id: fu.gym_id, member_id: fu.member_id || NO_MEMBER, followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || "", notes: fu.notes || "", status: fu.status }); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!admin) return;
     setSaving(true);
-    const payload = { type, member_id: form.member_id !== NO_MEMBER ? form.member_id : undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
+    const payload = { gym_id: form.gym_id, type, member_id: form.member_id !== NO_MEMBER ? form.member_id : undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
     try {
       if (editFu) await api.updateFollowup(editFu.id, payload);
       else await api.createFollowup(payload);
@@ -147,12 +154,21 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
           <DialogHeader><DialogTitle>{editFu ? "Edit Follow-up" : "Add Follow-up"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
+              <Label>Gym</Label>
+                <Select value={form.gym_id} onValueChange={(v) => setForm((p) => ({ ...p, gym_id: v, member_id: NO_MEMBER }))}>
+                  <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
+                  <SelectContent>
+                    {gyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-1.5">
               <Label>Member</Label>
                 <Select value={form.member_id} onValueChange={(v) => setForm((p) => ({ ...p, member_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NO_MEMBER}>None</SelectItem>
-                    {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.phone}</SelectItem>)}
+                    {members.filter((m) => !form.gym_id || m.gym_id === form.gym_id).map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.phone}</SelectItem>)}
                   </SelectContent>
                 </Select>
             </div>

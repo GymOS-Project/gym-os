@@ -11,12 +11,12 @@ import { toast } from "sonner";
 const SHIFTS = ["morning", "afternoon", "evening"];
 
 export default function ShiftReportPage() {
-  const { admin } = useAuth();
+  const { admin, selectedGymId } = useAuth();
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [shiftFilter, setShiftFilter] = useState("all");
 
-  useEffect(() => { if (admin) fetchData(); }, [admin]);
+  useEffect(() => { if (admin) fetchData(); }, [admin, selectedGymId]);
 
   const fetchData = async () => {
     if (!admin) return;
