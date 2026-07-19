@@ -31,7 +31,7 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen flex">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4">
-        <ThemeToggle isToggle className=''/>
+        <ThemeToggle isToggle className="pointer-events-auto" />
       </div>
 
       {/* Left Panel */}

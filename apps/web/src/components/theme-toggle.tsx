@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
 
-function ToggleComponent({ className }: { className: string }) {
+function ToggleComponent({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 

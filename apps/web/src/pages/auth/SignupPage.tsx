@@ -257,7 +257,7 @@ export default function SignupPage() {
   return (
     <div className="relative min-h-screen flex">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4">
-        <ThemeToggle isToggle={true} className=''/>
+        <ThemeToggle isToggle={true} className="pointer-events-auto" />
       </div>
 
       <div className="gradient-accent relative hidden overflow-hidden p-12 lg:flex lg:w-2/5 lg:flex-col lg:items-center lg:justify-center">
