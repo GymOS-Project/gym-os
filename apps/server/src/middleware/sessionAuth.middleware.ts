@@ -10,6 +10,8 @@ export interface AuthenticatedRequest extends Request {
   admin?: {
     id: string;
     auth_id: string;
+    gym_id?: string | null;
+    gym_type?: "single" | "branch" | null;
     [key: string]: unknown;
   };
 }

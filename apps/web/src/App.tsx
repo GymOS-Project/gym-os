@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { GuestRoute, ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
@@ -35,9 +35,10 @@ const queryClient = new QueryClient();
 const protectedElement = (element: React.ReactNode) => (
   <ProtectedRoute>{element}</ProtectedRoute>
 );
+const guestElement = (element: React.ReactNode) => <GuestRoute>{element}</GuestRoute>;
 const routes = [
-  { path: "/login", element: <LoginPage /> },
-  { path: "/signup", element: <SignupPage /> },
+  { path: "/login", element: <LoginPage />, guestOnly: true },
+  { path: "/signup", element: <SignupPage />, guestOnly: true },
   { path: "/", element: <DashboardPage />, protected: true },
   { path: "/members", element: <MemberListPage />, protected: true },
   { path: "/members/add", element: <AddMemberPage />, protected: true },
@@ -140,11 +141,11 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            {routes.map(({ path, element, protected: isProtected }) => (
+            {routes.map(({ path, element, protected: isProtected, guestOnly }) => (
               <Route
                 key={path}
                 path={path}
-                element={isProtected ? protectedElement(element) : element}
+                element={isProtected ? protectedElement(element) : guestOnly ? guestElement(element) : element}
               />
             ))}
           </Routes>

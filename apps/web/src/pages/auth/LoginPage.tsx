@@ -28,9 +28,9 @@ export default function LoginPage() {
     }
   };
 
-  useEffect(() => {
-    if (!user) navigate("/")
-  }, [])
+  // useEffect(() => {
+  //   if (!user) navigate("/")
+  // }, [])
 
   return (
     <div className="relative min-h-screen flex">
