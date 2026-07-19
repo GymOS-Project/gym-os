@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,24 +11,28 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const STEPS = [
-  { id: 1, title: 'Gym Profile', description: 'Basic gym and business details', icon: Building2 },
-  { id: 2, title: 'Owner & Contact', description: 'Who runs the gym and how to reach them', icon: User },
-  { id: 3, title: 'Account & Media', description: 'Login details and gym photos', icon: Lock },
+  { id: 1, title: 'Gym Profile', description: 'Add each gym or branch profile', icon: Building2 },
+  { id: 2, title: 'Owner & Contact', description: 'Capture branch contact details', icon: User },
+  { id: 3, title: 'Account & Media', description: 'Set your admin login and optional photos', icon: Lock },
 ];
 
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024;
-const MIN_PHOTOS = 8;
 const MAX_PHOTOS = 10;
 
-export default function SignupPage() {
-  const { signUp, user } = useAuth();
-  const navigate = useNavigate();
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+type GymForm = {
+  gym_name: string;
+  business_registration_name: string;
+  gym_email: string;
+  website: string;
+  instagram_page: string;
+  address: string;
+  owner_name: string;
+  phone: string;
+  owner_email: string;
+};
 
-  const [formData, setFormData] = useState({
-    gym_type: 'single',
+function createGymForm(): GymForm {
+  return {
     gym_name: '',
     business_registration_name: '',
     gym_email: '',
@@ -38,41 +42,153 @@ export default function SignupPage() {
     owner_name: '',
     phone: '',
     owner_email: '',
-    password: '',
-    confirmPassword: '',
-  });
+  };
+}
+
+function resizeGyms(existing: GymForm[], count: number) {
+  if (existing.length === count) {
+    return existing;
+  }
+
+  if (existing.length > count) {
+    return existing.slice(0, count);
+  }
+
+  return [...existing, ...Array.from({ length: count - existing.length }, () => createGymForm())];
+}
+
+export default function SignupPage() {
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [activeBranchIndex, setActiveBranchIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [gymType, setGymType] = useState<'single' | 'branch'>('single');
+  const [branchCount, setBranchCount] = useState(2);
+  const [gyms, setGyms] = useState<GymForm[]>([createGymForm(), createGymForm()]);
+  const [accountEmail, setAccountEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [gymPhotos, setGymPhotos] = useState<File[]>([]);
 
-  const update = (field: string, value: string) =>
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const gymCount = gymType === 'branch' ? branchCount : 1;
+  const activeGyms = gyms.slice(0, gymCount);
+  const currentGym = activeGyms[activeBranchIndex] || activeGyms[0];
+  const currentBranchLabel = gymType === 'branch' ? `Branch ${activeBranchIndex + 1} of ${gymCount}` : 'Primary Gym';
+
+  const updateGymType = (value: 'single' | 'branch') => {
+    setGymType(value);
+    const nextCount = value === 'branch' ? Math.max(branchCount, 2) : 1;
+    setBranchCount(nextCount === 1 ? 2 : nextCount);
+    setGyms((current) => resizeGyms(current, value === 'branch' ? nextCount : 1));
+    setActiveBranchIndex(0);
+  };
+
+  const updateBranchCount = (value: string) => {
+    const parsed = Math.max(2, Number(value) || 2);
+    setBranchCount(parsed);
+    setGyms((current) => resizeGyms(current, parsed));
+    setActiveBranchIndex((current) => Math.min(current, parsed - 1));
+  };
+
+  const updateGym = (index: number, field: keyof GymForm, value: string) => {
+    setGyms((current) => current.map((gym, gymIndex) => (
+      gymIndex === index ? { ...gym, [field]: value } : gym
+    )));
+  };
+
+  const validateGymProfile = (gym: GymForm | undefined, index: number) => {
+    if (!gym) {
+      toast.error('Gym details are missing');
+      return false;
+    }
+
+    if (!gym.gym_name.trim()) { toast.error(`Gym name is required for ${gymType === 'branch' ? `branch ${index + 1}` : 'your gym'}`); return false; }
+    if (!gym.business_registration_name.trim()) { toast.error(`Business registration name is required for ${gymType === 'branch' ? `branch ${index + 1}` : 'your gym'}`); return false; }
+    if (!gym.gym_email.trim()) { toast.error(`Gym email is required for ${gymType === 'branch' ? `branch ${index + 1}` : 'your gym'}`); return false; }
+    return true;
+  };
+
+  const validateOwnerContact = (gym: GymForm | undefined, index: number) => {
+    if (!gym) {
+      toast.error('Gym contact details are missing');
+      return false;
+    }
+
+    if (!gym.owner_name.trim()) { toast.error(`Owner name is required for ${gymType === 'branch' ? `branch ${index + 1}` : 'your gym'}`); return false; }
+    if (!gym.phone.trim()) { toast.error(`Phone number is required for ${gymType === 'branch' ? `branch ${index + 1}` : 'your gym'}`); return false; }
+    if (!gym.owner_email.trim()) { toast.error(`Owner email is required for ${gymType === 'branch' ? `branch ${index + 1}` : 'your gym'}`); return false; }
+    if (!gym.address.trim()) { toast.error(`Address is required for ${gymType === 'branch' ? `branch ${index + 1}` : 'your gym'}`); return false; }
+    return true;
+  };
 
   const validateStep = () => {
     if (step === 1) {
-      if (!formData.gym_type) { toast.error('Gym type is required'); return false; }
-      if (!formData.gym_name.trim()) { toast.error('Gym name is required'); return false; }
-      if (!formData.business_registration_name.trim()) { toast.error('Business registration name is required'); return false; }
-      if (!formData.gym_email.trim()) { toast.error('Gym email address is required'); return false; }
-    }
-    if (step === 2) {
-      if (!formData.owner_name.trim()) { toast.error('Owner name is required'); return false; }
-      if (!formData.phone.trim()) { toast.error('Phone number is required'); return false; }
-      if (!formData.address.trim()) { toast.error('Gym full address is required'); return false; }
-      if (!formData.owner_email.trim()) { toast.error('Owner email address is required'); return false; }
-    }
-    if (step === 3) {
-      if (formData.password.length < 6) { toast.error('Password must be at least 6 characters'); return false; }
-      if (formData.password !== formData.confirmPassword) { toast.error('Passwords do not match'); return false; }
-      if (gymPhotos.length < MIN_PHOTOS) { toast.error(`Please upload at least ${MIN_PHOTOS} gym photographs`); return false; }
-      if (gymPhotos.length > MAX_PHOTOS) { toast.error(`You can upload a maximum of ${MAX_PHOTOS} gym photographs`); return false; }
-      for (const photo of gymPhotos) {
-        if (photo.size > MAX_PHOTO_SIZE) { toast.error(`"${photo.name}" exceeds 10 MB limit`); return false; }
+      if (!gymType) {
+        toast.error('Gym type is required');
+        return false;
       }
+
+      if (gymType === 'branch' && branchCount < 2) {
+        toast.error('Branch gyms must have at least 2 branches');
+        return false;
+      }
+
+      return validateGymProfile(currentGym, activeBranchIndex);
+    }
+
+    if (step === 2) {
+      return validateOwnerContact(currentGym, activeBranchIndex);
+    }
+
+    if (!accountEmail.trim()) { toast.error('Admin login email is required'); return false; }
+    if (!activeGyms.every((gym, index) => validateGymProfile(gym, index) && validateOwnerContact(gym, index))) { return false; }
+    if (password.length < 6) { toast.error('Password must be at least 6 characters'); return false; }
+    if (password !== confirmPassword) { toast.error('Passwords do not match'); return false; }
+    if (gymPhotos.length > MAX_PHOTOS) { toast.error(`You can upload a maximum of ${MAX_PHOTOS} gym photographs`); return false; }
+    for (const photo of gymPhotos) {
+      if (photo.size > MAX_PHOTO_SIZE) { toast.error(`"${photo.name}" exceeds 10 MB limit`); return false; }
     }
     return true;
   };
 
-  const nextStep = () => { if (validateStep()) setStep(s => s + 1); };
-  const prevStep = () => setStep(s => s - 1);
+  const nextStep = () => {
+    if (!validateStep()) return;
+
+    if (gymType === 'branch' && step < 3 && activeBranchIndex < gymCount - 1) {
+      setActiveBranchIndex((current) => current + 1);
+      return;
+    }
+
+    if (step < 3) {
+      setStep((current) => current + 1);
+      setActiveBranchIndex(0);
+    }
+  };
+
+  const prevStep = () => {
+    if (step === 1) {
+      if (gymType === 'branch' && activeBranchIndex > 0) {
+        setActiveBranchIndex((current) => current - 1);
+      }
+      return;
+    }
+
+    if (step === 2) {
+      if (gymType === 'branch' && activeBranchIndex > 0) {
+        setActiveBranchIndex((current) => current - 1);
+        return;
+      }
+
+      setStep(1);
+      setActiveBranchIndex(gymType === 'branch' ? gymCount - 1 : 0);
+      return;
+    }
+
+    setStep(2);
+    setActiveBranchIndex(gymType === 'branch' ? gymCount - 1 : 0);
+  };
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -83,67 +199,67 @@ export default function SignupPage() {
       return;
     }
 
-    const oversized = files.filter(f => f.size > MAX_PHOTO_SIZE);
+    const oversized = files.filter((file) => file.size > MAX_PHOTO_SIZE);
     if (oversized.length > 0) {
       toast.error(`${oversized.length} file(s) exceed 10 MB limit and were skipped.`);
     }
 
-    const validFiles = files.filter(f => f.size <= MAX_PHOTO_SIZE);
-    setGymPhotos(prev => [...prev, ...validFiles]);
+    setGymPhotos((current) => [...current, ...files.filter((file) => file.size <= MAX_PHOTO_SIZE)]);
   };
 
   const removePhoto = (index: number) => {
-    setGymPhotos(prev => prev.filter((_, i) => i !== index));
+    setGymPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep()) return;
+
     setLoading(true);
     const payload = new FormData();
-    payload.append('gym_type', formData.gym_type);
-    payload.append('gym_name', formData.gym_name);
-    payload.append('business_registration_name', formData.business_registration_name);
-    payload.append('email', formData.owner_email || formData.gym_email);
-    payload.append('gym_email', formData.gym_email);
-    payload.append('website', formData.website);
-    payload.append('instagram_page', formData.instagram_page);
-    payload.append('address', formData.address);
-    payload.append('owner_name', formData.owner_name);
-    payload.append('phone', formData.phone);
-    payload.append('owner_email', formData.owner_email);
-    payload.append('password', formData.password);
+    const [primaryGym] = activeGyms;
+
+    payload.append('gym_type', gymType);
+    payload.append('email', accountEmail);
+    payload.append('account_email', accountEmail);
+    payload.append('password', password);
+    payload.append('branches_payload', JSON.stringify(activeGyms));
+    payload.append('gym_name', primaryGym.gym_name);
+    payload.append('business_registration_name', primaryGym.business_registration_name);
+    payload.append('gym_email', primaryGym.gym_email);
+    payload.append('website', primaryGym.website);
+    payload.append('instagram_page', primaryGym.instagram_page);
+    payload.append('address', primaryGym.address);
+    payload.append('owner_name', primaryGym.owner_name);
+    payload.append('phone', primaryGym.phone);
+    payload.append('owner_email', primaryGym.owner_email);
+
     gymPhotos.forEach((photo, index) => {
       payload.append(`gym_photos[${index}]`, photo);
     });
 
     const { error, authenticated } = await signUp(payload);
     setLoading(false);
+
     if (error) {
       toast.error(error.message || 'Sign up failed');
-    } else {
-      toast.success(
-        authenticated
-          ? 'Account created! Welcome to GymOs.'
-          : 'Account created! Please sign in to continue.'
-      );
-      navigate(authenticated ? '/' : '/login');
+      return;
     }
+
+    toast.success(
+      authenticated
+        ? 'Account created! Welcome to GymOs.'
+        : 'Account created! Please sign in to continue.'
+    );
+    navigate(authenticated ? '/' : '/login');
   };
-
-
-  // useEffect(() => {
-  //   if (!user) navigate("/")
-  //
-  // }, [])
 
   return (
     <div className="relative min-h-screen flex">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4">
-        <ThemeToggle className="pointer-events-auto" />
+        <ThemeToggle />
       </div>
 
-      {/* Left Panel */}
       <div className="gradient-accent relative hidden overflow-hidden p-12 lg:flex lg:w-2/5 lg:flex-col lg:items-center lg:justify-center">
         <div className="absolute inset-0 opacity-10">
           {Array.from({ length: 15 }).map((_, i) => (
@@ -168,38 +284,37 @@ export default function SignupPage() {
           </div>
           <h1 className="text-3xl font-bold text-white mb-4">Join GymOs</h1>
           <p className="leading-relaxed text-white/75">
-            Set up your gym management system in just a few steps and start managing your members today.
+            Set up your gym management system for one gym or multiple branches in just a few steps.
           </p>
 
-          {/* Step indicators on left */}
           <div className="mt-12 space-y-4">
-            {STEPS.map(s => (
+            {STEPS.map((section) => (
               <div
-                key={s.id}
+                key={section.id}
                 className={cn(
                   'flex items-center gap-4 rounded-xl p-4 transition-all',
-                  step === s.id ? 'border border-white/20 bg-white/10 backdrop-blur-sm' : 'opacity-55'
+                  step === section.id ? 'border border-white/20 bg-white/10 backdrop-blur-sm' : 'opacity-55'
                 )}
               >
                 <div
                   className={cn(
                     'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2',
-                    step > s.id
+                    step > section.id
                       ? 'border-primary bg-primary'
-                      : step === s.id
+                      : step === section.id
                         ? 'border-primary bg-primary/15'
                         : 'border-white/20'
                   )}
                 >
-                  {step > s.id ? (
+                  {step > section.id ? (
                     <Check className="h-5 w-5 text-white" />
                   ) : (
-                    <s.icon className="h-5 w-5 text-primary" />
+                    <section.icon className="h-5 w-5 text-primary" />
                   )}
                 </div>
                 <div className="text-left">
-                  <p className="text-white font-medium">{s.title}</p>
-                  <p className="text-sm text-white/60">{s.description}</p>
+                  <p className="text-white font-medium">{section.title}</p>
+                  <p className="text-sm text-white/60">{section.description}</p>
                 </div>
               </div>
             ))}
@@ -207,9 +322,8 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* Right Panel */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card/85 p-8 shadow-elevated backdrop-blur-xl">
+        <div className="w-full max-w-3xl rounded-3xl border border-border/70 bg-card/85 p-8 shadow-elevated backdrop-blur-xl">
           <div className="flex items-center gap-3 mb-2 lg:hidden">
             <div className="gradient-primary flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground shadow-sm">
               <Dumbbell className="h-5 w-5" />
@@ -217,15 +331,11 @@ export default function SignupPage() {
             <h1 className="text-2xl font-bold">GymOs</h1>
           </div>
 
-          {/* Mobile step progress */}
           <div className="flex items-center gap-2 mb-6 lg:hidden">
-            {STEPS.map(s => (
+            {STEPS.map((section) => (
               <div
-                key={s.id}
-                className={cn(
-                  'h-1.5 flex-1 rounded-full transition-all',
-                  step >= s.id ? 'bg-primary' : 'bg-muted'
-                )}
+                key={section.id}
+                className={cn('h-1.5 flex-1 rounded-full transition-all', step >= section.id ? 'bg-primary' : 'bg-muted')}
               />
             ))}
           </div>
@@ -236,132 +346,134 @@ export default function SignupPage() {
             <p className="text-muted-foreground mt-1">{STEPS[step - 1].description}</p>
           </div>
 
-          <form onSubmit={step === 3 ? handleSubmit : e => { e.preventDefault(); nextStep(); }}>
-            {/* Step 1: Gym Info */}
+          <form onSubmit={step === 3 ? handleSubmit : (e) => { e.preventDefault(); nextStep(); }}>
             {step === 1 && (
               <div className="space-y-5">
-                <div className="space-y-1.5">
-                  <Label htmlFor="gym_type">Gym Type *</Label>
-                  <Select value={formData.gym_type} onValueChange={value => update('gym_type', value)}>
-                    <SelectTrigger id="gym_type">
-                      <SelectValue placeholder="Select gym type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="single">Single</SelectItem>
-                      <SelectItem value="branch">Branch</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px]">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="gym_type">Gym Type *</Label>
+                    <Select value={gymType} onValueChange={updateGymType}>
+                      <SelectTrigger id="gym_type">
+                        <SelectValue placeholder="Select gym type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">Single</SelectItem>
+                        <SelectItem value="branch">Branch</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {gymType === 'branch' && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="branch_count">Number of Branches *</Label>
+                      <Input
+                        id="branch_count"
+                        type="number"
+                        min={2}
+                        value={branchCount}
+                        onChange={(e) => updateBranchCount(e.target.value)}
+                      />
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="gym_name">Gym Name *</Label>
-                  <Input
-                    id="gym_name"
-                    value={formData.gym_name}
-                    onChange={e => update('gym_name', e.target.value)}
-                    placeholder="e.g. FitZone Gym"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="business_registration_name">Business Registration Name *</Label>
-                  <Input
-                    id="business_registration_name"
-                    value={formData.business_registration_name}
-                    onChange={e => update('business_registration_name', e.target.value)}
-                    placeholder="Registered business name"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="gym_email">Gym Email Address *</Label>
-                  <Input
-                    id="gym_email"
-                    type="email"
-                    value={formData.gym_email}
-                    onChange={e => update('gym_email', e.target.value)}
-                    placeholder="contact@yourgym.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    value={formData.website}
-                    onChange={e => update('website', e.target.value)}
-                    placeholder="https://yourgym.com"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="instagram_page">Instagram Page</Label>
-                  <Input
-                    id="instagram_page"
-                    value={formData.instagram_page}
-                    onChange={e => update('instagram_page', e.target.value)}
-                    placeholder="https://instagram.com/yourgym"
-                  />
+
+                <div className="rounded-2xl border bg-muted/20 p-5 space-y-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="font-semibold text-foreground">{gymType === 'branch' ? currentBranchLabel : 'Gym Details'}</h3>
+                      <p className="text-sm text-muted-foreground">Profile details used throughout your admin records.</p>
+                    </div>
+                    {gymType === 'branch' && (
+                      <div className="inline-flex items-center rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                        Fill one branch at a time
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Gym Name *</Label>
+                      <Input value={currentGym?.gym_name || ''} onChange={(e) => updateGym(activeBranchIndex, 'gym_name', e.target.value)} placeholder="e.g. FitZone Gym" required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Business Registration Name *</Label>
+                      <Input value={currentGym?.business_registration_name || ''} onChange={(e) => updateGym(activeBranchIndex, 'business_registration_name', e.target.value)} placeholder="Registered business name" required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Gym Email Address *</Label>
+                      <Input type="email" value={currentGym?.gym_email || ''} onChange={(e) => updateGym(activeBranchIndex, 'gym_email', e.target.value)} placeholder="contact@yourgym.com" required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Website</Label>
+                      <Input value={currentGym?.website || ''} onChange={(e) => updateGym(activeBranchIndex, 'website', e.target.value)} placeholder="https://yourgym.com" />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Instagram Page</Label>
+                      <Input value={currentGym?.instagram_page || ''} onChange={(e) => updateGym(activeBranchIndex, 'instagram_page', e.target.value)} placeholder="https://instagram.com/yourgym" />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Step 2: Owner Details */}
             {step === 2 && (
               <div className="space-y-5">
-                <div className="space-y-1.5">
-                  <Label htmlFor="owner_name">Owner Name *</Label>
-                  <Input
-                    id="owner_name"
-                    value={formData.owner_name}
-                    onChange={e => update('owner_name', e.target.value)}
-                    placeholder="Your full name"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={e => update('phone', e.target.value)}
-                    placeholder="+91 9876543210"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="owner_email">Owner Email Address *</Label>
-                  <Input
-                    id="owner_email"
-                    type="email"
-                    value={formData.owner_email}
-                    onChange={e => update('owner_email', e.target.value)}
-                    placeholder="owner@yourgym.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="address">Gym Full Address *</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={e => update('address', e.target.value)}
-                    placeholder="Full gym address"
-                    required
-                  />
+                <div className="rounded-2xl border bg-muted/20 p-5 space-y-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="font-semibold text-foreground">{gymType === 'branch' ? currentBranchLabel : 'Owner & Contact'}</h3>
+                      <p className="text-sm text-muted-foreground">Who runs this gym and how members can reach them.</p>
+                    </div>
+                    {gymType === 'branch' && (
+                      <div className="inline-flex items-center rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                        Fill one branch at a time
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Owner Name *</Label>
+                      <Input value={currentGym?.owner_name || ''} onChange={(e) => updateGym(activeBranchIndex, 'owner_name', e.target.value)} placeholder="Your full name" required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Phone Number *</Label>
+                      <Input value={currentGym?.phone || ''} onChange={(e) => updateGym(activeBranchIndex, 'phone', e.target.value)} placeholder="+91 9876543210" required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Owner Email Address *</Label>
+                      <Input type="email" value={currentGym?.owner_email || ''} onChange={(e) => updateGym(activeBranchIndex, 'owner_email', e.target.value)} placeholder="owner@yourgym.com" required />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Gym Full Address *</Label>
+                      <Input value={currentGym?.address || ''} onChange={(e) => updateGym(activeBranchIndex, 'address', e.target.value)} placeholder="Full gym address" required />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Step 3: Account & Photos */}
             {step === 3 && (
               <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="account_email">Admin Login Email *</Label>
+                  <Input
+                    id="account_email"
+                    type="email"
+                    value={accountEmail}
+                    onChange={(e) => setAccountEmail(e.target.value)}
+                    placeholder="admin@yourgym.com"
+                    required
+                  />
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="password">Password *</Label>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
-                      value={formData.password}
-                      onChange={e => update('password', e.target.value)}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       placeholder="Min 6 characters"
                       required
                       className="pr-10"
@@ -380,31 +492,24 @@ export default function SignupPage() {
                   <Input
                     id="confirmPassword"
                     type="password"
-                    value={formData.confirmPassword}
-                    onChange={e => update('confirmPassword', e.target.value)}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repeat your password"
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>
-                    Gym Photographs *
-                    <span className="text-muted-foreground font-normal ml-1">
-                      ({gymPhotos.length}/{MAX_PHOTOS} uploaded, min {MIN_PHOTOS})
-                    </span>
+                    Gym Photographs
+                    <span className="text-muted-foreground font-normal ml-1">(optional, up to {MAX_PHOTOS})</span>
                   </Label>
                   <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4">
                     <div className="flex flex-col gap-3">
-                      {/* Photo grid */}
                       {gymPhotos.length > 0 && (
                         <div className="grid grid-cols-3 gap-2">
                           {gymPhotos.map((photo, index) => (
                             <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border border-border bg-background">
-                              <img
-                                src={URL.createObjectURL(photo)}
-                                alt={photo.name}
-                                className="w-full h-full object-cover"
-                              />
+                              <img src={URL.createObjectURL(photo)} alt={photo.name} className="w-full h-full object-cover" />
                               <button
                                 type="button"
                                 onClick={() => removePhoto(index)}
@@ -429,32 +534,19 @@ export default function SignupPage() {
                         </div>
                       )}
 
-                      {/* Empty state */}
                       {gymPhotos.length === 0 && (
                         <label htmlFor="gym_photo" className="flex flex-col items-center justify-center py-6 cursor-pointer">
                           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                             <Upload className="h-6 w-6" />
                           </div>
                           <p className="text-sm font-medium text-foreground">Upload gym photographs</p>
-                          <p className="text-xs text-muted-foreground mt-1">Upload {MIN_PHOTOS}-{MAX_PHOTOS} photos, max 10 MB each</p>
+                          <p className="text-xs text-muted-foreground mt-1">Optional during onboarding. You can also add them later from the admin panel.</p>
                         </label>
                       )}
 
-                      <Input
-                        id="gym_photo"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handlePhotoSelect}
-                      />
+                      <Input id="gym_photo" type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
                     </div>
                   </div>
-                  {gymPhotos.length > 0 && gymPhotos.length < MIN_PHOTOS && (
-                    <p className="mt-1 text-xs text-warning">
-                      Please upload at least {MIN_PHOTOS - gymPhotos.length} more photo{MIN_PHOTOS - gymPhotos.length > 1 ? 's' : ''}
-                    </p>
-                  )}
                 </div>
               </div>
             )}
@@ -465,13 +557,12 @@ export default function SignupPage() {
                   Back
                 </Button>
               )}
-              <Button
-                type="submit"
-                variant="gradient"
-                className="flex-1 h-11"
-                disabled={loading}
-              >
-                {step === 3 ? (loading ? 'Creating account...' : 'Create Account') : 'Continue'}
+              <Button type="submit" variant="gradient" className="flex-1 h-11" disabled={loading}>
+                {step === 3
+                  ? (loading ? 'Creating account...' : 'Create Account')
+                  : gymType === 'branch' && activeBranchIndex < gymCount - 1
+                    ? `Save & Next ${step === 1 ? 'Branch Profile' : 'Branch Contact'}`
+                    : 'Continue'}
               </Button>
             </div>
           </form>

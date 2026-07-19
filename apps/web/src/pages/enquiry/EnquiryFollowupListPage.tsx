@@ -10,12 +10,12 @@ import type { EnquiryFollowup } from "@/types";
 import { toast } from "sonner";
 
 export default function EnquiryFollowupListPage() {
-  const { admin } = useAuth();
+  const { admin, selectedGymId } = useAuth();
   const [followups, setFollowups] = useState<(EnquiryFollowup & { enquiries?: { name: string; phone: string; status: string } })[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  useEffect(() => { if (admin) fetchData(); }, [admin]);
+  useEffect(() => { if (admin) fetchData(); }, [admin, selectedGymId]);
 
   const fetchData = async () => {
     if (!admin) return;

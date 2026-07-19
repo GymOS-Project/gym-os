@@ -11,13 +11,13 @@ import { toast } from "sonner";
 import type { Transaction } from "@/types";
 
 export default function TransactionsPage() {
-  const { admin } = useAuth();
+  const { admin, selectedGymId } = useAuth();
   const [txns, setTxns] = useState<(Transaction & { members?: { name: string; phone: string } })[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
 
-  useEffect(() => { if (admin) fetchTxns(); }, [admin]);
+  useEffect(() => { if (admin) fetchTxns(); }, [admin, selectedGymId]);
 
   const fetchTxns = async () => {
     if (!admin) return;

@@ -8,6 +8,7 @@ import {
   setSessionCookies,
 } from "../services/authSession.service";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { ensureGymBelongsToAdmin } from "../services/gymScope.service";
 
 const SESSION_COOKIE_NAME = "sessionToken";
 const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";
@@ -16,6 +17,18 @@ const ADMIN_LOGO_BUCKET = process.env.SUPABASE_ADMIN_LOGO_BUCKET || GYM_PHOTO_BU
 type AuthUser = {
   id: string;
   email: string;
+};
+
+type SignupGymPayload = {
+  gym_name: string;
+  business_registration_name: string | null;
+  gym_email: string | null;
+  website: string | null;
+  instagram_page: string | null;
+  address: string | null;
+  owner_name: string;
+  phone: string;
+  owner_email: string | null;
 };
 
 
@@ -75,6 +88,73 @@ function normalizeOptionalString(value: unknown) {
   return trimmed ? trimmed : null;
 }
 
+function normalizeRequiredString(value: unknown) {
+  const normalized = normalizeOptionalString(value);
+  return typeof normalized === "string" ? normalized : "";
+}
+
+function parseSignupGyms(body: Record<string, unknown>) {
+  const gymType = body.gym_type;
+
+  if (gymType !== "single" && gymType !== "branch") {
+    throw new Error("gym_type must be either single or branch");
+  }
+
+  if (gymType === "branch") {
+    const rawBranches = typeof body.branches_payload === "string" ? body.branches_payload : "[]";
+    let parsed: unknown;
+
+    try {
+      parsed = JSON.parse(rawBranches);
+    } catch {
+      throw new Error("branches_payload must be valid JSON");
+    }
+
+    if (!Array.isArray(parsed) || parsed.length < 2) {
+      throw new Error("Branch gyms must include at least 2 branches");
+    }
+
+    return parsed.map((branch, index) => {
+      const payload = (branch || {}) as Record<string, unknown>;
+      const gym = {
+        gym_name: normalizeRequiredString(payload.gym_name),
+        business_registration_name: normalizeOptionalString(payload.business_registration_name),
+        gym_email: normalizeOptionalString(payload.gym_email),
+        website: normalizeOptionalString(payload.website),
+        instagram_page: normalizeOptionalString(payload.instagram_page),
+        address: normalizeOptionalString(payload.address),
+        owner_name: normalizeRequiredString(payload.owner_name),
+        phone: normalizeRequiredString(payload.phone),
+        owner_email: normalizeOptionalString(payload.owner_email),
+      } satisfies SignupGymPayload;
+
+      if (!gym.gym_name || !gym.owner_name || !gym.phone || !gym.gym_email || !gym.address || !gym.owner_email || !gym.business_registration_name) {
+        throw new Error(`Branch ${index + 1} is missing required fields`);
+      }
+
+      return gym;
+    });
+  }
+
+  const gym = {
+    gym_name: normalizeRequiredString(body.gym_name),
+    business_registration_name: normalizeOptionalString(body.business_registration_name),
+    gym_email: normalizeOptionalString(body.gym_email),
+    website: normalizeOptionalString(body.website),
+    instagram_page: normalizeOptionalString(body.instagram_page ?? body.instagram),
+    address: normalizeOptionalString(body.address),
+    owner_name: normalizeRequiredString(body.owner_name),
+    phone: normalizeRequiredString(body.phone),
+    owner_email: normalizeOptionalString(body.owner_email),
+  } satisfies SignupGymPayload;
+
+  if (!gym.gym_name || !gym.owner_name || !gym.phone || !gym.gym_email || !gym.address || !gym.owner_email || !gym.business_registration_name) {
+    throw new Error("All gym and owner fields are required");
+  }
+
+  return [gym];
+}
+
 function toAuthUser(user: { id: string; email?: string | null }): AuthUser {
   return {
     id: user.id,
@@ -85,26 +165,26 @@ function toAuthUser(user: { id: string; email?: string | null }): AuthUser {
 export async function signup(req: Request, res: Response) {
   const {
     email,
+    account_email,
     password,
     gym_type,
-    gym_name,
-    owner_name,
-    phone,
-    address,
-    website,
-    instagram,
-    instagram_page,
-    business_registration_name,
-    owner_email,
-    gym_email,
   } = req.body;
-  const authEmail = email || owner_email || gym_email;
+  let gyms: SignupGymPayload[];
+
+  try {
+    gyms = parseSignupGyms(req.body as Record<string, unknown>);
+  } catch (error) {
+    return res.status(400).json({ message: error instanceof Error ? error.message : "Invalid signup payload" });
+  }
+
+  const primaryGym = gyms[0];
+  const authEmail = email || account_email || primaryGym.owner_email || primaryGym.gym_email;
   const gymPhotoFiles = getSignupFiles(req);
   const gymPhotoFile = gymPhotoFiles[0];
 
-  if (!authEmail || !password || !gym_type || !gym_name || !owner_name || !phone) {
+  if (!authEmail || !password || !gym_type) {
     return res.status(400).json({
-      message: "email, password, gym_type, gym_name, owner_name, and phone are required",
+      message: "email, password, and gym_type are required",
     });
   }
 
@@ -133,20 +213,22 @@ export async function signup(req: Request, res: Response) {
       return res.status(500).json({ message: adminError.message });
     }
 
-    const { error: gymError } = await supabase.from("gyms").insert({
-      admin_id: admin.id,
-      gym_type,
-      gym_name,
-      owner_name,
-      phone: phone || null,
-      email: gym_email || null,
-      website: website || null,
-      instagram_page: instagram_page || instagram || null,
-      address: address || null,
-      business_registration_name: business_registration_name || null,
-      owner_email: owner_email || null,
-      gym_photo_url: gymPhotoUrl,
-    });
+    const { error: gymError } = await supabase.from("gyms").insert(
+      gyms.map((gym, index) => ({
+        admin_id: admin.id,
+        gym_type,
+        gym_name: gym.gym_name,
+        owner_name: gym.owner_name,
+        phone: gym.phone,
+        email: gym.gym_email,
+        website: gym.website,
+        instagram_page: gym.instagram_page,
+        address: gym.address,
+        business_registration_name: gym.business_registration_name,
+        owner_email: gym.owner_email,
+        gym_photo_url: index === 0 ? gymPhotoUrl : null,
+      })),
+    );
 
     if (gymError) {
       return res.status(500).json({ message: gymError.message });
@@ -235,6 +317,7 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
 
   const body = req.body as Record<string, unknown>;
   const gymUpdates: Record<string, unknown> = {};
+  const selectedGymId = normalizeOptionalString(body.gym_id);
 
   const requiredFields = [
     { key: "owner_name", label: "owner_name" },
@@ -275,6 +358,25 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
   const profileImageFile = getUploadedFile(req, "profile_image", "logo_image", "logo");
   const gymPhotoFile = getUploadedFile(req, "gym_photo", "cover_image");
 
+  const targetGymId = typeof selectedGymId === "string"
+    ? selectedGymId
+    : typeof req.admin?.gym_id === "string"
+      ? req.admin.gym_id
+      : null;
+
+  if (!targetGymId) {
+    return res.status(400).json({ message: "gym_id is required" });
+  }
+
+  try {
+    const belongsToAdmin = await ensureGymBelongsToAdmin(adminId, targetGymId);
+    if (!belongsToAdmin) {
+      return res.status(403).json({ message: "Invalid gym" });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to validate gym" });
+  }
+
   try {
     if (profileImageFile) {
       gymUpdates.logo_url = await uploadAdminLogo(profileImageFile, userId);
@@ -297,6 +399,7 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
   const { data, error } = await supabase
     .from("gyms")
     .update(gymUpdates)
+    .eq("id", targetGymId)
     .eq("admin_id", adminId)
     .select("*")
     .single();
@@ -305,21 +408,6 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ message: error.message });
   }
 
-  return res.json({
-    ...req.admin,
-    gym_id: data.id,
-    gym_name: data.gym_name,
-    owner_name: data.owner_name,
-    phone: data.phone,
-    email: data.email,
-    website: data.website,
-    instagram_page: data.instagram_page,
-    address: data.address,
-    business_registration_name: data.business_registration_name,
-    owner_email: data.owner_email,
-    gym_photo_url: data.gym_photo_url,
-    logo_url: data.logo_url,
-    gym_type: data.gym_type,
-    updated_at: data.updated_at,
-  });
+  const admin = await getAdminByAuthId(userId);
+  return res.json(admin);
 }

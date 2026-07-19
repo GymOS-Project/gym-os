@@ -12,19 +12,27 @@ import { Plus, CreditCard as Edit, Trash2, Package } from "lucide-react";
 import { toast } from "sonner";
 import type { PackageType } from "@/types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function PackageTypesPage() {
-  const { admin } = useAuth();
+  const { admin, gyms, selectedGymId } = useAuth();
   const [packages, setPackages] = useState<PackageType[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editPkg, setEditPkg] = useState<PackageType | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", duration_months: "", duration_days: "", price: "", description: "" });
+  const [form, setForm] = useState({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", name: "", duration_months: "", duration_days: "", price: "", description: "" });
   const [isCustom, setIsCustom] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { if (admin) fetchPackages(); }, [admin]);
+  useEffect(() => { if (admin) fetchPackages(); }, [admin, selectedGymId]);
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      gym_id: selectedGymId !== "all" ? selectedGymId : current.gym_id || gyms[0]?.id || "",
+    }));
+  }, [gyms, selectedGymId]);
 
   const fetchPackages = async () => {
     if (!admin) return;
@@ -36,7 +44,7 @@ export default function PackageTypesPage() {
 
   const openAdd = () => {
     setEditPkg(null);
-    setForm({ name: "", duration_months: "", duration_days: "", price: "", description: "" });
+    setForm({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", name: "", duration_months: "", duration_days: "", price: "", description: "" });
     setIsCustom(false);
     setDialogOpen(true);
   };
@@ -44,7 +52,7 @@ export default function PackageTypesPage() {
   const openEdit = (pkg: PackageType) => {
     setEditPkg(pkg);
     setIsCustom(!pkg.duration_months);
-    setForm({ name: pkg.name, duration_months: String(pkg.duration_months || ""), duration_days: String(pkg.duration_days || ""), price: String(pkg.price), description: pkg.description || "" });
+    setForm({ gym_id: pkg.gym_id, name: pkg.name, duration_months: String(pkg.duration_months || ""), duration_days: String(pkg.duration_days || ""), price: String(pkg.price), description: pkg.description || "" });
     setDialogOpen(true);
   };
 
@@ -53,6 +61,7 @@ export default function PackageTypesPage() {
     setSaving(true);
     const payload = {
       name: form.name,
+      gym_id: form.gym_id,
       duration_months: isCustom ? null : (parseInt(form.duration_months) || null),
       duration_days: isCustom ? (parseInt(form.duration_days) || null) : null,
       price: parseFloat(form.price),
@@ -107,7 +116,7 @@ export default function PackageTypesPage() {
             <p className="text-muted-foreground text-sm mt-1 mb-4">Start with presets or create custom packages</p>
             <div className="flex flex-wrap gap-2 justify-center">
               {presets.map((p) => (
-                <Button key={p.name} variant="outline" size="sm" onClick={() => { setForm({ name: p.name, duration_months: String(p.months), duration_days: "", price: String(p.price), description: "" }); setIsCustom(false); setEditPkg(null); setDialogOpen(true); }}>
+                <Button key={p.name} variant="outline" size="sm" onClick={() => { setForm({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", name: p.name, duration_months: String(p.months), duration_days: "", price: String(p.price), description: "" }); setIsCustom(false); setEditPkg(null); setDialogOpen(true); }}>
                   {p.name} — ₹{p.price.toLocaleString()}
                 </Button>
               ))}
@@ -147,6 +156,15 @@ export default function PackageTypesPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>{editPkg ? "Edit Package" : "Add Package Type"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Gym</Label>
+              <Select value={form.gym_id} onValueChange={(value) => setForm((p) => ({ ...p, gym_id: value }))}>
+                <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
+                <SelectContent>
+                  {gyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <Label>Package Name *</Label>
               <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Monthly, Quarterly" />

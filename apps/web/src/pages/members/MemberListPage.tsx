@@ -7,29 +7,51 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Trash2, Phone, UserX, UserCheck } from "lucide-react";
+import { Search, Plus, Trash2, Phone, UserX, UserCheck, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import type { Member } from "@/types";
+
+const NO_REFERENCE_MEMBER = "__none__";
 
 interface MemberWithPackage extends Member {
   member_packages?: { status: string; end_date: string; package_name: string }[];
 }
 
 export default function MemberListPage() {
-  const { admin } = useAuth();
+  const { admin, gyms, selectedGymId } = useAuth();
   const navigate = useNavigate();
   const [members, setMembers] = useState<MemberWithPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [referenceMembers, setReferenceMembers] = useState<{ id: string; name: string; gym_id: string }[]>([]);
+  const [editMemberId, setEditMemberId] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    gender: "",
+    date_of_birth: "",
+    address: "",
+    emergency_contact: "",
+    gym_id: "",
+    shift: "",
+    notes: "",
+    reference_member_id: NO_REFERENCE_MEMBER,
+  });
 
   useEffect(() => {
     if (!admin) return;
     fetchMembers();
-  }, [admin]);
+    api.getActiveMembers().then((data) => setReferenceMembers(data)).catch(() => {});
+  }, [admin, selectedGymId]);
 
   const fetchMembers = async () => {
     if (!admin) return;
@@ -84,6 +106,73 @@ export default function MemberListPage() {
       toast.success(`Member ${m.is_active ? "deactivated" : "activated"}`);
       fetchMembers();
     } catch { toast.error("Failed to update"); }
+  };
+
+  const setEdit = (key: keyof typeof editForm, value: string) => {
+    setEditForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const openEditModal = async (memberId: string) => {
+    setEditMemberId(memberId);
+    setEditLoading(true);
+
+    try {
+      const member = await api.getMember(memberId);
+      setEditForm({
+        name: member.name,
+        email: member.email || "",
+        phone: member.phone,
+        gender: member.gender || "",
+        date_of_birth: member.date_of_birth || "",
+        address: member.address || "",
+        emergency_contact: member.emergency_contact || "",
+        gym_id: member.gym_id || "",
+        shift: member.shift || "",
+        notes: member.notes || "",
+        reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER,
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load member");
+      setEditMemberId(null);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editMemberId) return;
+    if (!editForm.name || !editForm.phone) {
+      toast.error("Name and phone are required");
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      await api.updateMember(editMemberId, {
+        name: editForm.name,
+        email: editForm.email || null,
+        phone: editForm.phone,
+        gym_id: editForm.gym_id || null,
+        gender: (editForm.gender as Member["gender"]) || null,
+        date_of_birth: editForm.date_of_birth || null,
+        address: editForm.address || null,
+        emergency_contact: editForm.emergency_contact || null,
+        shift: editForm.shift || null,
+        notes: editForm.notes || null,
+        reference_member_id:
+          editForm.reference_member_id && editForm.reference_member_id !== NO_REFERENCE_MEMBER
+            ? editForm.reference_member_id
+            : null,
+      });
+      toast.success("Member updated successfully!");
+      setEditMemberId(null);
+      fetchMembers();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update member");
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   return (
@@ -157,6 +246,9 @@ export default function MemberListPage() {
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${m.phone}`)}>
                           <Phone className="h-3.5 w-3.5" />
                         </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditModal(m.id)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleActive(m)}>
                           {m.is_active ? <UserX className="h-3.5 w-3.5 text-warning" /> : <UserCheck className="h-3.5 w-3.5 text-success" />}
                         </Button>
@@ -186,6 +278,106 @@ export default function MemberListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!editMemberId} onOpenChange={(open) => !open && setEditMemberId(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Member</DialogTitle>
+          </DialogHeader>
+
+          {editLoading ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">Loading member...</div>
+          ) : (
+            <form onSubmit={handleEditSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Full Name *</Label>
+                  <Input value={editForm.name} onChange={(e) => setEdit("name", e.target.value)} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Phone *</Label>
+                  <Input value={editForm.phone} onChange={(e) => setEdit("phone", e.target.value)} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Email</Label>
+                  <Input type="email" value={editForm.email} onChange={(e) => setEdit("email", e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Gym *</Label>
+                  <Select value={editForm.gym_id} onValueChange={(value) => setEdit("gym_id", value)}>
+                    <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
+                    <SelectContent>
+                      {gyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Gender</Label>
+                  <Select value={editForm.gender} onValueChange={(value) => setEdit("gender", value)}>
+                    <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Date of Birth</Label>
+                  <Input type="date" value={editForm.date_of_birth} onChange={(e) => setEdit("date_of_birth", e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Shift</Label>
+                  <Select value={editForm.shift} onValueChange={(value) => setEdit("shift", value)}>
+                    <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="morning">Morning</SelectItem>
+                      <SelectItem value="afternoon">Afternoon</SelectItem>
+                      <SelectItem value="evening">Evening</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>Address</Label>
+                  <Input value={editForm.address} onChange={(e) => setEdit("address", e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Emergency Contact</Label>
+                  <Input value={editForm.emergency_contact} onChange={(e) => setEdit("emergency_contact", e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Reference Member</Label>
+                  <Select value={editForm.reference_member_id} onValueChange={(value) => setEdit("reference_member_id", value)}>
+                    <SelectTrigger><SelectValue placeholder="Select reference" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_REFERENCE_MEMBER}>None</SelectItem>
+                      {referenceMembers
+                        .filter((member) => !editForm.gym_id || member.gym_id === editForm.gym_id)
+                        .filter((member) => member.id !== editMemberId)
+                        .map((member) => (
+                          <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>Notes</Label>
+                  <Input value={editForm.notes} onChange={(e) => setEdit("notes", e.target.value)} />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditMemberId(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="gradient" disabled={editSaving}>
+                  {editSaving ? "Updating..." : "Update Member"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

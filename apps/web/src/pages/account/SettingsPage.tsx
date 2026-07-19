@@ -14,7 +14,7 @@ import { toast } from "sonner";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
 export default function SettingsPage() {
-  const { admin, refreshAdmin } = useAuth();
+  const { admin, selectedGym, selectedGymId, refreshAdmin } = useAuth();
   const [saving, setSaving] = useState(false);
   const [gymPhoto, setGymPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -29,21 +29,21 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    if (!admin) return;
+    if (!admin || !selectedGym) return;
     setForm({
-      gym_type: admin.gym_type || "single",
-      gym_name: admin.gym_name || "",
-      business_registration_name: admin.business_registration_name || "",
-      email: admin.email || "",
-      website: admin.website || "",
-      instagram_page: admin.instagram_page || "",
-      address: admin.address || "",
+      gym_type: selectedGym.gym_type || "single",
+      gym_name: selectedGym.gym_name || "",
+      business_registration_name: selectedGym.business_registration_name || "",
+      email: selectedGym.email || "",
+      website: selectedGym.website || "",
+      instagram_page: selectedGym.instagram_page || "",
+      address: selectedGym.address || "",
     });
-  }, [admin]);
+  }, [admin, selectedGym]);
 
   useEffect(() => {
     if (!gymPhoto) {
-      setPreviewUrl(admin?.gym_photo_url || null);
+      setPreviewUrl(selectedGym?.gym_photo_url || null);
       return;
     }
 
@@ -51,7 +51,7 @@ export default function SettingsPage() {
     setPreviewUrl(objectUrl);
 
     return () => URL.revokeObjectURL(objectUrl);
-  }, [gymPhoto, admin?.gym_photo_url]);
+  }, [gymPhoto, selectedGym?.gym_photo_url]);
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -86,6 +86,9 @@ export default function SettingsPage() {
     setSaving(true);
 
     const payload = new FormData();
+    if (selectedGym) {
+      payload.append("gym_id", selectedGym.id);
+    }
     payload.append("gym_type", form.gym_type);
     payload.append("gym_name", form.gym_name);
     payload.append("business_registration_name", form.business_registration_name);
@@ -111,6 +114,11 @@ export default function SettingsPage() {
 
   return (
     <AppLayout title="Settings">
+      {admin?.gyms?.length > 1 && selectedGymId === "all" ? (
+        <div className="mx-auto max-w-3xl rounded-2xl border border-warning/20 bg-warning/10 p-4 text-sm text-warning">
+          Select a specific gym from the global filter to edit branch settings.
+        </div>
+      ) : (
       <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
           <CardHeader>
@@ -237,6 +245,7 @@ export default function SettingsPage() {
           </Card>
         </div>
       </div>
+      )}
     </AppLayout>
   );
 }

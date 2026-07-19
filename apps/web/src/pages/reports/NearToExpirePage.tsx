@@ -11,12 +11,12 @@ import { Phone } from "lucide-react";
 import { toast } from "sonner";
 
 export default function NearToExpirePage() {
-  const { admin } = useAuth();
+  const { admin, selectedGymId } = useAuth();
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [daysFilter, setDaysFilter] = useState("7");
 
-  useEffect(() => { if (admin) fetchData(); }, [admin, daysFilter]);
+  useEffect(() => { if (admin) fetchData(); }, [admin, daysFilter, selectedGymId]);
 
   const fetchData = async () => {
     if (!admin) return;

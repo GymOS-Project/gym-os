@@ -1,11 +1,17 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { resolveGymScope } from "../services/gymScope.service";
 import { supabase } from "../supabase";
 
 export async function getDashboardStats(req: AuthenticatedRequest, res: Response) {
   const adminId = req.admin?.id;
   if (!adminId) {
     return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) {
+    return;
   }
 
   const today = new Date().toISOString().split("T")[0];
@@ -18,25 +24,39 @@ export async function getDashboardStats(req: AuthenticatedRequest, res: Response
     .toISOString()
     .split("T")[0];
 
+  let membersQuery = supabase.from("members").select("id, is_active, created_at").eq("admin_id", adminId);
+  let recentQuery = supabase
+    .from("members")
+    .select("id, name, phone, created_at")
+    .eq("admin_id", adminId);
+  let packagesQuery = supabase
+    .from("member_packages")
+    .select("status, end_date, amount_paid, created_at")
+    .eq("admin_id", adminId);
+  let enquiriesQuery = supabase.from("enquiries").select("id").eq("admin_id", adminId);
+  let followupsQuery = supabase.from("followups").select("id").eq("admin_id", adminId).eq("status", "pending");
+  let txnsQuery = supabase
+    .from("transactions")
+    .select("amount, transaction_date")
+    .eq("admin_id", adminId)
+    .gte("transaction_date", monthStart);
+
+  if (gymScope.selectedGymId) {
+    membersQuery = membersQuery.eq("gym_id", gymScope.selectedGymId);
+    recentQuery = recentQuery.eq("gym_id", gymScope.selectedGymId);
+    packagesQuery = packagesQuery.eq("gym_id", gymScope.selectedGymId);
+    enquiriesQuery = enquiriesQuery.eq("gym_id", gymScope.selectedGymId);
+    followupsQuery = followupsQuery.eq("gym_id", gymScope.selectedGymId);
+    txnsQuery = txnsQuery.eq("gym_id", gymScope.selectedGymId);
+  }
+
   const [membersRes, packagesRes, enquiriesRes, followupsRes, txnsRes, recentRes] = await Promise.all([
-    supabase.from("members").select("id, is_active, created_at").eq("admin_id", adminId),
-    supabase
-      .from("member_packages")
-      .select("status, end_date, amount_paid, created_at")
-      .eq("admin_id", adminId),
-    supabase.from("enquiries").select("id").eq("admin_id", adminId),
-    supabase.from("followups").select("id").eq("admin_id", adminId).eq("status", "pending"),
-    supabase
-      .from("transactions")
-      .select("amount, transaction_date")
-      .eq("admin_id", adminId)
-      .gte("transaction_date", monthStart),
-    supabase
-      .from("members")
-      .select("id, name, phone, created_at")
-      .eq("admin_id", adminId)
-      .order("created_at", { ascending: false })
-      .limit(5),
+    membersQuery,
+    packagesQuery,
+    enquiriesQuery,
+    followupsQuery,
+    txnsQuery,
+    recentQuery.order("created_at", { ascending: false }).limit(5),
   ]);
 
   const firstError = [membersRes, packagesRes, enquiriesRes, followupsRes, txnsRes, recentRes].find(

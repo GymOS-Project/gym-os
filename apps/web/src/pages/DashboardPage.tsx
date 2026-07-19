@@ -11,7 +11,7 @@ import {
 } from "recharts";
 
 export default function DashboardPage() {
-  const { admin } = useAuth();
+  const { admin, selectedGym, selectedGymId } = useAuth();
   const [stats, setStats] = useState<DashboardStats & { recentMembers?: any[]; memberStatusChart?: any[] }>({
     totalMembers: 0, activeMembers: 0, expiredMembers: 0,
     expiringThisWeek: 0, totalRevenue: 0, monthlyRevenue: 0,
@@ -27,7 +27,7 @@ export default function DashboardPage() {
       .then((data) => setStats(data as any))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [admin]);
+  }, [admin, selectedGymId]);
 
   const recentMembers: any[] = (stats as any).recentMembers || [];
 
@@ -36,7 +36,7 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Welcome back, {admin?.owner_name?.split(" ")[0]}!</h1>
-          <p className="text-muted-foreground mt-1">Here's what's happening at {admin?.gym_name} today.</p>
+          <p className="text-muted-foreground mt-1">Here's what's happening at {selectedGym?.gym_name || (admin?.gyms?.length > 1 ? 'all your gyms' : admin?.gym_name)} today.</p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

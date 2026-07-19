@@ -2,14 +2,9 @@ import { useEffect, useState } from "react";
 import { MoonStar, SunMedium } from "lucide-react";
 import { useTheme } from "next-themes";
 
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-interface ThemeToggleProps {
-  className?: string;
-}
-
-export function ThemeToggle({ className }: ThemeToggleProps) {
+export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -22,17 +17,34 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-3 rounded-full border border-border/70 bg-background/85 px-3 py-2 text-sm shadow-card backdrop-blur-xl",
+        "inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/85 p-1 shadow-sm backdrop-blur-xl",
         className,
       )}
     >
-      <SunMedium className={cn("h-4 w-4 transition-colors", isDark ? "text-muted-foreground" : "text-primary")} />
-      <Switch
-        checked={isDark}
-        onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-        aria-label="Toggle dark mode"
-      />
-      <MoonStar className={cn("h-4 w-4 transition-colors", isDark ? "text-primary" : "text-muted-foreground")} />
+      <button
+        type="button"
+        onClick={() => setTheme("light")}
+        className={cn(
+          "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-colors",
+          !isDark ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
+        aria-pressed={!isDark}
+      >
+        <SunMedium className="h-4 w-4" />
+        <span>Light</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setTheme("dark")}
+        className={cn(
+          "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-colors",
+          isDark ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
+        aria-pressed={isDark}
+      >
+        <MoonStar className="h-4 w-4" />
+        <span>Dark</span>
+      </button>
     </div>
   );
 }

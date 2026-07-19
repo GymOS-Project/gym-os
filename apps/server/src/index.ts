@@ -10,6 +10,7 @@ import followupsRouter from "./routes/followups";
 import enquiriesRouter from "./routes/enquiries";
 import reportsRouter from "./routes/reports";
 import statsRouter from "./routes/stats";
+import branchesRouter from "./routes/branches";
 import { createRateLimit } from "./middleware/rateLimit.middleware";
 
 import { startSubscriptionWorker, scheduleSubscriptionReminder } from "./jobs/subscriptionNotifier";
@@ -58,6 +59,7 @@ app.use("/followups", followupsRouter);
 app.use("/enquiries", enquiriesRouter);
 app.use("/reports", reportsRouter);
 app.use("/stats", statsRouter);
+app.use("/branches", branchesRouter);
 
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", message: "GymOS API running!" });

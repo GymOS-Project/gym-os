@@ -1,13 +1,15 @@
 import type {
-  Admin, Member, PackageType, MemberPackage,
+  Admin, Gym, Member, PackageType, MemberPackage,
   Enquiry, EnquiryFollowup, Followup, Transaction, Review,
 } from "@/types";
+import { getStoredGymFilter } from "@/lib/gymFilter";
 
 const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || "http://localhost:3001";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const gymScopedPath = withGymFilter(path);
   const isFormData = options?.body instanceof FormData;
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${gymScopedPath}`, {
     credentials: "include",
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
@@ -27,6 +29,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+function withGymFilter(path: string) {
+  if (path.startsWith("/auth") || path.startsWith("/branches")) {
+    return path;
+  }
+
+  const selectedGymId = getStoredGymFilter();
+  if (!selectedGymId || selectedGymId === "all") {
+    return path;
+  }
+
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}gym_id=${encodeURIComponent(selectedGymId)}`;
 }
 
 function qs(params: Record<string, string | number | undefined>): string {
@@ -67,10 +83,12 @@ export const api = {
   me: () => request<LoginResult>("/auth/me"),
   updateAdmin: (data: FormData) =>
     request<Admin>("/auth/admin", { method: "PUT", body: data }),
+  getGyms: () => request<Gym[]>("/branches"),
 
   // Members
   getMembers: () => request<(Member & { member_packages?: { status: string; end_date: string; package_name: string }[] })[]>("/members"),
-  getActiveMembers: () => request<{ id: string; name: string; phone: string }[]>("/members/active"),
+  getMember: (id: string) => request<Member>(`/members/${id}`),
+  getActiveMembers: () => request<{ id: string; name: string; phone: string; gym_id: string }[]>("/members/active"),
   createMember: (data: Partial<Member>) =>
     request<Member>("/members", { method: "POST", body: JSON.stringify(data) }),
   updateMember: (id: string, data: Partial<Member>) =>

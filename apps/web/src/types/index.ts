@@ -1,5 +1,24 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
+export interface Gym {
+  id: string;
+  admin_id: string;
+  gym_type: 'single' | 'branch';
+  gym_name: string;
+  owner_name: string;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  instagram_page: string | null;
+  address: string | null;
+  business_registration_name: string | null;
+  owner_email: string | null;
+  gym_photo_url: string | null;
+  logo_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Admin {
   id: string;
   user_id: string;
@@ -18,11 +37,13 @@ export interface Admin {
   logo_url: string | null;
   created_at: string;
   updated_at: string;
+  gyms: Gym[];
 }
 
 export interface PackageType {
   id: string;
   admin_id: string;
+  gym_id: string;
   name: string;
   duration_months: number | null;
   duration_days: number | null;
@@ -56,6 +77,7 @@ export interface Member {
 export interface MemberPackage {
   id: string;
   admin_id: string;
+  gym_id: string;
   member_id: string;
   package_type_id: string | null;
   package_name: string;
@@ -73,6 +95,7 @@ export interface MemberPackage {
 export interface Enquiry {
   id: string;
   admin_id: string;
+  gym_id: string;
   name: string;
   phone: string;
   email: string | null;
@@ -89,6 +112,7 @@ export interface Enquiry {
 export interface EnquiryFollowup {
   id: string;
   admin_id: string;
+  gym_id: string;
   enquiry_id: string;
   followup_date: string;
   next_followup_date: string | null;
@@ -101,6 +125,7 @@ export interface EnquiryFollowup {
 export interface Followup {
   id: string;
   admin_id: string;
+  gym_id: string;
   member_id: string | null;
   type: 'general' | 'payment_due' | 'renewal';
   followup_date: string;
@@ -115,6 +140,7 @@ export interface Followup {
 export interface Transaction {
   id: string;
   admin_id: string;
+  gym_id: string;
   member_id: string | null;
   member_package_id: string | null;
   type: 'payment' | 'refund' | 'adjustment';
@@ -129,6 +155,7 @@ export interface Transaction {
 export interface Review {
   id: string;
   admin_id: string;
+  gym_id: string;
   member_id: string | null;
   rating: number | null;
   comment: string | null;

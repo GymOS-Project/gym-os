@@ -39,9 +39,12 @@ type FlattenedAdmin = {
   [key: string]: any;
 };
 
+type GymRecord = Record<string, any>;
+
 function mergeAdminWithGym(
   admin: FlattenedAdmin | null,
-  gym: Record<string, any> | null,
+  gym: GymRecord | null,
+  gyms: GymRecord[] = [],
 ): FlattenedAdmin | null {
   if (!admin || !gym) {
     return null;
@@ -64,6 +67,7 @@ function mergeAdminWithGym(
     gym_type: gym.gym_type,
     created_at: admin.created_at ?? gym.created_at,
     updated_at: gym.updated_at ?? admin.updated_at,
+    gyms,
   };
 }
 
@@ -152,17 +156,19 @@ export async function getAdminByAuthId(authId: string) {
     return null;
   }
 
-  const { data: gym, error: gymError } = await supabase
+  const { data: gyms, error: gymError } = await supabase
     .from("gyms")
     .select("*")
     .eq("admin_id", admin.id)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
 
   if (gymError) {
     throw new Error(gymError.message);
   }
 
-  return mergeAdminWithGym(admin, gym);
+  const primaryGym = gyms?.[0] || null;
+
+  return mergeAdminWithGym(admin, primaryGym, gyms || []);
 }
 
 async function getUserFromAccessToken(accessToken: string) {

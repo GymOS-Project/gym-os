@@ -13,7 +13,7 @@ import { toast } from "sonner";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
 export default function ProfilePage() {
-  const { admin, refreshAdmin } = useAuth();
+  const { admin, selectedGym, selectedGymId, refreshAdmin } = useAuth();
   const [saving, setSaving] = useState(false);
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -24,17 +24,17 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    if (!admin) return;
+    if (!admin || !selectedGym) return;
     setForm({
-      owner_name: admin.owner_name || "",
-      owner_email: admin.owner_email || "",
-      phone: admin.phone || "",
+      owner_name: selectedGym.owner_name || "",
+      owner_email: selectedGym.owner_email || "",
+      phone: selectedGym.phone || "",
     });
-  }, [admin]);
+  }, [admin, selectedGym]);
 
   useEffect(() => {
     if (!profileImage) {
-      setPreviewUrl(admin?.logo_url || null);
+      setPreviewUrl(selectedGym?.logo_url || null);
       return;
     }
 
@@ -42,7 +42,7 @@ export default function ProfilePage() {
     setPreviewUrl(objectUrl);
 
     return () => URL.revokeObjectURL(objectUrl);
-  }, [profileImage, admin?.logo_url]);
+  }, [profileImage, selectedGym?.logo_url]);
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -77,6 +77,9 @@ export default function ProfilePage() {
     setSaving(true);
 
     const payload = new FormData();
+    if (selectedGym) {
+      payload.append("gym_id", selectedGym.id);
+    }
     payload.append("owner_name", form.owner_name);
     payload.append("owner_email", form.owner_email);
     payload.append("phone", form.phone);
@@ -98,6 +101,11 @@ export default function ProfilePage() {
 
   return (
     <AppLayout title="Profile">
+      {admin?.gyms?.length > 1 && selectedGymId === "all" ? (
+        <div className="mx-auto max-w-3xl rounded-2xl border border-warning/20 bg-warning/10 p-4 text-sm text-warning">
+          Select a specific gym from the global filter to edit its owner profile.
+        </div>
+      ) : (
       <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <Card>
           <CardHeader>
@@ -114,7 +122,7 @@ export default function ProfilePage() {
               </Avatar>
               <div className="space-y-1">
                 <p className="font-medium text-foreground">{form.owner_name || "Admin"}</p>
-                <p className="text-sm text-muted-foreground">{admin?.gym_name || "GymOs"}</p>
+                    <p className="text-sm text-muted-foreground">{selectedGym?.gym_name || admin?.gym_name || "GymOs"}</p>
               </div>
               <div className="w-full space-y-1.5">
                 <Label htmlFor="profile_image">Profile Image</Label>
@@ -180,6 +188,7 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+      )}
     </AppLayout>
   );
 }

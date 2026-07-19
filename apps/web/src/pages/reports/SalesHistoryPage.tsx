@@ -11,13 +11,13 @@ import { toast } from "sonner";
 import type { MemberPackage } from "@/types";
 
 export default function SalesHistoryPage() {
-  const { admin } = useAuth();
+  const { admin, selectedGymId } = useAuth();
   const [sales, setSales] = useState<(MemberPackage & { members?: { name: string; phone: string } })[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [monthFilter, setMonthFilter] = useState("all");
 
-  useEffect(() => { if (admin) fetchSales(); }, [admin]);
+  useEffect(() => { if (admin) fetchSales(); }, [admin, selectedGymId]);
 
   const fetchSales = async () => {
     if (!admin) return;
