@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import {  useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ const MIN_PHOTOS = 8;
 const MAX_PHOTOS = 10;
 
 export default function SignupPage() {
-  const { signUp, user } = useAuth();
+  const { signUp } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -96,7 +96,7 @@ export default function SignupPage() {
     setGymPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!validateStep()) return;
     setLoading(true);
@@ -132,15 +132,11 @@ export default function SignupPage() {
   };
 
 
-  // useEffect(() => {
-  //   if (!user) navigate("/")
-  //
-  // }, [])
 
   return (
     <div className="relative min-h-screen flex">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4">
-        <ThemeToggle className="pointer-events-auto" />
+        <ThemeToggle />
       </div>
 
       {/* Left Panel */}

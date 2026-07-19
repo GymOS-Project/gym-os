@@ -70,6 +70,7 @@ export const api = {
 
   // Members
   getMembers: () => request<(Member & { member_packages?: { status: string; end_date: string; package_name: string }[] })[]>("/members"),
+  getMember: (id: string) => request<Member>(`/members/${id}`),
   getActiveMembers: () => request<{ id: string; name: string; phone: string }[]>("/members/active"),
   createMember: (data: Partial<Member>) =>
     request<Member>("/members", { method: "POST", body: JSON.stringify(data) }),

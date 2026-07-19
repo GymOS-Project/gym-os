@@ -42,6 +42,7 @@ const routes = [
   { path: "/", element: <DashboardPage />, protected: true },
   { path: "/members", element: <MemberListPage />, protected: true },
   { path: "/members/add", element: <AddMemberPage />, protected: true },
+  { path: "/members/:id/edit", element: <AddMemberPage />, protected: true },
   { path: "/members/packages", element: <PackageTypesPage />, protected: true },
   {
     path: "/followups/common",
@@ -50,17 +51,6 @@ const routes = [
         type="general"
         title="Common Follow Up"
         description="Track general follow-ups with members"
-      />
-    ),
-    protected: true,
-  },
-  {
-    path: "/followups/enquiry",
-    element: (
-      <FollowupsPage
-        type="general"
-        title="Enquiry Follow Up"
-        description="Follow up with enquiry leads"
       />
     ),
     protected: true,

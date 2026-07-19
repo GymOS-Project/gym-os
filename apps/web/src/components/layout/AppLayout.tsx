@@ -5,13 +5,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, ClipboardList, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X } from 'lucide-react';
+import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface NavItem {
   label: string;
   href?: string;
   icon: React.ComponentType<{ className?: string }>;
+  exact?: boolean;
   children?: NavItem[];
 }
 
@@ -22,7 +23,7 @@ const navItems: NavItem[] = [
     icon: Users,
     children: [
       { label: 'Add Member', href: '/members/add', icon: UserPlus },
-      { label: 'Member List', href: '/members', icon: List },
+      { label: 'Member List', href: '/members', icon: List, exact: true },
       { label: 'Package Types', href: '/members/packages', icon: Package },
     ],
   },
@@ -31,7 +32,6 @@ const navItems: NavItem[] = [
     icon: PhoneCall,
     children: [
       { label: 'Common Follow Up', href: '/followups/common', icon: MessageSquare },
-      { label: 'Enquiry Follow Up', href: '/followups/enquiry', icon: ClipboardList },
       { label: 'Payment Due', href: '/followups/payment-due', icon: CreditCard },
       { label: 'Renewal Follow Up', href: '/followups/renewal', icon: RefreshCw },
     ],
@@ -41,7 +41,7 @@ const navItems: NavItem[] = [
     icon: UserSearch,
     children: [
       { label: 'Add Enquiry', href: '/enquiry/add', icon: UserPlus },
-      { label: 'Data List', href: '/enquiry', icon: List },
+      { label: 'Data List', href: '/enquiry', icon: List, exact: true },
       { label: 'Follow Up List', href: '/enquiry/followups', icon: Bell },
       { label: 'Not Interested', href: '/enquiry/not-interested', icon: XCircle },
     ],
@@ -60,6 +60,22 @@ const navItems: NavItem[] = [
   },
 ];
 
+function isNavItemActive(item: NavItem, pathname: string) {
+  if (!item.href) {
+    return item.children?.some(child => isNavItemActive(child, pathname)) ?? false;
+  }
+
+  if (item.href === '/') {
+    return pathname === '/';
+  }
+
+  if (item.exact) {
+    return pathname === item.href;
+  }
+
+  return pathname === item.href || pathname.startsWith(item.href + '/');
+}
+
 function NavItemComponent({
   item,
   depth = 0,
@@ -74,14 +90,11 @@ function NavItemComponent({
   const location = useLocation();
   const [open, setOpen] = useState(() => {
     if (!item.children) return false;
-    return item.children.some(child => child.href === location.pathname ||
-      (child.href !== '/' && location.pathname.startsWith(child.href || '')));
+    return item.children.some(child => isNavItemActive(child, location.pathname));
   });
 
   if (item.href) {
-    const isActive = item.href === '/'
-      ? location.pathname === '/'
-      : location.pathname === item.href || location.pathname.startsWith(item.href + '/');
+    const isActive = isNavItemActive(item, location.pathname);
     return (
       <NavLink
         to={item.href}
@@ -210,7 +223,6 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           </button>
           {title && <h1 className="font-semibold text-foreground">{title}</h1>}
           <div className="ml-auto flex items-center gap-3">
-            <ThemeToggle className="scale-90 sm:scale-100" />
             <div className="hidden sm:block text-right">
               <p className="text-sm font-medium text-foreground">{admin?.owner_name}</p>
               <p className="text-xs text-muted-foreground">{admin?.gym_name}</p>
@@ -247,6 +259,10 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5">
+                  <ThemeToggle />
+                </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
