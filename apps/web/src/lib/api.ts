@@ -9,15 +9,12 @@ const API_BASE_URL =
   ((import.meta as any).env.PROD ? "/api" : "http://localhost:3001");
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const gymScopedPath = withGymFilter(path);
   const isFormData = options?.body instanceof FormData;
-  const res = await fetch(`${API_BASE_URL}${gymScopedPath}`, {
-    credentials: "include",
-    headers: {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(options?.headers || {}),
-    },
+  const headers = withGymHeader(path, options?.headers, isFormData);
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
+    credentials: "include",
+    headers,
   });
 
   if (!res.ok) {
@@ -33,18 +30,24 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-function withGymFilter(path: string) {
+function withGymHeader(path: string, incomingHeaders: RequestInit["headers"], isFormData: boolean) {
+  const headers = new Headers(incomingHeaders || undefined);
+
+  if (!isFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   if (path.startsWith("/auth") || path.startsWith("/branches")) {
-    return path;
+    return headers;
   }
 
   const selectedGymId = getStoredGymFilter();
   if (!selectedGymId || selectedGymId === "all") {
-    return path;
+    return headers;
   }
 
-  const separator = path.includes("?") ? "&" : "?";
-  return `${path}${separator}gym_id=${encodeURIComponent(selectedGymId)}`;
+  headers.set("x-gym-id", selectedGymId);
+  return headers;
 }
 
 function qs(params: Record<string, string | number | undefined>): string {
