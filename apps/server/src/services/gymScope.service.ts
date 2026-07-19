@@ -30,7 +30,7 @@ export async function resolveGymScope(req: AuthenticatedRequest, res: Response):
   }
 
   const gymIds = await listAdminGyms(adminId);
-  const requestedGymId = typeof req.query.gym_id === "string" ? req.query.gym_id : null;
+  const requestedGymId = req.get("x-gym-id") || (typeof req.query.gym_id === "string" ? req.query.gym_id : null);
 
   if (requestedGymId && !gymIds.includes(requestedGymId)) {
     res.status(403).json({ message: "Invalid gym filter" });
@@ -67,6 +67,8 @@ export async function resolveWriteGymId(req: AuthenticatedRequest, res: Response
 
   const requestedGymId = typeof req.body?.gym_id === "string"
     ? req.body.gym_id
+    : typeof req.get("x-gym-id") === "string" && req.get("x-gym-id")
+      ? req.get("x-gym-id")!
     : typeof req.query.gym_id === "string"
       ? req.query.gym_id
       : typeof req.admin?.gym_id === "string"
