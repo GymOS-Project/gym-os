@@ -3,6 +3,8 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Admin {
   id: string;
   user_id: string;
+  gym_id: string;
+  gym_type: 'single' | 'branch';
   gym_name: string;
   owner_name: string;
   phone: string | null;
@@ -34,6 +36,7 @@ export interface PackageType {
 export interface Member {
   id: string;
   admin_id: string;
+  gym_id: string;
   name: string;
   email: string | null;
   phone: string;

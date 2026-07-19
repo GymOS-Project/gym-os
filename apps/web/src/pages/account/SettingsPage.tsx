@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Globe, ImageUp, Settings } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const [gymPhoto, setGymPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
+    gym_type: "single" as "single" | "branch",
     gym_name: "",
     business_registration_name: "",
     email: "",
@@ -29,6 +31,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!admin) return;
     setForm({
+      gym_type: admin.gym_type || "single",
       gym_name: admin.gym_name || "",
       business_registration_name: admin.business_registration_name || "",
       email: admin.email || "",
@@ -83,6 +86,7 @@ export default function SettingsPage() {
     setSaving(true);
 
     const payload = new FormData();
+    payload.append("gym_type", form.gym_type);
     payload.append("gym_name", form.gym_name);
     payload.append("business_registration_name", form.business_registration_name);
     payload.append("email", form.email);
@@ -116,6 +120,18 @@ export default function SettingsPage() {
           <CardContent>
             <form onSubmit={handleSave} className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="gym_type">Gym Type</Label>
+                  <Select value={form.gym_type} onValueChange={(value: "single" | "branch") => updateField("gym_type", value)}>
+                    <SelectTrigger id="gym_type">
+                      <SelectValue placeholder="Select gym type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single</SelectItem>
+                      <SelectItem value="branch">Branch</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="gym_name">Gym Name</Label>
                   <Input

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Dumbbell, Check, Eye, EyeOff, Building2, User, Lock, Upload, X, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,6 +28,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
+    gym_type: 'single',
     gym_name: '',
     business_registration_name: '',
     gym_email: '',
@@ -46,6 +48,7 @@ export default function SignupPage() {
 
   const validateStep = () => {
     if (step === 1) {
+      if (!formData.gym_type) { toast.error('Gym type is required'); return false; }
       if (!formData.gym_name.trim()) { toast.error('Gym name is required'); return false; }
       if (!formData.business_registration_name.trim()) { toast.error('Business registration name is required'); return false; }
       if (!formData.gym_email.trim()) { toast.error('Gym email address is required'); return false; }
@@ -98,6 +101,7 @@ export default function SignupPage() {
     if (!validateStep()) return;
     setLoading(true);
     const payload = new FormData();
+    payload.append('gym_type', formData.gym_type);
     payload.append('gym_name', formData.gym_name);
     payload.append('business_registration_name', formData.business_registration_name);
     payload.append('email', formData.owner_email || formData.gym_email);
@@ -128,10 +132,10 @@ export default function SignupPage() {
   };
 
 
-  useEffect(() => {
-    if (!user) navigate("/")
-
-  }, [])
+  // useEffect(() => {
+  //   if (!user) navigate("/")
+  //
+  // }, [])
 
   return (
     <div className="relative min-h-screen flex">
@@ -236,6 +240,18 @@ export default function SignupPage() {
             {/* Step 1: Gym Info */}
             {step === 1 && (
               <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="gym_type">Gym Type *</Label>
+                  <Select value={formData.gym_type} onValueChange={value => update('gym_type', value)}>
+                    <SelectTrigger id="gym_type">
+                      <SelectValue placeholder="Select gym type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single</SelectItem>
+                      <SelectItem value="branch">Branch</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="gym_name">Gym Name *</Label>
                   <Input

@@ -33,6 +33,40 @@ export type AuthSessionUser = {
   email?: string | null;
 };
 
+type FlattenedAdmin = {
+  id: string;
+  auth_id: string;
+  [key: string]: any;
+};
+
+function mergeAdminWithGym(
+  admin: FlattenedAdmin | null,
+  gym: Record<string, any> | null,
+): FlattenedAdmin | null {
+  if (!admin || !gym) {
+    return null;
+  }
+
+  return {
+    ...admin,
+    gym_id: gym.id,
+    gym_name: gym.gym_name,
+    owner_name: gym.owner_name,
+    phone: gym.phone,
+    email: gym.email,
+    website: gym.website,
+    instagram_page: gym.instagram_page,
+    address: gym.address,
+    business_registration_name: gym.business_registration_name,
+    owner_email: gym.owner_email,
+    gym_photo_url: gym.gym_photo_url,
+    logo_url: gym.logo_url,
+    gym_type: gym.gym_type,
+    created_at: admin.created_at ?? gym.created_at,
+    updated_at: gym.updated_at ?? admin.updated_at,
+  };
+}
+
 export function getCookieOptions(maxAge?: number): CookieOptions {
   const sameSite: CookieOptions["sameSite"] =
     COOKIE_SAME_SITE === "strict"
@@ -114,7 +148,21 @@ export async function getAdminByAuthId(authId: string) {
     throw new Error(error.message);
   }
 
-  return admin;
+  if (!admin) {
+    return null;
+  }
+
+  const { data: gym, error: gymError } = await supabase
+    .from("gyms")
+    .select("*")
+    .eq("admin_id", admin.id)
+    .maybeSingle();
+
+  if (gymError) {
+    throw new Error(gymError.message);
+  }
+
+  return mergeAdminWithGym(admin, gym);
 }
 
 async function getUserFromAccessToken(accessToken: string) {

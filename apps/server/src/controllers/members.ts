@@ -83,6 +83,11 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
     return;
   }
 
+  const gymId = typeof req.admin?.gym_id === "string" ? req.admin.gym_id : null;
+  if (!gymId) {
+    return res.status(400).json({ message: "Admin is not linked to a gym" });
+  }
+
   const {
     name,
     email,
@@ -114,6 +119,7 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
       notes,
       reference_member_id,
       admin_id: adminId,
+      gym_id: gymId,
     })
     .select()
     .single();

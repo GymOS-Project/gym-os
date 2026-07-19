@@ -86,6 +86,7 @@ export async function signup(req: Request, res: Response) {
   const {
     email,
     password,
+    gym_type,
     gym_name,
     owner_name,
     phone,
@@ -101,10 +102,14 @@ export async function signup(req: Request, res: Response) {
   const gymPhotoFiles = getSignupFiles(req);
   const gymPhotoFile = gymPhotoFiles[0];
 
-  if (!authEmail || !password || !gym_name || !owner_name || !phone) {
+  if (!authEmail || !password || !gym_type || !gym_name || !owner_name || !phone) {
     return res.status(400).json({
-      message: "email, password, gym_name, owner_name, and phone are required",
+      message: "email, password, gym_type, gym_name, owner_name, and phone are required",
     });
+  }
+
+  if (gym_type !== "single" && gym_type !== "branch") {
+    return res.status(400).json({ message: "gym_type must be either single or branch" });
   }
 
   const signupClient = createSupabaseAuthClient();
@@ -120,8 +125,17 @@ export async function signup(req: Request, res: Response) {
       gymPhotoUrl = await uploadGymPhoto(gymPhotoFile, data.user.id);
     }
 
-    const { error: adminError } = await supabase.from("admins").insert({
+    const { data: admin, error: adminError } = await supabase.from("admins").insert({
       auth_id: data.user.id,
+    }).select("id").single();
+
+    if (adminError) {
+      return res.status(500).json({ message: adminError.message });
+    }
+
+    const { error: gymError } = await supabase.from("gyms").insert({
+      admin_id: admin.id,
+      gym_type,
       gym_name,
       owner_name,
       phone: phone || null,
@@ -134,8 +148,8 @@ export async function signup(req: Request, res: Response) {
       gym_photo_url: gymPhotoUrl,
     });
 
-    if (adminError) {
-      return res.status(500).json({ message: adminError.message });
+    if (gymError) {
+      return res.status(500).json({ message: gymError.message });
     }
   }
 
@@ -220,7 +234,7 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
   }
 
   const body = req.body as Record<string, unknown>;
-  const updates: Record<string, unknown> = {};
+  const gymUpdates: Record<string, unknown> = {};
 
   const requiredFields = [
     { key: "owner_name", label: "owner_name" },
@@ -233,7 +247,7 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
       if (!value) {
         return res.status(400).json({ message: `${field.label} cannot be empty` });
       }
-      updates[field.key] = value;
+      gymUpdates[field.key] = value;
     }
   }
 
@@ -245,11 +259,16 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
     "address",
     "business_registration_name",
     "owner_email",
+    "gym_type",
   ];
 
   for (const field of optionalFields) {
     if (hasOwn(body, field)) {
-      updates[field] = normalizeOptionalString(body[field]);
+      const value = normalizeOptionalString(body[field]);
+      if (field === "gym_type" && value && value !== "single" && value !== "branch") {
+        return res.status(400).json({ message: "gym_type must be either single or branch" });
+      }
+      gymUpdates[field] = value;
     }
   }
 
@@ -258,28 +277,27 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
 
   try {
     if (profileImageFile) {
-      updates.logo_url = await uploadAdminLogo(profileImageFile, userId);
+      gymUpdates.logo_url = await uploadAdminLogo(profileImageFile, userId);
     }
 
     if (gymPhotoFile) {
-      updates.gym_photo_url = await uploadGymPhoto(gymPhotoFile, userId);
+      gymUpdates.gym_photo_url = await uploadGymPhoto(gymPhotoFile, userId);
     }
   } catch (error) {
     return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to upload image" });
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(gymUpdates).length === 0) {
     const admin = await getAdminByAuthId(userId);
     return res.json(admin);
   }
 
-  updates.updated_at = new Date().toISOString();
+  gymUpdates.updated_at = new Date().toISOString();
 
   const { data, error } = await supabase
-    .from("admins")
-    .update(updates)
-    .eq("id", adminId)
-    .eq("auth_id", userId)
+    .from("gyms")
+    .update(gymUpdates)
+    .eq("admin_id", adminId)
     .select("*")
     .single();
 
@@ -287,5 +305,21 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ message: error.message });
   }
 
-  return res.json(data);
+  return res.json({
+    ...req.admin,
+    gym_id: data.id,
+    gym_name: data.gym_name,
+    owner_name: data.owner_name,
+    phone: data.phone,
+    email: data.email,
+    website: data.website,
+    instagram_page: data.instagram_page,
+    address: data.address,
+    business_registration_name: data.business_registration_name,
+    owner_email: data.owner_email,
+    gym_photo_url: data.gym_photo_url,
+    logo_url: data.logo_url,
+    gym_type: data.gym_type,
+    updated_at: data.updated_at,
+  });
 }
