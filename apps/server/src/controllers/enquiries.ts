@@ -164,7 +164,9 @@ export async function createEnquiryFollowup(req: AuthenticatedRequest, res: Resp
     return;
   }
 
-  const validEnquiry = await ensureEnquiryBelongsToGym(req.params.id, adminId, gymId).catch((error) => {
+  const enquiryId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+  const validEnquiry = await ensureEnquiryBelongsToGym(enquiryId, adminId, gymId).catch((error) => {
     res.status(500).json({ message: error instanceof Error ? error.message : "Failed to validate enquiry" });
     return null;
   });
@@ -184,7 +186,7 @@ export async function createEnquiryFollowup(req: AuthenticatedRequest, res: Resp
     .insert({
       admin_id: adminId,
       gym_id: gymId,
-      enquiry_id: req.params.id,
+      enquiry_id: enquiryId,
       followup_date,
       next_followup_date: next_followup_date || null,
       notes: notes || null,
