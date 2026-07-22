@@ -30,7 +30,7 @@ const adminAuthLimiter = createRateLimit({
 
 router.use(authReadLimiter);
 
-router.post("/signup", authWriteLimiter, upload.any(), signup);
+router.post("/signup", authWriteLimiter, upload.any() as any, signup);
 router.post("/login", authWriteLimiter, login);
 router.post("/signout", signout);
 router.get("/me", me);
@@ -39,7 +39,7 @@ router.put(
   authWriteLimiter,
   adminAuthLimiter,
   requireAuthenticatedAdmin,
-  upload.any(),
+  upload.any() as any,
   updateAdmin
 );
 
