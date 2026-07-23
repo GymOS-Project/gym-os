@@ -68,7 +68,7 @@
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react-swc": "^3.11.0",
+    "@vitejs/plugin-react-swc": "^4.3.2",
     "autoprefixer": "^10.4.21",
     "eslint": "^10.7.0",
     "eslint-plugin-react-hooks": "^7.1.1",
