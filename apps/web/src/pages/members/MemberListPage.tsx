@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { Member } from "@/types";
 
 const NO_REFERENCE_MEMBER = "__none__";
@@ -39,8 +40,13 @@ export default function MemberListPage() {
     phone: "",
     gender: "",
     date_of_birth: "",
-    address: "",
+    current_address: "",
+    permanent_address: "",
     emergency_contact: "",
+    aadhar_card_no: "",
+    driving_license_no: "",
+    pan_card_no: "",
+    marital_status: "",
     gym_id: "",
     shift: "",
     notes: "",
@@ -124,8 +130,13 @@ export default function MemberListPage() {
         phone: member.phone,
         gender: member.gender || "",
         date_of_birth: member.date_of_birth || "",
-        address: member.address || "",
+        current_address: member.current_address || member.address || "",
+        permanent_address: member.permanent_address || "",
         emergency_contact: member.emergency_contact || "",
+        aadhar_card_no: member.aadhar_card_no || "",
+        driving_license_no: member.driving_license_no || "",
+        pan_card_no: member.pan_card_no || "",
+        marital_status: member.marital_status || "",
         gym_id: member.gym_id || "",
         shift: member.shift || "",
         notes: member.notes || "",
@@ -156,8 +167,14 @@ export default function MemberListPage() {
         gym_id: editForm.gym_id || null,
         gender: (editForm.gender as Member["gender"]) || null,
         date_of_birth: editForm.date_of_birth || null,
-        address: editForm.address || null,
+        address: editForm.current_address || null,
+        current_address: editForm.current_address || null,
+        permanent_address: editForm.permanent_address || null,
         emergency_contact: editForm.emergency_contact || null,
+        aadhar_card_no: editForm.aadhar_card_no || null,
+        driving_license_no: editForm.driving_license_no || null,
+        pan_card_no: editForm.pan_card_no || null,
+        marital_status: editForm.marital_status || null,
         shift: editForm.shift || null,
         notes: editForm.notes || null,
         reference_member_id:
@@ -280,7 +297,7 @@ export default function MemberListPage() {
       </AlertDialog>
 
       <Dialog open={!!editMemberId} onOpenChange={(open) => !open && setEditMemberId(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Edit Member</DialogTitle>
           </DialogHeader>
@@ -337,9 +354,25 @@ export default function MemberListPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Marital Status</Label>
+                  <Select value={editForm.marital_status} onValueChange={(value) => setEdit("marital_status", value)}>
+                    <SelectTrigger><SelectValue placeholder="Select marital status" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single</SelectItem>
+                      <SelectItem value="married">Married</SelectItem>
+                      <SelectItem value="divorced">Divorced</SelectItem>
+                      <SelectItem value="widowed">Widowed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Address</Label>
-                  <Input value={editForm.address} onChange={(e) => setEdit("address", e.target.value)} />
+                  <Label>Current Address</Label>
+                  <Textarea value={editForm.current_address} onChange={(e) => setEdit("current_address", e.target.value)} />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>Permanent Address</Label>
+                  <Textarea value={editForm.permanent_address} onChange={(e) => setEdit("permanent_address", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Emergency Contact</Label>
@@ -360,9 +393,21 @@ export default function MemberListPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Aadhar Card No</Label>
+                  <Input value={editForm.aadhar_card_no} onChange={(e) => setEdit("aadhar_card_no", e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Driving License No</Label>
+                  <Input value={editForm.driving_license_no} onChange={(e) => setEdit("driving_license_no", e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>PAN Card No</Label>
+                  <Input value={editForm.pan_card_no} onChange={(e) => setEdit("pan_card_no", e.target.value)} />
+                </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label>Notes</Label>
-                  <Input value={editForm.notes} onChange={(e) => setEdit("notes", e.target.value)} />
+                  <Textarea value={editForm.notes} onChange={(e) => setEdit("notes", e.target.value)} />
                 </div>
               </div>
 

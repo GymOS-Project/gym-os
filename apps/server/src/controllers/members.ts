@@ -4,6 +4,15 @@ import { attachMemberPackages } from "../services/memberPackages.service";
 import { ensureGymBelongsToAdmin, resolveGymScope } from "../services/gymScope.service";
 import { supabase } from "../supabase";
 
+function normalizeOptionalString(value: unknown) {
+  if (typeof value !== "string") {
+    return value == null ? null : String(value);
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
 function getAdminId(req: AuthenticatedRequest, res: Response) {
   const adminId = req.admin?.id;
   if (!adminId) {
@@ -146,11 +155,19 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
     gender,
     date_of_birth,
     address,
+    current_address,
+    permanent_address,
     emergency_contact,
+    aadhar_card_no,
+    driving_license_no,
+    pan_card_no,
+    marital_status,
     shift,
     notes,
     reference_member_id,
   } = req.body;
+
+  const resolvedCurrentAddress = normalizeOptionalString(current_address ?? address);
 
   if (!name || !phone) {
     return res.status(400).json({ message: "name and phone are required" });
@@ -164,8 +181,14 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
       phone,
       gender,
       date_of_birth,
-      address,
+      address: resolvedCurrentAddress,
+      current_address: resolvedCurrentAddress,
+      permanent_address: normalizeOptionalString(permanent_address),
       emergency_contact,
+      aadhar_card_no: normalizeOptionalString(aadhar_card_no),
+      driving_license_no: normalizeOptionalString(driving_license_no),
+      pan_card_no: normalizeOptionalString(pan_card_no),
+      marital_status: normalizeOptionalString(marital_status),
       shift,
       notes,
       reference_member_id,
@@ -200,13 +223,23 @@ export async function updateMember(req: AuthenticatedRequest, res: Response) {
     gender,
     date_of_birth,
     address,
+    current_address,
+    permanent_address,
     emergency_contact,
+    aadhar_card_no,
+    driving_license_no,
+    pan_card_no,
+    marital_status,
     reference_member_id,
     shift,
     notes,
     is_active,
     gym_id,
   } = req.body;
+
+  const resolvedCurrentAddress = current_address !== undefined || address !== undefined
+    ? normalizeOptionalString(current_address ?? address)
+    : undefined;
 
   if (gym_id && !(await ensureGymBelongsToAdmin(adminId, gym_id).catch(() => false))) {
     return res.status(403).json({ message: "Invalid gym" });
@@ -236,8 +269,14 @@ export async function updateMember(req: AuthenticatedRequest, res: Response) {
       phone,
       gender,
       date_of_birth,
-      address,
+      address: resolvedCurrentAddress,
+      current_address: resolvedCurrentAddress,
+      permanent_address,
       emergency_contact,
+      aadhar_card_no,
+      driving_license_no,
+      pan_card_no,
+      marital_status,
       reference_member_id,
       shift,
       notes,

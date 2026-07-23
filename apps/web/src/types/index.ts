@@ -66,8 +66,14 @@ export interface Member {
   gender: 'male' | 'female' | 'other' | null;
   date_of_birth: string | null;
   address: string | null;
+  current_address: string | null;
+  permanent_address: string | null;
   photo_url: string | null;
   emergency_contact: string | null;
+  aadhar_card_no: string | null;
+  driving_license_no: string | null;
+  pan_card_no: string | null;
+  marital_status: string | null;
   reference_member_id: string | null;
   shift: string | null;
   notes: string | null;

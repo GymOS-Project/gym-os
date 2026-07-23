@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import type { PackageType } from "@/types";
 import { addDays, addMonths, format } from "date-fns";
@@ -25,7 +26,8 @@ export default function AddMemberPage() {
 
   const [form, setForm] = useState({
     name: "", email: "", phone: "", gender: "", date_of_birth: "",
-    address: "", emergency_contact: "", shift: "", notes: "",
+    current_address: "", permanent_address: "", emergency_contact: "", shift: "", notes: "",
+    aadhar_card_no: "", driving_license_no: "", pan_card_no: "", marital_status: "",
     gym_id: "",
     reference_member_id: NO_REFERENCE_MEMBER,
     package_type_id: "", start_date: format(new Date(), "yyyy-MM-dd"),
@@ -60,10 +62,15 @@ export default function AddMemberPage() {
           phone: member.phone,
           gender: member.gender || "",
           date_of_birth: member.date_of_birth || "",
-          address: member.address || "",
+          current_address: member.current_address || member.address || "",
+          permanent_address: member.permanent_address || "",
           emergency_contact: member.emergency_contact || "",
           shift: member.shift || "",
           notes: member.notes || "",
+          aadhar_card_no: member.aadhar_card_no || "",
+          driving_license_no: member.driving_license_no || "",
+          pan_card_no: member.pan_card_no || "",
+          marital_status: member.marital_status || "",
           gym_id: member.gym_id || "",
           reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER,
           package_type_id: "",
@@ -98,8 +105,14 @@ export default function AddMemberPage() {
     gym_id: form.gym_id,
     gender: (form.gender as any) || null,
     date_of_birth: form.date_of_birth || null,
-    address: form.address || null,
+    address: form.current_address || null,
+    current_address: form.current_address || null,
+    permanent_address: form.permanent_address || null,
     emergency_contact: form.emergency_contact || null,
+    aadhar_card_no: form.aadhar_card_no || null,
+    driving_license_no: form.driving_license_no || null,
+    pan_card_no: form.pan_card_no || null,
+    marital_status: form.marital_status || null,
     shift: form.shift || null,
     notes: form.notes || null,
     reference_member_id:
@@ -163,7 +176,7 @@ export default function AddMemberPage() {
 
   return (
     <AppLayout title={isEditing ? "Edit Member" : "Add Member"}>
-      <div className="max-w-3xl mx-auto">
+      <div className="mx-auto max-w-4xl">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">{isEditing ? "Edit Member" : "Add New Member"}</h1>
           <p className="text-muted-foreground mt-1">
@@ -224,9 +237,25 @@ export default function AddMemberPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label>Marital Status</Label>
+                <Select value={form.marital_status} onValueChange={(v) => set("marital_status", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select marital status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single</SelectItem>
+                    <SelectItem value="married">Married</SelectItem>
+                    <SelectItem value="divorced">Divorced</SelectItem>
+                    <SelectItem value="widowed">Widowed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>Address</Label>
-                <Input value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Member address" />
+                <Label>Current Address</Label>
+                <Textarea value={form.current_address} onChange={(e) => set("current_address", e.target.value)} placeholder="Current address" />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Permanent Address</Label>
+                <Textarea value={form.permanent_address} onChange={(e) => set("permanent_address", e.target.value)} placeholder="Permanent address" />
               </div>
               <div className="space-y-1.5">
                 <Label>Emergency Contact</Label>
@@ -242,9 +271,21 @@ export default function AddMemberPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label>Aadhar Card No</Label>
+                <Input value={form.aadhar_card_no} onChange={(e) => set("aadhar_card_no", e.target.value)} placeholder="Aadhar number" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Driving License No</Label>
+                <Input value={form.driving_license_no} onChange={(e) => set("driving_license_no", e.target.value)} placeholder="Driving license number" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>PAN Card No</Label>
+                <Input value={form.pan_card_no} onChange={(e) => set("pan_card_no", e.target.value)} placeholder="PAN number" />
+              </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label>Notes</Label>
-                <Input value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Additional notes" />
+                <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Additional notes" />
               </div>
             </div>
           </div>
