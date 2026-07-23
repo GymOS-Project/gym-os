@@ -32,6 +32,8 @@ type SignupGymPayload = {
   owner_email: string | null;
 };
 
+type GymDetailsPayload = SignupGymPayload;
+
 
 async function uploadAdminImage(file: Express.Multer.File, userId: string, bucket: string, folder: string) {
   const fileExt = file.originalname.includes(".")
@@ -158,6 +160,40 @@ function parseSignupGyms(body: Record<string, unknown>) {
   }
 
   return [gym];
+}
+
+function parseGymDetails(payload: Record<string, unknown>) {
+  const gym = {
+    gym_name: normalizeRequiredString(payload.gym_name),
+    business_registration_name: normalizeOptionalString(payload.business_registration_name),
+    gym_email: normalizeOptionalString(payload.gym_email),
+    website: normalizeOptionalString(payload.website),
+    instagram_page: normalizeOptionalString(payload.instagram_page),
+    address: normalizeOptionalString(payload.address),
+    owner_name: normalizeRequiredString(payload.owner_name),
+    phone: normalizeRequiredString(payload.phone),
+    owner_email: normalizeOptionalString(payload.owner_email),
+  } satisfies GymDetailsPayload;
+
+  if (!gym.gym_name || !gym.owner_name || !gym.phone || !gym.gym_email || !gym.address || !gym.owner_email || !gym.business_registration_name) {
+    throw new Error("All new branch fields are required");
+  }
+
+  return gym;
+}
+
+async function getAdminGyms(adminId: string) {
+  const { data, error } = await supabase
+    .from("gyms")
+    .select("*")
+    .eq("admin_id", adminId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data || [];
 }
 
 function toAuthUser(user: { id: string; email?: string | null }): AuthUser {
@@ -314,6 +350,79 @@ export async function me(req: Request, res: Response) {
   return res.json({ user: toAuthUser(user), admin, authenticated: true });
 }
 
+export async function upgradeSingleGymToBranch(req: AuthenticatedRequest, res: Response) {
+  const adminId = req.admin?.id;
+  const userId = req.authUser?.id;
+
+  if (!adminId || !userId) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  let newGym: GymDetailsPayload;
+
+  try {
+    newGym = parseGymDetails(req.body as Record<string, unknown>);
+  } catch (error) {
+    return res.status(400).json({ message: error instanceof Error ? error.message : "Invalid branch upgrade payload" });
+  }
+
+  try {
+    const admin = await getAdminByAuthId(userId);
+
+    if (!admin || admin.gym_type !== "single" || !Array.isArray(admin.gyms) || admin.gyms.length !== 1) {
+      return res.status(400).json({ message: "Only single-gym accounts can upgrade to branch mode" });
+    }
+
+    const currentGyms = await getAdminGyms(adminId);
+
+    if (currentGyms.length !== 1) {
+      return res.status(400).json({ message: "This account is no longer eligible for branch upgrade setup" });
+    }
+
+    const upgradeTimestamp = new Date().toISOString();
+
+    const { error: updateExistingGymsError } = await supabase
+      .from("gyms")
+      .update({
+        gym_type: "branch",
+        updated_at: upgradeTimestamp,
+      })
+      .eq("admin_id", adminId);
+
+    if (updateExistingGymsError) {
+      return res.status(500).json({ message: updateExistingGymsError.message });
+    }
+
+    const { error: insertBranchError } = await supabase.from("gyms").insert({
+      admin_id: adminId,
+      gym_type: "branch",
+      gym_name: newGym.gym_name,
+      owner_name: newGym.owner_name,
+      phone: newGym.phone,
+      email: newGym.gym_email,
+      website: newGym.website,
+      instagram_page: newGym.instagram_page,
+      address: newGym.address,
+      business_registration_name: newGym.business_registration_name,
+      owner_email: newGym.owner_email,
+    });
+
+    if (insertBranchError) {
+      await supabase
+        .from("gyms")
+        .update({ gym_type: "single", updated_at: upgradeTimestamp })
+        .eq("admin_id", adminId);
+
+      return res.status(500).json({ message: insertBranchError.message });
+    }
+
+    const refreshedAdmin = await getAdminByAuthId(userId);
+    return res.json(refreshedAdmin);
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to upgrade account to branch mode" });
+  }
+}
+
 export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
   const adminId = req.admin?.id;
   const userId = req.authUser?.id;
@@ -325,6 +434,14 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
   const body = req.body as Record<string, unknown>;
   const gymUpdates: Record<string, unknown> = {};
   const selectedGymId = normalizeOptionalString(body.gym_id);
+
+  if (hasOwn(body, "gym_type")) {
+    return res.status(400).json({
+      message: req.admin?.gym_type === "single"
+        ? "Gym type changes are locked. Submit a branch upgrade request first."
+        : "Gym type cannot be changed from settings.",
+    });
+  }
 
   const requiredFields = [
     { key: "owner_name", label: "owner_name" },
@@ -349,15 +466,11 @@ export async function updateAdmin(req: AuthenticatedRequest, res: Response) {
     "address",
     "business_registration_name",
     "owner_email",
-    "gym_type",
   ];
 
   for (const field of optionalFields) {
     if (hasOwn(body, field)) {
       const value = normalizeOptionalString(body[field]);
-      if (field === "gym_type" && value && value !== "single" && value !== "branch") {
-        return res.status(400).json({ message: "gym_type must be either single or branch" });
-      }
       gymUpdates[field] = value;
     }
   }

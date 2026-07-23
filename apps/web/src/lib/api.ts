@@ -88,7 +88,11 @@ export const api = {
   me: () => request<LoginResult>("/auth/me"),
   updateAdmin: (data: FormData) =>
     request<Admin>("/auth/admin", { method: "PUT", body: data }),
+  upgradeToBranch: (data: Record<string, unknown>) =>
+    request<Admin>("/auth/admin/upgrade-to-branch", { method: "POST", body: JSON.stringify(data) }),
   getGyms: () => request<Gym[]>("/branches"),
+  createBranch: (data: Record<string, unknown>) =>
+    request<Gym>("/branches", { method: "POST", body: JSON.stringify(data) }),
 
   // Members
   getMembers: () => request<(Member & { member_packages?: { status: string; end_date: string; package_name: string }[] })[]>("/members"),

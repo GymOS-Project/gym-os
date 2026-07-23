@@ -1,6 +1,13 @@
 import { Router } from "express";
 import multer from "multer";
-import { login, me, signout, signup, updateAdmin } from "../controllers/auth";
+import {
+  login,
+  me,
+  signout,
+  signup,
+  updateAdmin,
+  upgradeSingleGymToBranch,
+} from "../controllers/auth";
 import { createRateLimit } from "../middleware/rateLimit.middleware";
 import { requireAuthenticatedAdmin } from "../middleware/sessionAuth.middleware";
 
@@ -41,6 +48,13 @@ router.put(
   requireAuthenticatedAdmin,
   upload.any() as any,
   updateAdmin
+);
+router.post(
+  "/admin/upgrade-to-branch",
+  authWriteLimiter,
+  adminAuthLimiter,
+  requireAuthenticatedAdmin,
+  upgradeSingleGymToBranch
 );
 
 export default router;
