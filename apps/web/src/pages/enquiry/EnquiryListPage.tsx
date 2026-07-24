@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -173,7 +174,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Next Follow-up Date</Label>
-              <Input type="date" value={fuForm.next_followup_date} onChange={(e) => setFuForm((p) => ({ ...p, next_followup_date: e.target.value }))} />
+              <DatePicker value={fuForm.next_followup_date} onChange={(value) => setFuForm((p) => ({ ...p, next_followup_date: value }))} placeholder="Select next follow-up" />
             </div>
             <div className="space-y-1.5">
               <Label>Notes</Label>

@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -341,7 +342,7 @@ export default function MemberListPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Date of Birth</Label>
-                  <Input type="date" value={editForm.date_of_birth} onChange={(e) => setEdit("date_of_birth", e.target.value)} />
+                  <DatePicker value={editForm.date_of_birth} onChange={(value) => setEdit("date_of_birth", value)} placeholder="Select date of birth" />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Shift</Label>

@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -88,7 +89,7 @@ export default function AddMemberPage() {
 
   const availablePackages = packages.filter((pkg) => !form.gym_id || pkg.gym_id === form.gym_id);
   const selectedPkg = availablePackages.find((p) => p.id === form.package_type_id);
-  const endDate = selectedPkg
+  const endDate = selectedPkg && form.start_date
     ? selectedPkg.duration_months
       ? format(addMonths(new Date(form.start_date), selectedPkg.duration_months), "yyyy-MM-dd")
       : selectedPkg.duration_days
@@ -224,7 +225,7 @@ export default function AddMemberPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Date of Birth</Label>
-                <Input type="date" value={form.date_of_birth} onChange={(e) => set("date_of_birth", e.target.value)} />
+                <DatePicker value={form.date_of_birth} onChange={(value) => set("date_of_birth", value)} placeholder="Select date of birth" />
               </div>
               <div className="space-y-1.5">
                 <Label>Shift</Label>
@@ -307,7 +308,7 @@ export default function AddMemberPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Start Date</Label>
-                  <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
+                  <DatePicker value={form.start_date} onChange={(value) => set("start_date", value)} placeholder="Select start date" allowClear={false} />
                 </div>
                 {endDate && (
                   <div className="space-y-1.5">

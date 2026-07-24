@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -111,7 +112,7 @@ export default function AddEnquiryPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Next Follow-up Date</Label>
-              <Input type="date" value={form.next_followup_date} onChange={(e) => set("next_followup_date", e.target.value)} />
+              <DatePicker value={form.next_followup_date} onChange={(value) => set("next_followup_date", value)} placeholder="Select next follow-up" />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Notes</Label>

@@ -102,8 +102,8 @@ function NavItemComponent({
         title={collapsed ? item.label : undefined}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150',
-          collapsed ? 'justify-center px-2' : '',
-          depth > 0 ? 'ml-4 pl-3' : '',
+          collapsed ? 'mx-auto h-11 w-11 justify-center rounded-xl px-0' : '',
+          depth > 0 && !collapsed ? 'ml-4 pl-3' : '',
           isActive
             ? 'bg-primary/15 text-primary font-medium shadow-sm'
             : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
@@ -128,8 +128,8 @@ function NavItemComponent({
         title={collapsed ? item.label : undefined}
         className={cn(
           'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150',
-          collapsed ? 'justify-center px-2' : '',
-          open ? 'text-sidebar-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+          collapsed ? 'mx-auto h-11 w-11 justify-center rounded-xl px-0' : '',
+          open ? 'bg-sidebar-accent/70 text-sidebar-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
         )}
       >
         <item.icon className="h-4 w-4 shrink-0" />
@@ -180,7 +180,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
       </div>
 
       {/* Nav */}
-      <nav className={cn('flex-1 overflow-y-auto py-4 space-y-0.5', collapsed ? 'px-2' : 'px-3')}>
+      <nav className={cn('flex-1 overflow-y-auto py-4 space-y-1', collapsed ? 'px-3' : 'px-3')}>
         {navItems.map(item => (
           <NavItemComponent key={item.label} item={item} collapsed={collapsed} onExpand={() => setDesktopCollapsed(false)} />
         ))}
@@ -191,7 +191,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
-      <aside className={cn('hidden shrink-0 overflow-hidden border-r border-border transition-[width] duration-200 lg:block', desktopCollapsed ? 'w-20' : 'w-64')}>
+      <aside className={cn('hidden shrink-0 overflow-hidden border-r border-border transition-[width] duration-200 lg:block', desktopCollapsed ? 'w-[4.5rem]' : 'w-64')}>
         <Sidebar collapsed={desktopCollapsed} />
       </aside>
 
