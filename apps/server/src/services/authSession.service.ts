@@ -33,6 +33,24 @@ export type AuthSessionUser = {
   email?: string | null;
 };
 
+export type SessionRole = "admin" | "trainer";
+
+export type StaffSessionProfile = {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  auth_user_id: string;
+  role: "trainer";
+  full_name: string;
+  email: string;
+  phone: string | null;
+  specializations: string | null;
+  section_permissions: string[];
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
 type FlattenedAdmin = {
   id: string;
   auth_id: string;
@@ -40,6 +58,14 @@ type FlattenedAdmin = {
 };
 
 type GymRecord = Record<string, any>;
+
+function normalizeSectionPermissions(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return value.filter((entry): entry is string => typeof entry === "string");
+}
 
 function mergeAdminWithGym(
   admin: FlattenedAdmin | null,
@@ -146,6 +172,41 @@ export function clearSessionCookies(res: Response) {
   res.clearCookie(REFRESH_COOKIE_NAME, getCookieOptions());
 }
 
+async function getAdminContext(adminId: string, gymIds?: string[]) {
+  const { data: admin, error } = await supabase
+    .from("admins")
+    .select("*")
+    .eq("id", adminId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!admin) {
+    return null;
+  }
+
+  let gymsQuery = supabase
+    .from("gyms")
+    .select("*")
+    .eq("admin_id", admin.id)
+    .order("created_at", { ascending: true });
+
+  if (gymIds && gymIds.length > 0) {
+    gymsQuery = gymIds.length === 1 ? gymsQuery.eq("id", gymIds[0]) : gymsQuery.in("id", gymIds);
+  }
+
+  const { data: gyms, error: gymError } = await gymsQuery;
+
+  if (gymError) {
+    throw new Error(gymError.message);
+  }
+
+  const primaryGym = gyms?.[0] || null;
+  return mergeAdminWithGym(admin, primaryGym, gyms || []);
+}
+
 export async function getAdminByAuthId(authId: string) {
   const { data: admin, error } = await supabase
     .from("admins")
@@ -161,19 +222,37 @@ export async function getAdminByAuthId(authId: string) {
     return null;
   }
 
-  const { data: gyms, error: gymError } = await supabase
-    .from("gyms")
-    .select("*")
-    .eq("admin_id", admin.id)
-    .order("created_at", { ascending: true });
+  return getAdminContext(admin.id);
+}
 
-  if (gymError) {
-    throw new Error(gymError.message);
+export async function getStaffByAuthId(authId: string) {
+  const { data: staff, error } = await supabase
+    .from("staff_accounts")
+    .select("*")
+    .eq("auth_user_id", authId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
   }
 
-  const primaryGym = gyms?.[0] || null;
+  if (!staff || !staff.is_active) {
+    return null;
+  }
 
-  return mergeAdminWithGym(admin, primaryGym, gyms || []);
+  const admin = await getAdminContext(staff.admin_id, [staff.gym_id]);
+  if (!admin) {
+    return null;
+  }
+
+  return {
+    admin,
+    staff: {
+      ...staff,
+      role: "trainer" as const,
+      section_permissions: normalizeSectionPermissions(staff.section_permissions),
+    } satisfies StaffSessionProfile,
+  };
 }
 
 async function getUserFromAccessToken(accessToken: string) {
@@ -245,4 +324,33 @@ export async function resolveAuthenticatedAdmin(req: Request, res: Response) {
   }
 
   return { user, admin };
+}
+
+export async function resolveAuthenticatedSession(req: Request, res: Response) {
+  const user = await resolveAuthenticatedUser(req, res);
+  if (!user) {
+    return null;
+  }
+
+  const admin = await getAdminByAuthId(user.id);
+  if (admin) {
+    return {
+      user,
+      admin,
+      staff: null,
+      role: "admin" as SessionRole,
+    };
+  }
+
+  const staffSession = await getStaffByAuthId(user.id);
+  if (!staffSession) {
+    return null;
+  }
+
+  return {
+    user,
+    admin: staffSession.admin,
+    staff: staffSession.staff,
+    role: staffSession.staff.role,
+  };
 }

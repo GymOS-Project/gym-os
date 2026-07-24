@@ -31,7 +31,7 @@ export default function AddEnquiryPage() {
     }));
   }, [gyms, selectedGymId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!admin) return;
     if (!form.gym_id) { toast.error("Gym is required"); return; }

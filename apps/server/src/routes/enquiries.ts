@@ -7,11 +7,11 @@ import {
   listEnquiryFollowups,
   updateEnquiry,
 } from "../controllers/enquiries";
-import { requireAuthenticatedAdmin } from "../middleware/sessionAuth.middleware";
+import { requireAuthenticatedSession, requireSectionAccess } from "../middleware/sessionAuth.middleware";
 
 const router = Router();
 
-router.use(requireAuthenticatedAdmin);
+router.use(requireAuthenticatedSession, requireSectionAccess("enquiries"));
 
 router.get("/", listEnquiries);
 router.post("/", createEnquiry);

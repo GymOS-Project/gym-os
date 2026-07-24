@@ -119,6 +119,11 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <div className="pt-2 text-right">
+                <Link to="/forgot-password" className="text-sm font-medium text-primary hover:text-primary/80">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
             <Button type="submit" variant="gradient" className="w-full h-11" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign In'}

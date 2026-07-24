@@ -4,7 +4,9 @@ import {
   clearSessionCookies,
   decryptCookieValue,
   getAdminByAuthId,
+  getStaffByAuthId,
   resolveAuthenticatedUser,
+  resolveAuthenticatedSession,
   setSessionCookies,
 } from "../services/authSession.service";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
@@ -14,6 +16,8 @@ const SESSION_COOKIE_NAME = "sessionToken";
 const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";
 const ADMIN_LOGO_BUCKET = process.env.SUPABASE_ADMIN_LOGO_BUCKET || GYM_PHOTO_BUCKET;
 const MAX_GYM_PHOTOS = 10;
+const PASSWORD_RESET_REDIRECT_URL = process.env.PASSWORD_RESET_REDIRECT_URL
+  || (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, "")}/reset-password` : null);
 
 type AuthUser = {
   id: string;
@@ -293,11 +297,14 @@ export async function signup(req: Request, res: Response) {
   setSessionCookies(res, signInResult.data.session);
 
   const admin = await getAdminByAuthId(signInResult.data.user.id);
+  const staffSession = admin ? null : await getStaffByAuthId(signInResult.data.user.id);
 
   return res.status(201).json({
     message: "Account created successfully.",
     user: toAuthUser(signInResult.data.user),
     admin,
+    staff: staffSession?.staff || null,
+    role: admin ? "admin" : staffSession?.staff.role || null,
     authenticated: true,
   });
 }
@@ -322,8 +329,136 @@ export async function login(req: Request, res: Response) {
   setSessionCookies(res, data.session);
 
   const admin = await getAdminByAuthId(data.user.id);
+  const staffSession = admin ? null : await getStaffByAuthId(data.user.id);
 
-  return res.json({ user: toAuthUser(data.user), admin, authenticated: true });
+  return res.json({
+    user: toAuthUser(data.user),
+    admin: admin || staffSession?.admin || null,
+    staff: staffSession?.staff || null,
+    role: admin ? "admin" : staffSession?.staff.role || null,
+    authenticated: true,
+  });
+}
+
+export async function forgotPassword(req: Request, res: Response) {
+  const email = normalizeOptionalString(req.body?.email);
+
+  if (!email) {
+    return res.status(400).json({ message: "email is required" });
+  }
+
+  if (!PASSWORD_RESET_REDIRECT_URL) {
+    return res.status(500).json({ message: "Password reset redirect URL is not configured" });
+  }
+
+  const authClient = createSupabaseAuthClient();
+  const { error } = await authClient.auth.resetPasswordForEmail(email, {
+    redirectTo: PASSWORD_RESET_REDIRECT_URL,
+  });
+
+  if (error) {
+    return res.status(400).json({ message: error.message });
+  }
+
+  return res.json({ message: "If the account exists, a password reset link has been sent." });
+}
+
+export async function resetPassword(req: Request, res: Response) {
+  const accessToken = normalizeOptionalString(req.body?.access_token);
+  const newPassword = normalizeOptionalString(req.body?.new_password);
+
+  if (!accessToken || !newPassword) {
+    return res.status(400).json({ message: "access_token and new_password are required" });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters" });
+  }
+
+  const authClient = createSupabaseAuthClient();
+  const { data: userResult, error: userError } = await authClient.auth.getUser(accessToken);
+
+  if (userError || !userResult.user?.id || !userResult.user.email) {
+    return res.status(400).json({ message: "Invalid or expired reset link" });
+  }
+
+  const { error: updateError } = await supabase.auth.admin.updateUserById(userResult.user.id, {
+    password: newPassword,
+  });
+
+  if (updateError) {
+    return res.status(500).json({ message: updateError.message });
+  }
+
+  const signInClient = createSupabaseAuthClient();
+  const signInResult = await signInClient.auth.signInWithPassword({
+    email: userResult.user.email,
+    password: newPassword,
+  });
+
+  if (signInResult.error || !signInResult.data.session || !signInResult.data.user) {
+    return res.status(500).json({ message: signInResult.error?.message || "Password updated, but failed to create a new session" });
+  }
+
+  setSessionCookies(res, signInResult.data.session);
+
+  const admin = await getAdminByAuthId(signInResult.data.user.id);
+  const staffSession = admin ? null : await getStaffByAuthId(signInResult.data.user.id);
+
+  return res.json({
+    user: toAuthUser(signInResult.data.user),
+    admin: admin || staffSession?.admin || null,
+    staff: staffSession?.staff || null,
+    role: admin ? "admin" : staffSession?.staff.role || null,
+    authenticated: true,
+    message: "Password updated successfully.",
+  });
+}
+
+export async function updatePassword(req: AuthenticatedRequest, res: Response) {
+  const userId = req.authUser?.id;
+  const email = req.authUser?.email || null;
+  const currentPassword = normalizeOptionalString(req.body?.current_password);
+  const newPassword = normalizeOptionalString(req.body?.new_password);
+
+  if (!userId || !email) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: "current_password and new_password are required" });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters" });
+  }
+
+  if (currentPassword === newPassword) {
+    return res.status(400).json({ message: "New password must be different from the current password" });
+  }
+
+  const verifyClient = createSupabaseAuthClient();
+  const verifyResult = await verifyClient.auth.signInWithPassword({ email, password: currentPassword });
+  if (verifyResult.error) {
+    return res.status(401).json({ message: "Current password is incorrect" });
+  }
+
+  const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+    password: newPassword,
+  });
+
+  if (updateError) {
+    return res.status(500).json({ message: updateError.message });
+  }
+
+  const signInClient = createSupabaseAuthClient();
+  const signInResult = await signInClient.auth.signInWithPassword({ email, password: newPassword });
+  if (signInResult.error || !signInResult.data.session) {
+    return res.status(500).json({ message: signInResult.error?.message || "Password updated, but failed to refresh the session" });
+  }
+
+  setSessionCookies(res, signInResult.data.session);
+  return res.json({ message: "Password updated successfully" });
 }
 
 export async function signout(req: Request, res: Response) {
@@ -339,15 +474,19 @@ export async function signout(req: Request, res: Response) {
 }
 
 export async function me(req: Request, res: Response) {
-  const user = await resolveAuthenticatedUser(req, res);
+  const session = await resolveAuthenticatedSession(req, res);
 
-  if (!user) {
+  if (!session) {
     return res.status(401).json({ message: "Not authenticated" });
   }
 
-  const admin = await getAdminByAuthId(user.id);
-
-  return res.json({ user: toAuthUser(user), admin, authenticated: true });
+  return res.json({
+    user: toAuthUser(session.user),
+    admin: session.admin,
+    staff: session.staff,
+    role: session.role,
+    authenticated: true,
+  });
 }
 
 export async function upgradeSingleGymToBranch(req: AuthenticatedRequest, res: Response) {

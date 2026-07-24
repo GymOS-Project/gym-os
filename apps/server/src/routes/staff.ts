@@ -1,12 +1,14 @@
 import { Router } from "express";
-import { createBranch, listBranches } from "../controllers/branches";
+
+import { createStaff, listStaff, updateStaff } from "../controllers/staff";
 import { requireAdmin, requireAuthenticatedSession } from "../middleware/sessionAuth.middleware";
 
 const router = Router();
 
 router.use(requireAuthenticatedSession, requireAdmin);
 
-router.get("/", listBranches);
-router.post("/", createBranch);
+router.get("/trainers", listStaff);
+router.post("/trainers", createStaff);
+router.put("/trainers/:id", updateStaff);
 
 export default router;

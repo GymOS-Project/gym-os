@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Star, Plus } from "lucide-react";
 import { toast } from "sonner";
-import type { Review } from "@/types";
 
 const ANONYMOUS_MEMBER = "__anonymous__";
 

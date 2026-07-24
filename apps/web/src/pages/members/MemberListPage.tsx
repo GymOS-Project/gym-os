@@ -15,7 +15,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { Member } from "@/types";
 
 const NO_REFERENCE_MEMBER = "__none__";
 
@@ -264,7 +263,7 @@ export default function MemberListPage() {
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${m.phone}`)}>
                           <Phone className="h-3.5 w-3.5" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditModal(m.id)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => navigate(`/members/${m.id}/edit`)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleActive(m)}>
