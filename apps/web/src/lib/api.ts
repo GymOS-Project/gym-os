@@ -26,6 +26,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+function withBody(data: FormData | Record<string, unknown>) {
+  return data instanceof FormData ? data : JSON.stringify(data);
+}
+
 function withGymHeader(path: string, incomingHeaders: RequestInit["headers"], isFormData: boolean) {
   const headers = new Headers(incomingHeaders || undefined);
 
@@ -109,14 +113,14 @@ export const api = {
   deleteMember: (id: string) => request<void>(`/members/${id}`, { method: "DELETE" }),
   assignDietPlanToMember: (memberId: string, plan_id: string) =>
     request<DietPlanAssignment>(`/members/${memberId}/diet-plans`, { method: "POST", body: JSON.stringify({ plan_id }) }),
-  updateAssignedDietPlan: (memberId: string, assignmentId: string, data: Partial<DietPlan>) =>
-    request<DietPlanAssignment>(`/members/${memberId}/diet-plans/${assignmentId}`, { method: "PUT", body: JSON.stringify(data) }),
+  updateAssignedDietPlan: (memberId: string, assignmentId: string, data: FormData | Partial<DietPlan>) =>
+    request<DietPlanAssignment>(`/members/${memberId}/diet-plans/${assignmentId}`, { method: "PUT", body: withBody(data as FormData | Record<string, unknown>) }),
   deleteAssignedDietPlan: (memberId: string, assignmentId: string) =>
     request<void>(`/members/${memberId}/diet-plans/${assignmentId}`, { method: "DELETE" }),
   assignExercisePlanToMember: (memberId: string, plan_id: string) =>
     request<ExercisePlanAssignment>(`/members/${memberId}/exercise-plans`, { method: "POST", body: JSON.stringify({ plan_id }) }),
-  updateAssignedExercisePlan: (memberId: string, assignmentId: string, data: Partial<ExercisePlan>) =>
-    request<ExercisePlanAssignment>(`/members/${memberId}/exercise-plans/${assignmentId}`, { method: "PUT", body: JSON.stringify(data) }),
+  updateAssignedExercisePlan: (memberId: string, assignmentId: string, data: FormData | Partial<ExercisePlan>) =>
+    request<ExercisePlanAssignment>(`/members/${memberId}/exercise-plans/${assignmentId}`, { method: "PUT", body: withBody(data as FormData | Record<string, unknown>) }),
   deleteAssignedExercisePlan: (memberId: string, assignmentId: string) =>
     request<void>(`/members/${memberId}/exercise-plans/${assignmentId}`, { method: "DELETE" }),
 
@@ -131,19 +135,19 @@ export const api = {
   // Diet plans
   getDietPlans: (scope = "shared") => request<DietPlan[]>(`/diet-plans${qs({ scope })}`),
   getDietPlan: (id: string) => request<DietPlan>(`/diet-plans/${id}`),
-  createDietPlan: (data: Partial<DietPlan>) =>
-    request<DietPlan>("/diet-plans", { method: "POST", body: JSON.stringify(data) }),
-  updateDietPlan: (id: string, data: Partial<DietPlan>) =>
-    request<DietPlan>(`/diet-plans/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  createDietPlan: (data: FormData | Partial<DietPlan>) =>
+    request<DietPlan>("/diet-plans", { method: "POST", body: withBody(data as FormData | Record<string, unknown>) }),
+  updateDietPlan: (id: string, data: FormData | Partial<DietPlan>) =>
+    request<DietPlan>(`/diet-plans/${id}`, { method: "PUT", body: withBody(data as FormData | Record<string, unknown>) }),
   deleteDietPlan: (id: string) => request<void>(`/diet-plans/${id}`, { method: "DELETE" }),
 
   // Exercise plans
   getExercisePlans: (scope = "shared") => request<ExercisePlan[]>(`/exercise-plans${qs({ scope })}`),
   getExercisePlan: (id: string) => request<ExercisePlan>(`/exercise-plans/${id}`),
-  createExercisePlan: (data: Partial<ExercisePlan>) =>
-    request<ExercisePlan>("/exercise-plans", { method: "POST", body: JSON.stringify(data) }),
-  updateExercisePlan: (id: string, data: Partial<ExercisePlan>) =>
-    request<ExercisePlan>(`/exercise-plans/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  createExercisePlan: (data: FormData | Partial<ExercisePlan>) =>
+    request<ExercisePlan>("/exercise-plans", { method: "POST", body: withBody(data as FormData | Record<string, unknown>) }),
+  updateExercisePlan: (id: string, data: FormData | Partial<ExercisePlan>) =>
+    request<ExercisePlan>(`/exercise-plans/${id}`, { method: "PUT", body: withBody(data as FormData | Record<string, unknown>) }),
   deleteExercisePlan: (id: string) => request<void>(`/exercise-plans/${id}`, { method: "DELETE" }),
 
   // Staff

@@ -1,6 +1,7 @@
 type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 type SessionRole = 'admin' | 'trainer';
+type PlanContentType = 'rich_text' | 'pdf';
 
 type RouteType = { path: string, element: React.JSX, protected?: boolean, section?: string, allowedRoles?: SessionRole[], guestOnly?: boolean }
 
@@ -73,7 +74,10 @@ interface BasePlan {
   plan_scope: 'shared' | 'member_custom';
   name: string;
   description: string | null;
+  content_type: PlanContentType;
   content: string | null;
+  pdf_url: string | null;
+  pdf_file_name: string | null;
   tag: string | null;
   is_active: boolean;
   created_at: string;

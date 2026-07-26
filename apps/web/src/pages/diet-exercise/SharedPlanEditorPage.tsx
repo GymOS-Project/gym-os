@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { PlanContentEditor } from '@/components/plans/PlanContentEditor';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { api } from '@/lib/api';
+import { buildPlanFormData, createPlanEditorValue, type PlanEditorValue } from '@/lib/planContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -35,11 +37,11 @@ export default function SharedPlanEditorPage({ planType }: Props) {
   const content = planContent[planType];
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
+  const [planContentValue, setPlanContentValue] = useState<PlanEditorValue>(createPlanEditorValue());
   const [form, setForm] = useState({
     gym_id: selectedGymId !== 'all' ? selectedGymId : gyms[0]?.id || '',
     name: '',
     description: '',
-    content: '',
     tag: '',
   });
 
@@ -60,9 +62,9 @@ export default function SharedPlanEditorPage({ planType }: Props) {
           gym_id: plan.gym_id,
           name: plan.name,
           description: plan.description || '',
-          content: plan.content || '',
           tag: plan.tag || '',
         });
+        setPlanContentValue(createPlanEditorValue(plan));
       })
       .catch((error: any) => {
         toast.error(error.message || `Failed to load ${content.title.toLowerCase()}`);
@@ -84,16 +86,26 @@ export default function SharedPlanEditorPage({ planType }: Props) {
 
     setLoading(true);
     try {
+      const payload = buildPlanFormData(
+        {
+          gym_id: form.gym_id,
+          name: form.name,
+          description: form.description || null,
+          tag: form.tag || null,
+        },
+        planContentValue,
+      );
+
       if (planType === 'diet') {
         if (isEditing && id) {
-          await api.updateDietPlan(id, form);
+          await api.updateDietPlan(id, payload);
         } else {
-          await api.createDietPlan(form);
+          await api.createDietPlan(payload);
         }
       } else if (isEditing && id) {
-        await api.updateExercisePlan(id, form);
+        await api.updateExercisePlan(id, payload);
       } else {
-        await api.createExercisePlan(form);
+        await api.createExercisePlan(payload);
       }
 
       toast.success(`${content.title} ${isEditing ? 'updated' : 'created'}`);
@@ -146,8 +158,8 @@ export default function SharedPlanEditorPage({ planType }: Props) {
                 <Textarea value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="Short summary" />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>Content</Label>
-                <Textarea value={form.content} onChange={(e) => setField('content', e.target.value)} placeholder="Detailed plan content" className="min-h-[220px]" />
+                <Label>Plan Content</Label>
+                <PlanContentEditor value={planContentValue} onChange={setPlanContentValue} />
               </div>
             </div>
           </div>

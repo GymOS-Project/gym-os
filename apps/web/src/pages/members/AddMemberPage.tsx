@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { PlanContentEditor } from "@/components/plans/PlanContentEditor";
+import { PlanContentPreviewDialog } from "@/components/plans/PlanContentPreviewDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -11,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { buildPlanFormData, createPlanEditorValue, type PlanEditorValue } from "@/lib/planContent";
 import { toast } from "sonner";
 import { addDays, addMonths, format } from "date-fns";
 
@@ -34,22 +37,23 @@ export default function AddMemberPage() {
   const [selectedDietPlanId, setSelectedDietPlanId] = useState("");
   const [selectedExercisePlanId, setSelectedExercisePlanId] = useState("");
   const [assignmentSaving, setAssignmentSaving] = useState(false);
+  const [previewPlan, setPreviewPlan] = useState<{ title: string; value: DietPlan | ExercisePlan | null } | null>(null);
   const [planEditor, setPlanEditor] = useState<{
     open: boolean;
     type: "diet" | "exercise";
     assignmentId: string;
     name: string;
     description: string;
-    content: string;
     tag: string;
+    planContent: PlanEditorValue;
   }>({
     open: false,
     type: "diet",
     assignmentId: "",
     name: "",
     description: "",
-    content: "",
     tag: "",
+    planContent: createPlanEditorValue(),
   });
 
   const [form, setForm] = useState({
@@ -203,8 +207,8 @@ export default function AddMemberPage() {
       assignmentId: assignment.id,
       name: assignment.plan?.name || "",
       description: assignment.plan?.description || "",
-      content: assignment.plan?.content || "",
       tag: assignment.plan?.tag || "",
+      planContent: createPlanEditorValue(assignment.plan),
     });
   };
 
@@ -216,12 +220,14 @@ export default function AddMemberPage() {
 
     setAssignmentSaving(true);
     try {
-      const payload = {
-        name: planEditor.name,
-        description: planEditor.description || null,
-        content: planEditor.content || null,
-        tag: planEditor.tag || null,
-      };
+      const payload = buildPlanFormData(
+        {
+          name: planEditor.name,
+          description: planEditor.description || null,
+          tag: planEditor.tag || null,
+        },
+        planEditor.planContent,
+      );
 
       if (planEditor.type === "diet") {
         await api.updateAssignedDietPlan(memberId, planEditor.assignmentId, payload);
@@ -502,12 +508,18 @@ export default function AddMemberPage() {
                           <Badge variant={assignment.plan?.plan_scope === 'member_custom' ? 'default' : 'secondary'}>
                             {assignment.plan?.plan_scope === 'member_custom' ? 'Custom Copy' : 'Shared Template'}
                           </Badge>
+                          <Badge variant="outline">{assignment.plan?.content_type === 'pdf' ? 'PDF' : 'Rich Text'}</Badge>
                           {assignment.plan?.tag && <Badge variant="outline">{assignment.plan.tag}</Badge>}
                         </div>
                         {assignment.plan?.description && <p className="mt-1 text-sm text-muted-foreground">{assignment.plan.description}</p>}
-                        {assignment.plan?.content && <p className="mt-3 whitespace-pre-wrap text-sm">{assignment.plan.content}</p>}
+                        {assignment.plan?.pdf_file_name && <p className="mt-2 text-xs text-muted-foreground">{assignment.plan.pdf_file_name}</p>}
                       </div>
                       <div className="flex gap-2">
+                        {assignment.plan && (
+                          <Button type="button" variant="outline" onClick={() => setPreviewPlan({ title: assignment.plan?.name || 'Diet plan preview', value: assignment.plan || null })}>
+                            Preview
+                          </Button>
+                        )}
                         <Button type="button" variant="outline" onClick={() => openPlanEditor('diet', assignment)} disabled={assignmentSaving}>
                           {assignment.plan?.plan_scope === 'member_custom' ? 'Edit Copy' : 'Customize'}
                         </Button>
@@ -552,12 +564,18 @@ export default function AddMemberPage() {
                           <Badge variant={assignment.plan?.plan_scope === 'member_custom' ? 'default' : 'secondary'}>
                             {assignment.plan?.plan_scope === 'member_custom' ? 'Custom Copy' : 'Shared Template'}
                           </Badge>
+                          <Badge variant="outline">{assignment.plan?.content_type === 'pdf' ? 'PDF' : 'Rich Text'}</Badge>
                           {assignment.plan?.tag && <Badge variant="outline">{assignment.plan.tag}</Badge>}
                         </div>
                         {assignment.plan?.description && <p className="mt-1 text-sm text-muted-foreground">{assignment.plan.description}</p>}
-                        {assignment.plan?.content && <p className="mt-3 whitespace-pre-wrap text-sm">{assignment.plan.content}</p>}
+                        {assignment.plan?.pdf_file_name && <p className="mt-2 text-xs text-muted-foreground">{assignment.plan.pdf_file_name}</p>}
                       </div>
                       <div className="flex gap-2">
+                        {assignment.plan && (
+                          <Button type="button" variant="outline" onClick={() => setPreviewPlan({ title: assignment.plan?.name || 'Exercise plan preview', value: assignment.plan || null })}>
+                            Preview
+                          </Button>
+                        )}
                         <Button type="button" variant="outline" onClick={() => openPlanEditor('exercise', assignment)} disabled={assignmentSaving}>
                           {assignment.plan?.plan_scope === 'member_custom' ? 'Edit Copy' : 'Customize'}
                         </Button>
@@ -599,8 +617,8 @@ export default function AddMemberPage() {
                 <Textarea value={planEditor.description} onChange={(e) => setPlanEditor((current) => ({ ...current, description: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Content</Label>
-                <Textarea className="min-h-[220px]" value={planEditor.content} onChange={(e) => setPlanEditor((current) => ({ ...current, content: e.target.value }))} />
+                <Label>Plan Content</Label>
+                <PlanContentEditor value={planEditor.planContent} onChange={(nextPlanContent) => setPlanEditor((current) => ({ ...current, planContent: nextPlanContent }))} />
               </div>
             </div>
             <DialogFooter>
@@ -609,6 +627,13 @@ export default function AddMemberPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <PlanContentPreviewDialog
+          open={Boolean(previewPlan)}
+          onOpenChange={(open) => !open && setPreviewPlan(null)}
+          title={previewPlan?.title || "Plan Preview"}
+          value={previewPlan?.value || null}
+        />
       </div>
     </AppLayout>
   );
