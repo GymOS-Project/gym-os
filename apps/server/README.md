@@ -29,11 +29,16 @@ NODE_ENV=development
 FRONTEND_URL=http://localhost:8080
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+RESEND_API_KEY=re_xxxxx
+RESEND_FROM_EMAIL=GymOS <no-reply@yourdomain.com>
 
 # Optional WhatsApp configuration
 # TWILIO_ACCOUNT_SID=your_twilio_account_sid
 # TWILIO_AUTH_TOKEN=your_twilio_auth_token
 # TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+
+# Optional email links
+# MOBILE_APP_URL=https://app.gymos.example/mobile
 ```
 
 ## Local Run
@@ -73,6 +78,8 @@ GET /healthcheck
 - Login and signup set HTTP-only cookies
 - Session refresh is handled on the backend
 - `FRONTEND_URL` must match the frontend origin for CORS
+- `RESEND_API_KEY` and `RESEND_FROM_EMAIL` enable welcome emails for onboarding and admin-created staff accounts
+- `MOBILE_APP_URL` overrides the default mobile app link used in staff welcome emails
 
 ## Production Notes
 

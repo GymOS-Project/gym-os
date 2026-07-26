@@ -4,8 +4,8 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { PlanContentPreviewDialog } from '@/components/plans/PlanContentPreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { api } from '@/lib/api';
 import { Eye, Plus, Pencil, Trash2 } from 'lucide-react';
@@ -158,18 +158,13 @@ export default function SharedPlanListPage({ planType }: Props) {
         </div>
       </div>
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {content.singular}?</AlertDialogTitle>
-            <AlertDialogDescription>This removes the shared template. Member-specific custom copies will remain untouched.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        open={Boolean(deleteId)}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title={`Delete ${content.singular}?`}
+        description="This removes the shared template. Member-specific custom copies will remain untouched."
+        onConfirm={handleDelete}
+      />
 
       <PlanContentPreviewDialog
         open={Boolean(previewPlan)}

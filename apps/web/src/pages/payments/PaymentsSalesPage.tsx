@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { downloadCsv } from "@/lib/csv";
 import { useAuth } from "@/contexts/AuthContext";
-import { Package, Search } from "lucide-react";
+import { Download, Package, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PaymentsSalesPage() {
@@ -57,12 +58,33 @@ export default function PaymentsSalesPage() {
   return (
     <AppLayout title="Payments Sales">
       <div className="space-y-5">
-        <div className="flex items-center gap-3">
-          <Package className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold">Sales</h1>
-            <p className="mt-0.5 text-muted-foreground">Review package sales, renewals, discounts, and net collections.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3 flex-1">
+            <Package className="h-6 w-6 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">Sales</h1>
+              <p className="mt-0.5 text-muted-foreground">Review package sales, renewals, discounts, and net collections.</p>
+            </div>
           </div>
+          <Button
+            variant="outline"
+            onClick={() => downloadCsv("payments-sales.csv", filteredSales.map((sale) => ({
+              member_name: sale.members?.name || "",
+              member_phone: sale.members?.phone || "",
+              package_name: sale.package_name,
+              start_date: sale.start_date,
+              end_date: sale.end_date,
+              gross_amount: Number(sale.gross_amount ?? sale.amount_paid ?? 0),
+              discount_amount: Number(sale.discount_amount ?? 0),
+              net_amount: Number(sale.net_amount ?? sale.amount_paid ?? 0),
+              payment_mode: sale.payment_mode,
+              status: sale.status,
+            })))}
+            disabled={filteredSales.length === 0}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">

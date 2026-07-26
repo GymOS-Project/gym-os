@@ -170,6 +170,12 @@ export const api = {
     request<(Transaction & { members?: { id: string; name: string; phone: string; email?: string | null; shift?: string | null } | null })[]>(`/payments/collections${qs(params || {})}`),
   createPaymentCollection: (data: Partial<Transaction>) =>
     request<Transaction>("/payments/collections", { method: "POST", body: JSON.stringify(data) }),
+  updatePaymentCollection: (id: string, data: Partial<Transaction>) =>
+    request<Transaction>(`/payments/collections/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deletePaymentCollection: (id: string) =>
+    request<void>(`/payments/collections/${id}`, { method: "DELETE" }),
+  refundPaymentCollection: (id: string, data?: { amount?: number; description?: string | null; transaction_date?: string | null }) =>
+    request<Transaction>(`/payments/collections/${id}/refund`, { method: "POST", body: JSON.stringify(data || {}) }),
   getPaymentSales: (params?: { date_from?: string; date_to?: string; status?: string; package_type_id?: string; member_id?: string }) =>
     request<(MemberPackage & { members?: { id: string; name: string; phone: string; email?: string | null; shift?: string | null } | null })[]>(`/payments/sales${qs(params || {})}`),
   getPaymentAnalytics: (params?: { date_from?: string; date_to?: string }) =>

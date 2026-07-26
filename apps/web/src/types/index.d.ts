@@ -273,6 +273,9 @@ interface Coupon {
   starts_at: string | null;
   ends_at: string | null;
   is_active: boolean;
+  usage_count?: number;
+  total_discount_amount?: number;
+  last_used_at?: string | null;
   created_at: string;
   updated_at: string;
 }

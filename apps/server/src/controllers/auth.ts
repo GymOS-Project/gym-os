@@ -9,6 +9,7 @@ import {
   resolveAuthenticatedSession,
   setSessionCookies,
 } from "../services/authSession.service";
+import { sendGymOnboardingWelcomeEmail } from "../services/email.service";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { ensureGymBelongsToAdmin } from "../services/gymScope.service";
 
@@ -298,6 +299,19 @@ export async function signup(req: Request, res: Response) {
         await cleanupAdminRecord(admin.id);
         await cleanupAuthUser(data.user.id);
         return res.status(500).json({ message: gymError.message });
+      }
+
+      const recipientEmail = data.user.email || authEmail;
+      if (recipientEmail) {
+        void sendGymOnboardingWelcomeEmail({
+          to: recipientEmail,
+          ownerName: primaryGym.owner_name,
+          gymName: primaryGym.gym_name,
+          gymType: gym_type,
+          gymCount: gyms.length,
+        }).catch((emailError) => {
+          console.error("Failed to send onboarding welcome email", emailError);
+        });
       }
     } catch (uploadError) {
       if (createdAdminId) {

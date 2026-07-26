@@ -96,8 +96,6 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
       label: 'Reports',
       icon: BarChart2,
       children: [
-        { label: 'Sales History', href: '/reports/sales', icon: BarChart2 },
-        { label: 'Transactions', href: '/reports/transactions', icon: Receipt },
         { label: 'Member Reviews', href: '/reports/reviews', icon: Star },
         { label: 'Reference Members', href: '/reports/references', icon: Share2 },
         { label: 'Report by Shift', href: '/reports/shift', icon: Clock },

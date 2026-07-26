@@ -31,8 +31,6 @@ import AddEnquiryPage from "@/pages/enquiry/AddEnquiryPage";
 import EnquiryListPage from "@/pages/enquiry/EnquiryListPage";
 import EnquiryFollowupListPage from "@/pages/enquiry/EnquiryFollowupListPage";
 
-import SalesHistoryPage from "@/pages/reports/SalesHistoryPage";
-import TransactionsPage from "@/pages/reports/TransactionsPage";
 import ReviewsPage from "@/pages/reports/ReviewsPage";
 import ReferenceMembersPage from "@/pages/reports/ReferenceMembersPage";
 import ShiftReportPage from "@/pages/reports/ShiftReportPage";
@@ -140,12 +138,12 @@ const routes: RouteType[] = [
     protected: true,
     section: "enquiries",
   },
-  { path: "/reports/sales", element: <SalesHistoryPage />, protected: true, section: "reports" },
+  { path: "/reports/sales", element: <PaymentsSalesPage />, protected: true, allowedRoles: ["admin"] },
   {
     path: "/reports/transactions",
-    element: <TransactionsPage />,
+    element: <PaymentsCollectionsPage />,
     protected: true,
-    section: "reports",
+    allowedRoles: ["admin"],
   },
   { path: "/reports/reviews", element: <ReviewsPage />, protected: true, section: "reports" },
   {

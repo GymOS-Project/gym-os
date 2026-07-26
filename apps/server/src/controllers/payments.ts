@@ -41,6 +41,26 @@ async function loadScopedPackageType(adminId: string, gymId: string, packageType
   return data;
 }
 
+async function loadScopedTransaction(adminId: string, transactionId: string, gymId?: string | null) {
+  let query = supabase
+    .from("transactions")
+    .select("*")
+    .eq("id", transactionId)
+    .eq("admin_id", adminId);
+
+  if (gymId) {
+    query = query.eq("gym_id", gymId);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}
+
 export async function listCollections(req: AuthenticatedRequest, res: Response) {
   const adminId = getAdminId(req, res);
   if (!adminId) return;
@@ -116,6 +136,170 @@ export async function createCollection(req: AuthenticatedRequest, res: Response)
       discount_amount: 0,
       net_amount: roundedAmount,
       payment_mode: paymentMode,
+      description,
+      transaction_date: transactionDate,
+    })
+    .select("*")
+    .single();
+
+  if (error) return res.status(500).json({ message: error.message });
+  return res.status(201).json(data);
+}
+
+export async function updateCollection(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) return;
+  const transactionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) return;
+
+  let transaction;
+  try {
+    transaction = await loadScopedTransaction(adminId, transactionId, gymScope.selectedGymId);
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to load payment" });
+  }
+
+  if (!transaction) {
+    return res.status(404).json({ message: "Payment not found" });
+  }
+
+  if (transaction.member_package_id || transaction.package_sale_id || transaction.coupon_id || Number(transaction.discount_amount || 0) > 0) {
+    return res.status(400).json({ message: "Package sale payments cannot be edited directly. Create a refund instead." });
+  }
+
+  const memberId = normalizeOptionalString(req.body.member_id);
+  const type = normalizeOptionalString(req.body.type);
+  const amount = req.body.amount !== undefined ? normalizeOptionalNumber(req.body.amount) : null;
+  const paymentMode = normalizeOptionalString(req.body.payment_mode);
+  const description = req.body.description !== undefined ? normalizeOptionalString(req.body.description) : undefined;
+  const transactionDate = req.body.transaction_date !== undefined ? parseOptionalDate(req.body.transaction_date) : undefined;
+
+  if (memberId) {
+    const validMember = await ensureMemberBelongsToGym(memberId, adminId, transaction.gym_id).catch((error) => {
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to validate member" });
+      return null;
+    });
+    if (validMember === null) return;
+    if (!validMember) return res.status(400).json({ message: "Selected member does not belong to this gym" });
+  }
+
+  const updates: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (memberId !== null) updates.member_id = memberId;
+  if (type) updates.type = type;
+  if (amount != null) {
+    const roundedAmount = roundCurrency(amount);
+    updates.amount = roundedAmount;
+    updates.gross_amount = roundedAmount;
+    updates.net_amount = roundedAmount;
+    updates.discount_amount = 0;
+  }
+  if (paymentMode) updates.payment_mode = paymentMode;
+  if (description !== undefined) updates.description = description;
+  if (transactionDate !== undefined) updates.transaction_date = transactionDate;
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .update(updates)
+    .eq("id", transactionId)
+    .eq("admin_id", adminId)
+    .select("*")
+    .single();
+
+  if (error) return res.status(500).json({ message: error.message });
+  return res.json(data);
+}
+
+export async function deleteCollection(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) return;
+  const transactionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) return;
+
+  let transaction;
+  try {
+    transaction = await loadScopedTransaction(adminId, transactionId, gymScope.selectedGymId);
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to load payment" });
+  }
+
+  if (!transaction) {
+    return res.status(404).json({ message: "Payment not found" });
+  }
+
+  if (transaction.member_package_id || transaction.package_sale_id || transaction.coupon_id || Number(transaction.discount_amount || 0) > 0) {
+    return res.status(400).json({ message: "Package sale payments cannot be deleted directly. Create a refund instead." });
+  }
+
+  const { error } = await supabase
+    .from("transactions")
+    .delete()
+    .eq("id", transactionId)
+    .eq("admin_id", adminId);
+
+  if (error) return res.status(500).json({ message: error.message });
+  return res.status(204).send();
+}
+
+export async function refundCollection(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) return;
+  const transactionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) return;
+
+  let transaction;
+  try {
+    transaction = await loadScopedTransaction(adminId, transactionId, gymScope.selectedGymId);
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to load payment" });
+  }
+
+  if (!transaction) {
+    return res.status(404).json({ message: "Payment not found" });
+  }
+
+  if (transaction.type !== "payment") {
+    return res.status(400).json({ message: "Only payment transactions can be refunded" });
+  }
+
+  const requestedAmount = normalizeOptionalNumber(req.body.amount);
+  const sourceAmount = Number(transaction.net_amount ?? transaction.amount ?? 0);
+  const refundAmount = roundCurrency(requestedAmount ?? sourceAmount);
+  if (!refundAmount || refundAmount <= 0) {
+    return res.status(400).json({ message: "Refund amount must be greater than zero" });
+  }
+
+  if (refundAmount > sourceAmount) {
+    return res.status(400).json({ message: "Refund amount cannot exceed the original payment amount" });
+  }
+
+  const description = normalizeOptionalString(req.body.description)
+    || `Refund for payment ${transaction.id}`;
+  const transactionDate = parseOptionalDate(req.body.transaction_date) || new Date().toISOString().split("T")[0];
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .insert({
+      admin_id: adminId,
+      gym_id: transaction.gym_id,
+      member_id: transaction.member_id,
+      member_package_id: transaction.member_package_id,
+      package_sale_id: transaction.package_sale_id,
+      coupon_id: null,
+      type: "refund",
+      amount: refundAmount,
+      gross_amount: refundAmount,
+      discount_amount: 0,
+      net_amount: refundAmount,
+      payment_mode: transaction.payment_mode,
       description,
       transaction_date: transactionDate,
     })
@@ -279,7 +463,46 @@ export async function listCoupons(req: AuthenticatedRequest, res: Response) {
 
   const { data, error } = await query.order("created_at", { ascending: false });
   if (error) return res.status(500).json({ message: error.message });
-  return res.json(data || []);
+
+  const coupons = data || [];
+  const couponIds = coupons.map((coupon) => coupon.id as string);
+
+  if (couponIds.length === 0) {
+    return res.json([]);
+  }
+
+  const { data: usages, error: usageError } = await supabase
+    .from("coupon_usages")
+    .select("coupon_id, discount_amount, created_at")
+    .eq("admin_id", adminId)
+    .in("coupon_id", couponIds);
+
+  if (usageError) {
+    return res.status(500).json({ message: usageError.message });
+  }
+
+  const usageSummary = new Map<string, { usage_count: number; total_discount_amount: number; last_used_at: string | null }>();
+  for (const usage of usages || []) {
+    const couponId = usage.coupon_id as string;
+    const existing = usageSummary.get(couponId) || { usage_count: 0, total_discount_amount: 0, last_used_at: null };
+    existing.usage_count += 1;
+    existing.total_discount_amount += Number(usage.discount_amount || 0);
+    const createdAt = typeof usage.created_at === "string" ? usage.created_at : null;
+    if (createdAt && (!existing.last_used_at || createdAt > existing.last_used_at)) {
+      existing.last_used_at = createdAt;
+    }
+    usageSummary.set(couponId, existing);
+  }
+
+  return res.json(coupons.map((coupon) => {
+    const summary = usageSummary.get(coupon.id as string);
+    return {
+      ...coupon,
+      usage_count: summary?.usage_count || 0,
+      total_discount_amount: roundCurrency(summary?.total_discount_amount || 0),
+      last_used_at: summary?.last_used_at || null,
+    };
+  }));
 }
 
 export async function createCoupon(req: AuthenticatedRequest, res: Response) {

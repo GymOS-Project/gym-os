@@ -2,6 +2,7 @@ import type { Response } from "express";
 
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { ensureGymBelongsToAdmin, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
+import { sendStaffAccountCreatedEmail } from "../services/email.service";
 import { supabase } from "../supabase";
 
 function getAdminId(req: AuthenticatedRequest, res: Response) {
@@ -89,6 +90,17 @@ export async function createStaff(req: AuthenticatedRequest, res: Response) {
     return res.status(400).json({ message: "full_name, email, and password are required" });
   }
 
+  const { data: gymRecord, error: gymError } = await supabase
+    .from("gyms")
+    .select("gym_name")
+    .eq("id", gymId)
+    .eq("admin_id", adminId)
+    .single();
+
+  if (gymError) {
+    return res.status(500).json({ message: gymError.message });
+  }
+
   const { data: authUserData, error: authError } = await supabase.auth.admin.createUser({
     email,
     password,
@@ -124,6 +136,15 @@ export async function createStaff(req: AuthenticatedRequest, res: Response) {
     await supabase.auth.admin.deleteUser(authUserData.user.id).catch(() => {});
     return res.status(500).json({ message: error.message });
   }
+
+  void sendStaffAccountCreatedEmail({
+    to: email,
+    fullName,
+    gymName: gymRecord?.gym_name || "your gym",
+    role,
+  }).catch((emailError) => {
+    console.error("Failed to send staff account email", emailError);
+  });
 
   return res.status(201).json(data);
 }

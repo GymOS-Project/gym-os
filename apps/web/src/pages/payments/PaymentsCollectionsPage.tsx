@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DatePicker } from "@/components/ui/date-picker";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
-import { Plus, Receipt, Search } from "lucide-react";
+import { downloadCsv } from "@/lib/csv";
+import { Pencil, Plus, Receipt, RotateCcw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PaymentsCollectionsPage() {
@@ -21,9 +23,14 @@ export default function PaymentsCollectionsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<(Transaction & { members?: { id: string; name: string; phone: string; email?: string | null; shift?: string | null } | null }) | null>(null);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ date_from: "", date_to: "", type: "all", payment_mode: "all" });
   const [form, setForm] = useState({ member_id: "", type: "payment", amount: "", payment_mode: "cash", description: "", transaction_date: "" });
+  const [refundForm, setRefundForm] = useState({ amount: "", description: "", transaction_date: "" });
 
   const fetchCollections = async () => {
     if (!admin) return;
@@ -92,6 +99,95 @@ export default function PaymentsCollectionsPage() {
     }
   };
 
+  const openEdit = (transaction: (Transaction & { members?: { id: string; name: string; phone: string; email?: string | null; shift?: string | null } | null })) => {
+    setSelectedTransaction(transaction);
+    setForm({
+      member_id: transaction.member_id || "",
+      type: transaction.type,
+      amount: String(transaction.amount ?? 0),
+      payment_mode: transaction.payment_mode,
+      description: transaction.description || "",
+      transaction_date: transaction.transaction_date || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const openRefund = (transaction: (Transaction & { members?: { id: string; name: string; phone: string; email?: string | null; shift?: string | null } | null })) => {
+    setSelectedTransaction(transaction);
+    setRefundForm({
+      amount: String(transaction.net_amount ?? transaction.amount ?? 0),
+      description: `Refund for ${transaction.members?.name || "payment"}`,
+      transaction_date: "",
+    });
+    setRefundDialogOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedTransaction || !form.amount || !form.payment_mode) {
+      toast.error("Amount and payment mode are required");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await api.updatePaymentCollection(selectedTransaction.id, {
+        member_id: form.member_id || null,
+        type: form.type as Transaction["type"],
+        amount: Number(form.amount),
+        payment_mode: form.payment_mode as Transaction["payment_mode"],
+        description: form.description || null,
+        transaction_date: form.transaction_date || null,
+      });
+      toast.success("Payment updated");
+      setEditDialogOpen(false);
+      setSelectedTransaction(null);
+      await fetchCollections();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update payment");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRefund = async () => {
+    if (!selectedTransaction || !refundForm.amount) {
+      toast.error("Refund amount is required");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await api.refundPaymentCollection(selectedTransaction.id, {
+        amount: Number(refundForm.amount),
+        description: refundForm.description || null,
+        transaction_date: refundForm.transaction_date || null,
+      });
+      toast.success("Refund created");
+      setRefundDialogOpen(false);
+      setSelectedTransaction(null);
+      await fetchCollections();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create refund");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setSaving(true);
+    try {
+      await api.deletePaymentCollection(deleteId);
+      toast.success("Payment deleted");
+      setDeleteId(null);
+      await fetchCollections();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete payment");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <AppLayout title="Payments Collections">
       <div className="space-y-5">
@@ -103,7 +199,26 @@ export default function PaymentsCollectionsPage() {
               <p className="mt-0.5 text-muted-foreground">Track all incoming payments, refunds, and adjustments.</p>
             </div>
           </div>
-          <Button variant="gradient" className="gap-2" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4" /> Create Payment</Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => downloadCsv("payments-collections.csv", filteredCollections.map((item) => ({
+                date: item.transaction_date,
+                member_name: item.members?.name || "",
+                member_phone: item.members?.phone || "",
+                type: item.type,
+                gross_amount: Number(item.gross_amount ?? item.amount ?? 0),
+                discount_amount: Number(item.discount_amount ?? 0),
+                net_amount: Number(item.net_amount ?? item.amount ?? 0),
+                payment_mode: item.payment_mode,
+                description: item.description || "",
+              })))}
+              disabled={filteredCollections.length === 0}
+            >
+              Export CSV
+            </Button>
+            <Button variant="gradient" className="gap-2" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4" /> Create Payment</Button>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -153,13 +268,14 @@ export default function PaymentsCollectionsPage() {
                 <TableHead>Net</TableHead>
                 <TableHead>Mode</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={8} className="py-12 text-center text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="py-12 text-center text-muted-foreground">Loading...</TableCell></TableRow>
               ) : filteredCollections.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="py-12 text-center text-muted-foreground">No collections found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="py-12 text-center text-muted-foreground">No collections found.</TableCell></TableRow>
               ) : filteredCollections.map((item) => (
                 <TableRow key={item.id} className="hover:bg-muted/30">
                   <TableCell className="text-sm">{new Date(item.transaction_date).toLocaleDateString()}</TableCell>
@@ -170,6 +286,25 @@ export default function PaymentsCollectionsPage() {
                   <TableCell className="font-medium text-primary">₹{Number(item.net_amount ?? item.amount ?? 0).toLocaleString()}</TableCell>
                   <TableCell className="text-sm capitalize">{item.payment_mode}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{item.description || "-"}</TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      {!item.member_package_id && !item.package_sale_id && Number(item.discount_amount ?? 0) === 0 ? (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(item)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(item.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      ) : null}
+                      {item.type === "payment" ? (
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openRefund(item)}>
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : null}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -237,6 +372,102 @@ export default function PaymentsCollectionsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader><DialogTitle>Edit Payment</DialogTitle></DialogHeader>
+            <div className="grid gap-4 py-2">
+              <div className="space-y-1.5">
+                <Label>Member</Label>
+                <Select value={form.member_id || "__none__"} onValueChange={(value) => setForm((current) => ({ ...current, member_id: value === "__none__" ? "" : value }))}>
+                  <SelectTrigger><SelectValue placeholder="Select member (optional)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No Member</SelectItem>
+                    {members.map((member) => <SelectItem key={member.id} value={member.id}>{member.name} - {member.phone}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Type</Label>
+                  <Select value={form.type} onValueChange={(value) => setForm((current) => ({ ...current, type: value }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="payment">Payment</SelectItem>
+                      <SelectItem value="refund">Refund</SelectItem>
+                      <SelectItem value="adjustment">Adjustment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Amount</Label>
+                  <Input type="number" value={form.amount} onChange={(e) => setForm((current) => ({ ...current, amount: e.target.value }))} placeholder="0.00" />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Payment Mode</Label>
+                  <Select value={form.payment_mode} onValueChange={(value) => setForm((current) => ({ ...current, payment_mode: value }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Transaction Date</Label>
+                  <DatePicker value={form.transaction_date} onChange={(value) => setForm((current) => ({ ...current, transaction_date: value }))} placeholder="Select date" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Description</Label>
+                <Input value={form.description} onChange={(e) => setForm((current) => ({ ...current, description: e.target.value }))} placeholder="Optional note" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+              <Button variant="gradient" onClick={handleUpdate} disabled={saving}>{saving ? "Saving..." : "Update Payment"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader><DialogTitle>Create Refund</DialogTitle></DialogHeader>
+            <div className="grid gap-4 py-2">
+              <div className="space-y-1.5">
+                <Label>Refund Amount</Label>
+                <Input type="number" value={refundForm.amount} onChange={(e) => setRefundForm((current) => ({ ...current, amount: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Refund Date</Label>
+                <DatePicker value={refundForm.transaction_date} onChange={(value) => setRefundForm((current) => ({ ...current, transaction_date: value }))} placeholder="Select refund date" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Description</Label>
+                <Input value={refundForm.description} onChange={(e) => setRefundForm((current) => ({ ...current, description: e.target.value }))} placeholder="Refund reason" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRefundDialogOpen(false)}>Cancel</Button>
+              <Button variant="gradient" onClick={handleRefund} disabled={saving}>{saving ? "Saving..." : "Create Refund"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <DeleteConfirmationDialog
+          open={Boolean(deleteId)}
+          onOpenChange={(open) => !open && setDeleteId(null)}
+          title="Delete Payment?"
+          description="This permanently deletes the selected manual payment entry. Package sale payments cannot be deleted here."
+          onConfirm={handleDelete}
+          confirmDisabled={saving}
+          confirmLabel={saving ? "Deleting..." : "Delete"}
+        />
       </div>
     </AppLayout>
   );
