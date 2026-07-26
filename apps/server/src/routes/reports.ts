@@ -10,11 +10,11 @@ import {
   listReviews,
   listTransactions,
 } from "../controllers/reports";
-import { requireAuthenticatedAdmin } from "../middleware/sessionAuth.middleware";
+import { requireAuthenticatedSession, requireSectionAccess } from "../middleware/sessionAuth.middleware";
 
 const router = Router();
 
-router.use(requireAuthenticatedAdmin);
+router.use(requireAuthenticatedSession, requireSectionAccess("reports"));
 
 router.get("/packages", listMemberPackages);
 router.post("/packages", createMemberPackage);

@@ -1,6 +1,10 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export interface Gym {
+type SessionRole = 'admin' | 'trainer';
+
+type RouteType = { path: string, element: React.JSX, protected?: boolean, section?: string, allowedRoles?: SessionRole[], guestOnly?: boolean }
+
+interface Gym {
   id: string;
   admin_id: string;
   gym_type: 'single' | 'branch';
@@ -20,7 +24,7 @@ export interface Gym {
   updated_at: string;
 }
 
-export interface Admin {
+interface Admin {
   id: string;
   user_id: string;
   gym_id: string;
@@ -42,7 +46,69 @@ export interface Admin {
   gyms: Gym[];
 }
 
-export interface PackageType {
+interface StaffAccount {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  auth_user_id: string;
+  role: 'trainer';
+  full_name: string;
+  email: string;
+  phone: string | null;
+  specializations: string | null;
+  section_permissions: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BasePlan {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  member_id: string | null;
+  source_plan_id: string | null;
+  created_by_type: SessionRole;
+  created_by_staff_id: string | null;
+  plan_scope: 'shared' | 'member_custom';
+  name: string;
+  description: string | null;
+  content: string | null;
+  tag: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface DietPlan extends BasePlan { }
+
+interface ExercisePlan extends BasePlan { }
+
+interface DietPlanAssignment {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  member_id: string;
+  diet_plan_id: string;
+  assigned_by_staff_id: string | null;
+  created_at: string;
+  updated_at: string;
+  plan?: DietPlan | null;
+}
+
+interface ExercisePlanAssignment {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  member_id: string;
+  exercise_plan_id: string;
+  assigned_by_staff_id: string | null;
+  created_at: string;
+  updated_at: string;
+  plan?: ExercisePlan | null;
+}
+
+interface PackageType {
   id: string;
   admin_id: string;
   gym_id: string;
@@ -56,7 +122,7 @@ export interface PackageType {
   updated_at: string;
 }
 
-export interface Member {
+interface Member {
   id: string;
   admin_id: string;
   gym_id: string;
@@ -80,9 +146,11 @@ export interface Member {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  diet_plan_assignments?: DietPlanAssignment[];
+  exercise_plan_assignments?: ExercisePlanAssignment[];
 }
 
-export interface MemberPackage {
+interface MemberPackage {
   id: string;
   admin_id: string;
   gym_id: string;
@@ -100,7 +168,7 @@ export interface MemberPackage {
   members?: Member;
 }
 
-export interface Enquiry {
+interface Enquiry {
   id: string;
   admin_id: string;
   gym_id: string;
@@ -117,7 +185,7 @@ export interface Enquiry {
   updated_at: string;
 }
 
-export interface EnquiryFollowup {
+interface EnquiryFollowup {
   id: string;
   admin_id: string;
   gym_id: string;
@@ -130,7 +198,7 @@ export interface EnquiryFollowup {
   enquiries?: Enquiry;
 }
 
-export interface Followup {
+interface Followup {
   id: string;
   admin_id: string;
   gym_id: string;
@@ -145,7 +213,7 @@ export interface Followup {
   members?: Member;
 }
 
-export interface Transaction {
+interface Transaction {
   id: string;
   admin_id: string;
   gym_id: string;
@@ -160,7 +228,7 @@ export interface Transaction {
   members?: Member;
 }
 
-export interface Review {
+interface Review {
   id: string;
   admin_id: string;
   gym_id: string;

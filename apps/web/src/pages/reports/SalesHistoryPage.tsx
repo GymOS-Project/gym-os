@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartBar as BarChart2 } from "lucide-react";
 import { toast } from "sonner";
-import type { MemberPackage } from "@/types";
 
 export default function SalesHistoryPage() {
   const { admin, selectedGymId } = useAuth();

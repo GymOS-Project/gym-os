@@ -8,11 +8,17 @@ import { GuestRoute, ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
+import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 import DashboardPage from "@/pages/DashboardPage";
 
 import AddMemberPage from "@/pages/members/AddMemberPage";
 import MemberListPage from "@/pages/members/MemberListPage";
 import PackageTypesPage from "@/pages/members/PackageTypesPage";
+import DietPlansPage from "@/pages/diet-exercise/DietPlansPage";
+import DietPlanEditorPage from "@/pages/diet-exercise/DietPlanEditorPage";
+import ExercisePlansPage from "@/pages/diet-exercise/ExercisePlansPage";
+import ExercisePlanEditorPage from "@/pages/diet-exercise/ExercisePlanEditorPage";
 
 import FollowupsPage from "@/pages/followups/FollowupsPage";
 
@@ -28,22 +34,32 @@ import ShiftReportPage from "@/pages/reports/ShiftReportPage";
 import NearToExpirePage from "@/pages/reports/NearToExpirePage";
 import ProfilePage from "@/pages/account/ProfilePage";
 import SettingsPage from "@/pages/account/SettingsPage";
+import TrainersPage from "@/pages/staff/TrainersPage";
 
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
-const protectedElement = (element: React.ReactNode) => (
-  <ProtectedRoute>{element}</ProtectedRoute>
+const protectedElement = (element: React.ReactNode, options?: { section?: string; allowedRoles?: SessionRole[] }) => (
+  <ProtectedRoute section={options?.section} allowedRoles={options?.allowedRoles}>{element}</ProtectedRoute>
 );
 const guestElement = (element: React.ReactNode) => <GuestRoute>{element}</GuestRoute>;
-const routes = [
+const routes: RouteType[] = [
   { path: "/login", element: <LoginPage />, guestOnly: true },
   { path: "/signup", element: <SignupPage />, guestOnly: true },
+  { path: "/forgot-password", element: <ForgotPasswordPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage /> },
   { path: "/", element: <DashboardPage />, protected: true },
-  { path: "/members", element: <MemberListPage />, protected: true },
-  { path: "/members/add", element: <AddMemberPage />, protected: true },
-  { path: "/members/:id/edit", element: <AddMemberPage />, protected: true },
-  { path: "/members/packages", element: <PackageTypesPage />, protected: true },
+  { path: "/members", element: <MemberListPage />, protected: true, section: "members" },
+  { path: "/members/add", element: <AddMemberPage />, protected: true, section: "members", allowedRoles: ["admin"] },
+  { path: "/members/:id/edit", element: <AddMemberPage />, protected: true, section: "members" },
+  { path: "/members/packages", element: <PackageTypesPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
+  { path: "/diet-exercise/diet-plans", element: <DietPlansPage />, protected: true, section: "diet_plans" },
+  { path: "/diet-exercise/diet-plans/create", element: <DietPlanEditorPage />, protected: true, section: "diet_plans" },
+  { path: "/diet-exercise/diet-plans/:id/edit", element: <DietPlanEditorPage />, protected: true, section: "diet_plans" },
+  { path: "/diet-exercise/exercise-plans", element: <ExercisePlansPage />, protected: true, section: "exercise_plans" },
+  { path: "/diet-exercise/exercise-plans/create", element: <ExercisePlanEditorPage />, protected: true, section: "exercise_plans" },
+  { path: "/diet-exercise/exercise-plans/:id/edit", element: <ExercisePlanEditorPage />, protected: true, section: "exercise_plans" },
+  { path: "/staff/trainers", element: <TrainersPage />, protected: true, allowedRoles: ["admin"] },
   {
     path: "/followups/common",
     element: (
@@ -54,6 +70,7 @@ const routes = [
       />
     ),
     protected: true,
+    section: "followups",
   },
   {
     path: "/followups/payment-due",
@@ -65,6 +82,7 @@ const routes = [
       />
     ),
     protected: true,
+    section: "followups",
   },
   {
     path: "/followups/renewal",
@@ -76,8 +94,9 @@ const routes = [
       />
     ),
     protected: true,
+    section: "followups",
   },
-  { path: "/enquiry/add", element: <AddEnquiryPage />, protected: true },
+  { path: "/enquiry/add", element: <AddEnquiryPage />, protected: true, section: "enquiries" },
   {
     path: "/enquiry",
     element: (
@@ -87,11 +106,13 @@ const routes = [
       />
     ),
     protected: true,
+    section: "enquiries",
   },
   {
     path: "/enquiry/followups",
     element: <EnquiryFollowupListPage />,
     protected: true,
+    section: "enquiries",
   },
   {
     path: "/enquiry/not-interested",
@@ -103,21 +124,24 @@ const routes = [
       />
     ),
     protected: true,
+    section: "enquiries",
   },
-  { path: "/reports/sales", element: <SalesHistoryPage />, protected: true },
+  { path: "/reports/sales", element: <SalesHistoryPage />, protected: true, section: "reports" },
   {
     path: "/reports/transactions",
     element: <TransactionsPage />,
     protected: true,
+    section: "reports",
   },
-  { path: "/reports/reviews", element: <ReviewsPage />, protected: true },
+  { path: "/reports/reviews", element: <ReviewsPage />, protected: true, section: "reports" },
   {
     path: "/reports/references",
     element: <ReferenceMembersPage />,
     protected: true,
+    section: "reports",
   },
-  { path: "/reports/shift", element: <ShiftReportPage />, protected: true },
-  { path: "/reports/expiring", element: <NearToExpirePage />, protected: true },
+  { path: "/reports/shift", element: <ShiftReportPage />, protected: true, section: "reports" },
+  { path: "/reports/expiring", element: <NearToExpirePage />, protected: true, section: "reports" },
   { path: "/profile", element: <ProfilePage />, protected: true },
   { path: "/settings", element: <SettingsPage />, protected: true },
   { path: "*", element: <NotFound /> },
@@ -131,11 +155,11 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            {routes.map(({ path, element, protected: isProtected, guestOnly }) => (
+            {routes.map(({ path, element, protected: isProtected, guestOnly, section, allowedRoles }) => (
               <Route
                 key={path}
                 path={path}
-                element={isProtected ? protectedElement(element) : guestOnly ? guestElement(element) : element}
+                element={isProtected ? protectedElement(element, { section, allowedRoles }) : guestOnly ? guestElement(element) : element}
               />
             ))}
           </Routes>

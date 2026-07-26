@@ -12,10 +12,12 @@ function AuthRouteLoader() {
   );
 }
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+export function ProtectedRoute({ children, allowedRoles, section }: { children: React.ReactNode; allowedRoles?: SessionRole[]; section?: string }) {
+  const { user, loading, role, hasSectionAccess } = useAuth();
   if (loading) return <AuthRouteLoader />;
   if (!user) return <Navigate to="/login" replace />;
+  if (allowedRoles && (!role || !allowedRoles.includes(role))) return <Navigate to="/" replace />;
+  if (section && !hasSectionAccess(section)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 

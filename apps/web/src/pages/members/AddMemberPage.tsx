@@ -4,25 +4,53 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import type { PackageType } from "@/types";
 import { addDays, addMonths, format } from "date-fns";
 
 const NO_REFERENCE_MEMBER = "__none__";
 
 export default function AddMemberPage() {
-  const { admin, gyms, selectedGymId } = useAuth();
+  const { admin, gyms, selectedGymId, hasSectionAccess } = useAuth();
   const navigate = useNavigate();
   const { id: memberId } = useParams();
   const isEditing = Boolean(memberId);
+  const canManageDietPlans = hasSectionAccess("diet_plans");
+  const canManageExercisePlans = hasSectionAccess("exercise_plans");
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [packages, setPackages] = useState<PackageType[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; gym_id: string }[]>([]);
+  const [dietPlans, setDietPlans] = useState<DietPlan[]>([]);
+  const [exercisePlans, setExercisePlans] = useState<ExercisePlan[]>([]);
+  const [dietAssignments, setDietAssignments] = useState<DietPlanAssignment[]>([]);
+  const [exerciseAssignments, setExerciseAssignments] = useState<ExercisePlanAssignment[]>([]);
+  const [selectedDietPlanId, setSelectedDietPlanId] = useState("");
+  const [selectedExercisePlanId, setSelectedExercisePlanId] = useState("");
+  const [assignmentSaving, setAssignmentSaving] = useState(false);
+  const [planEditor, setPlanEditor] = useState<{
+    open: boolean;
+    type: "diet" | "exercise";
+    assignmentId: string;
+    name: string;
+    description: string;
+    content: string;
+    tag: string;
+  }>({
+    open: false,
+    type: "diet",
+    assignmentId: "",
+    name: "",
+    description: "",
+    content: "",
+    tag: "",
+  });
 
   const [form, setForm] = useState({
     name: "", email: "", phone: "", gender: "", date_of_birth: "",
@@ -45,10 +73,16 @@ export default function AddMemberPage() {
     if (!isEditing) {
       api.getPlans().then((data) => setPackages(data.filter((p) => p.is_active)));
     }
+    if (canManageDietPlans) {
+      api.getDietPlans().then(setDietPlans).catch(() => {});
+    }
+    if (canManageExercisePlans) {
+      api.getExercisePlans().then(setExercisePlans).catch(() => {});
+    }
     api.getActiveMembers().then((data) => {
       setMembers(isEditing ? data.filter((member) => member.id !== memberId) : data);
     });
-  }, [admin, gyms, isEditing, memberId, selectedGymId]);
+  }, [admin, canManageDietPlans, canManageExercisePlans, gyms, isEditing, memberId, selectedGymId]);
 
   useEffect(() => {
     if (!admin || !memberId) return;
@@ -78,6 +112,8 @@ export default function AddMemberPage() {
           amount_paid: "",
           payment_mode: "cash",
         });
+        setDietAssignments(member.diet_plan_assignments || []);
+        setExerciseAssignments(member.exercise_plan_assignments || []);
       })
       .catch((err: any) => {
         toast.error(err.message || "Failed to load member");
@@ -87,8 +123,10 @@ export default function AddMemberPage() {
   }, [admin, memberId, navigate]);
 
   const availablePackages = packages.filter((pkg) => !form.gym_id || pkg.gym_id === form.gym_id);
+  const availableDietPlans = dietPlans.filter((plan) => plan.is_active && (!form.gym_id || plan.gym_id === form.gym_id));
+  const availableExercisePlans = exercisePlans.filter((plan) => plan.is_active && (!form.gym_id || plan.gym_id === form.gym_id));
   const selectedPkg = availablePackages.find((p) => p.id === form.package_type_id);
-  const endDate = selectedPkg
+  const endDate = selectedPkg && form.start_date
     ? selectedPkg.duration_months
       ? format(addMonths(new Date(form.start_date), selectedPkg.duration_months), "yyyy-MM-dd")
       : selectedPkg.duration_days
@@ -119,6 +157,104 @@ export default function AddMemberPage() {
       form.reference_member_id && form.reference_member_id !== NO_REFERENCE_MEMBER
         ? form.reference_member_id
         : null,
+  };
+
+  const refreshMemberPlans = async () => {
+    if (!memberId) return;
+    const member = await api.getMember(memberId);
+    setDietAssignments(member.diet_plan_assignments || []);
+    setExerciseAssignments(member.exercise_plan_assignments || []);
+  };
+
+  const assignDietPlan = async () => {
+    if (!memberId || !selectedDietPlanId) return;
+    setAssignmentSaving(true);
+    try {
+      await api.assignDietPlanToMember(memberId, selectedDietPlanId);
+      setSelectedDietPlanId("");
+      await refreshMemberPlans();
+      toast.success("Diet plan assigned");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to assign diet plan");
+    } finally {
+      setAssignmentSaving(false);
+    }
+  };
+
+  const assignExercisePlan = async () => {
+    if (!memberId || !selectedExercisePlanId) return;
+    setAssignmentSaving(true);
+    try {
+      await api.assignExercisePlanToMember(memberId, selectedExercisePlanId);
+      setSelectedExercisePlanId("");
+      await refreshMemberPlans();
+      toast.success("Exercise plan assigned");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to assign exercise plan");
+    } finally {
+      setAssignmentSaving(false);
+    }
+  };
+
+  const openPlanEditor = (type: "diet" | "exercise", assignment: DietPlanAssignment | ExercisePlanAssignment) => {
+    setPlanEditor({
+      open: true,
+      type,
+      assignmentId: assignment.id,
+      name: assignment.plan?.name || "",
+      description: assignment.plan?.description || "",
+      content: assignment.plan?.content || "",
+      tag: assignment.plan?.tag || "",
+    });
+  };
+
+  const savePlanCustomization = async () => {
+    if (!memberId || !planEditor.assignmentId || !planEditor.name) {
+      toast.error("Plan name is required");
+      return;
+    }
+
+    setAssignmentSaving(true);
+    try {
+      const payload = {
+        name: planEditor.name,
+        description: planEditor.description || null,
+        content: planEditor.content || null,
+        tag: planEditor.tag || null,
+      };
+
+      if (planEditor.type === "diet") {
+        await api.updateAssignedDietPlan(memberId, planEditor.assignmentId, payload);
+      } else {
+        await api.updateAssignedExercisePlan(memberId, planEditor.assignmentId, payload);
+      }
+
+      await refreshMemberPlans();
+      setPlanEditor((current) => ({ ...current, open: false }));
+      toast.success(`${planEditor.type === "diet" ? "Diet" : "Exercise"} plan customized`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to customize plan");
+    } finally {
+      setAssignmentSaving(false);
+    }
+  };
+
+  const removeAssignedPlan = async (type: "diet" | "exercise", assignmentId: string) => {
+    if (!memberId) return;
+    setAssignmentSaving(true);
+    try {
+      if (type === "diet") {
+        await api.deleteAssignedDietPlan(memberId, assignmentId);
+      } else {
+        await api.deleteAssignedExercisePlan(memberId, assignmentId);
+      }
+      await refreshMemberPlans();
+      toast.success(`${type === "diet" ? "Diet" : "Exercise"} plan removed`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to remove assigned plan");
+    } finally {
+      setAssignmentSaving(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -224,7 +360,7 @@ export default function AddMemberPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Date of Birth</Label>
-                <Input type="date" value={form.date_of_birth} onChange={(e) => set("date_of_birth", e.target.value)} />
+                <DatePicker value={form.date_of_birth} onChange={(value) => set("date_of_birth", value)} placeholder="Select date of birth" />
               </div>
               <div className="space-y-1.5">
                 <Label>Shift</Label>
@@ -307,7 +443,7 @@ export default function AddMemberPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Start Date</Label>
-                  <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
+                  <DatePicker value={form.start_date} onChange={(value) => set("start_date", value)} placeholder="Select start date" allowClear={false} />
                 </div>
                 {endDate && (
                   <div className="space-y-1.5">
@@ -336,6 +472,106 @@ export default function AddMemberPage() {
             </div>
           )}
 
+          {isEditing && canManageDietPlans && (
+            <div className="rounded-xl border bg-card p-6 space-y-4">
+              <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center">
+                <div className="flex-1">
+                  <h2 className="font-semibold text-base">Assigned Diet Plans</h2>
+                  <p className="text-sm text-muted-foreground">Assign shared diet templates or customize them for this member.</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Select value={selectedDietPlanId} onValueChange={setSelectedDietPlanId}>
+                    <SelectTrigger className="w-full sm:w-[240px]"><SelectValue placeholder="Select diet plan" /></SelectTrigger>
+                    <SelectContent>
+                      {availableDietPlans.map((plan) => <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" onClick={assignDietPlan} disabled={!selectedDietPlanId || assignmentSaving}>Assign</Button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {dietAssignments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No diet plans assigned yet.</p>
+                ) : dietAssignments.map((assignment) => (
+                  <div key={assignment.id} className="rounded-lg border p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium">{assignment.plan?.name || 'Untitled plan'}</p>
+                          <Badge variant={assignment.plan?.plan_scope === 'member_custom' ? 'default' : 'secondary'}>
+                            {assignment.plan?.plan_scope === 'member_custom' ? 'Custom Copy' : 'Shared Template'}
+                          </Badge>
+                          {assignment.plan?.tag && <Badge variant="outline">{assignment.plan.tag}</Badge>}
+                        </div>
+                        {assignment.plan?.description && <p className="mt-1 text-sm text-muted-foreground">{assignment.plan.description}</p>}
+                        {assignment.plan?.content && <p className="mt-3 whitespace-pre-wrap text-sm">{assignment.plan.content}</p>}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" onClick={() => openPlanEditor('diet', assignment)} disabled={assignmentSaving}>
+                          {assignment.plan?.plan_scope === 'member_custom' ? 'Edit Copy' : 'Customize'}
+                        </Button>
+                        <Button type="button" variant="outline" className="text-destructive hover:text-destructive" onClick={() => removeAssignedPlan('diet', assignment.id)} disabled={assignmentSaving}>
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isEditing && canManageExercisePlans && (
+            <div className="rounded-xl border bg-card p-6 space-y-4">
+              <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center">
+                <div className="flex-1">
+                  <h2 className="font-semibold text-base">Assigned Exercise Plans</h2>
+                  <p className="text-sm text-muted-foreground">Assign shared exercise templates or customize them for this member.</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Select value={selectedExercisePlanId} onValueChange={setSelectedExercisePlanId}>
+                    <SelectTrigger className="w-full sm:w-[240px]"><SelectValue placeholder="Select exercise plan" /></SelectTrigger>
+                    <SelectContent>
+                      {availableExercisePlans.map((plan) => <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" onClick={assignExercisePlan} disabled={!selectedExercisePlanId || assignmentSaving}>Assign</Button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {exerciseAssignments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No exercise plans assigned yet.</p>
+                ) : exerciseAssignments.map((assignment) => (
+                  <div key={assignment.id} className="rounded-lg border p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium">{assignment.plan?.name || 'Untitled plan'}</p>
+                          <Badge variant={assignment.plan?.plan_scope === 'member_custom' ? 'default' : 'secondary'}>
+                            {assignment.plan?.plan_scope === 'member_custom' ? 'Custom Copy' : 'Shared Template'}
+                          </Badge>
+                          {assignment.plan?.tag && <Badge variant="outline">{assignment.plan.tag}</Badge>}
+                        </div>
+                        {assignment.plan?.description && <p className="mt-1 text-sm text-muted-foreground">{assignment.plan.description}</p>}
+                        {assignment.plan?.content && <p className="mt-3 whitespace-pre-wrap text-sm">{assignment.plan.content}</p>}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" onClick={() => openPlanEditor('exercise', assignment)} disabled={assignmentSaving}>
+                          {assignment.plan?.plan_scope === 'member_custom' ? 'Edit Copy' : 'Customize'}
+                        </Button>
+                        <Button type="button" variant="outline" className="text-destructive hover:text-destructive" onClick={() => removeAssignedPlan('exercise', assignment.id)} disabled={assignmentSaving}>
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-3">
             <Button type="button" variant="outline" onClick={() => navigate("/members")}>Cancel</Button>
             <Button type="submit" variant="gradient" disabled={loading}>
@@ -343,6 +579,36 @@ export default function AddMemberPage() {
             </Button>
           </div>
         </form>
+
+        <Dialog open={planEditor.open} onOpenChange={(open) => setPlanEditor((current) => ({ ...current, open }))}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{planEditor.type === 'diet' ? 'Customize Diet Plan' : 'Customize Exercise Plan'}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-2">
+              <div className="space-y-1.5">
+                <Label>Name</Label>
+                <Input value={planEditor.name} onChange={(e) => setPlanEditor((current) => ({ ...current, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tag</Label>
+                <Input value={planEditor.tag} onChange={(e) => setPlanEditor((current) => ({ ...current, tag: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Description</Label>
+                <Textarea value={planEditor.description} onChange={(e) => setPlanEditor((current) => ({ ...current, description: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Content</Label>
+                <Textarea className="min-h-[220px]" value={planEditor.content} onChange={(e) => setPlanEditor((current) => ({ ...current, content: e.target.value }))} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setPlanEditor((current) => ({ ...current, open: false }))}>Cancel</Button>
+              <Button type="button" variant="gradient" onClick={savePlanCustomization} disabled={assignmentSaving}>Save Custom Copy</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

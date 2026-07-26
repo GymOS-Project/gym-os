@@ -1,7 +1,3 @@
-import type {
-  Admin, Gym, Member, PackageType, MemberPackage,
-  Enquiry, EnquiryFollowup, Followup, Transaction, Review,
-} from "@/types";
 import { getStoredGymFilter } from "@/lib/gymFilter";
 
 const API_BASE_URL =
@@ -61,6 +57,8 @@ function qs(params: Record<string, string | number | undefined>): string {
 export interface LoginResult {
   user: { id: string; email: string } | null;
   admin: Admin | null;
+  staff: StaffAccount | null;
+  role: SessionRole | null;
   authenticated: boolean;
   message?: string;
 }
@@ -84,8 +82,14 @@ export const api = {
     request<LoginResult>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   signup: (data: FormData) =>
     request<LoginResult>("/auth/signup", { method: "POST", body: data }),
+  forgotPassword: (email: string) =>
+    request<{ message: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
+  resetPassword: (access_token: string, new_password: string) =>
+    request<LoginResult>("/auth/reset-password", { method: "POST", body: JSON.stringify({ access_token, new_password }) }),
   signout: () => request<{ message: string }>("/auth/signout", { method: "POST" }),
   me: () => request<LoginResult>("/auth/me"),
+  updatePassword: (current_password: string, new_password: string) =>
+    request<{ message: string }>("/auth/password", { method: "POST", body: JSON.stringify({ current_password, new_password }) }),
   updateAdmin: (data: FormData) =>
     request<Admin>("/auth/admin", { method: "PUT", body: data }),
   upgradeToBranch: (data: Record<string, unknown>) =>
@@ -103,6 +107,18 @@ export const api = {
   updateMember: (id: string, data: Partial<Member>) =>
     request<Member>(`/members/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteMember: (id: string) => request<void>(`/members/${id}`, { method: "DELETE" }),
+  assignDietPlanToMember: (memberId: string, plan_id: string) =>
+    request<DietPlanAssignment>(`/members/${memberId}/diet-plans`, { method: "POST", body: JSON.stringify({ plan_id }) }),
+  updateAssignedDietPlan: (memberId: string, assignmentId: string, data: Partial<DietPlan>) =>
+    request<DietPlanAssignment>(`/members/${memberId}/diet-plans/${assignmentId}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteAssignedDietPlan: (memberId: string, assignmentId: string) =>
+    request<void>(`/members/${memberId}/diet-plans/${assignmentId}`, { method: "DELETE" }),
+  assignExercisePlanToMember: (memberId: string, plan_id: string) =>
+    request<ExercisePlanAssignment>(`/members/${memberId}/exercise-plans`, { method: "POST", body: JSON.stringify({ plan_id }) }),
+  updateAssignedExercisePlan: (memberId: string, assignmentId: string, data: Partial<ExercisePlan>) =>
+    request<ExercisePlanAssignment>(`/members/${memberId}/exercise-plans/${assignmentId}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteAssignedExercisePlan: (memberId: string, assignmentId: string) =>
+    request<void>(`/members/${memberId}/exercise-plans/${assignmentId}`, { method: "DELETE" }),
 
   // Plans (package_types)
   getPlans: () => request<PackageType[]>("/plans"),
@@ -111,6 +127,31 @@ export const api = {
   updatePlan: (id: string, data: Partial<PackageType>) =>
     request<PackageType>(`/plans/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deletePlan: (id: string) => request<void>(`/plans/${id}`, { method: "DELETE" }),
+
+  // Diet plans
+  getDietPlans: (scope = "shared") => request<DietPlan[]>(`/diet-plans${qs({ scope })}`),
+  getDietPlan: (id: string) => request<DietPlan>(`/diet-plans/${id}`),
+  createDietPlan: (data: Partial<DietPlan>) =>
+    request<DietPlan>("/diet-plans", { method: "POST", body: JSON.stringify(data) }),
+  updateDietPlan: (id: string, data: Partial<DietPlan>) =>
+    request<DietPlan>(`/diet-plans/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteDietPlan: (id: string) => request<void>(`/diet-plans/${id}`, { method: "DELETE" }),
+
+  // Exercise plans
+  getExercisePlans: (scope = "shared") => request<ExercisePlan[]>(`/exercise-plans${qs({ scope })}`),
+  getExercisePlan: (id: string) => request<ExercisePlan>(`/exercise-plans/${id}`),
+  createExercisePlan: (data: Partial<ExercisePlan>) =>
+    request<ExercisePlan>("/exercise-plans", { method: "POST", body: JSON.stringify(data) }),
+  updateExercisePlan: (id: string, data: Partial<ExercisePlan>) =>
+    request<ExercisePlan>(`/exercise-plans/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteExercisePlan: (id: string) => request<void>(`/exercise-plans/${id}`, { method: "DELETE" }),
+
+  // Staff
+  getTrainers: () => request<StaffAccount[]>("/staff/trainers"),
+  createTrainer: (data: Partial<StaffAccount> & { password: string }) =>
+    request<StaffAccount>("/staff/trainers", { method: "POST", body: JSON.stringify(data) }),
+  updateTrainer: (id: string, data: Partial<StaffAccount>) =>
+    request<StaffAccount>(`/staff/trainers/${id}`, { method: "PUT", body: JSON.stringify(data) }),
 
   // Member packages
   getMemberPackages: () => request<(MemberPackage & { members?: { name: string; phone: string } })[]>("/reports/packages"),

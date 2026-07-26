@@ -17,51 +17,86 @@ interface NavItem {
   children?: NavItem[];
 }
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-  {
-    label: 'Members',
-    icon: Users,
-    children: [
-      { label: 'Add Member', href: '/members/add', icon: UserPlus },
-      { label: 'Member List', href: '/members', icon: List, exact: true },
-      { label: 'Package Types', href: '/members/packages', icon: Package },
-    ],
-  },
-  {
-    label: 'Follow Ups',
-    icon: PhoneCall,
-    children: [
-      { label: 'Common Follow Up', href: '/followups/common', icon: MessageSquare },
-      { label: 'Payment Due', href: '/followups/payment-due', icon: CreditCard },
-      { label: 'Renewal Follow Up', href: '/followups/renewal', icon: RefreshCw },
-    ],
-  },
-  {
-    label: 'Enquiry',
-    icon: UserSearch,
-    children: [
-      { label: 'Add Enquiry', href: '/enquiry/add', icon: UserPlus },
-      { label: 'Data List', href: '/enquiry', icon: List, exact: true },
-      { label: 'Follow Up List', href: '/enquiry/followups', icon: Bell },
-      { label: 'Not Interested', href: '/enquiry/not-interested', icon: XCircle },
-    ],
-  },
-  {
-    label: 'Reports',
-    icon: BarChart2,
-    children: [
-      { label: 'Sales History', href: '/reports/sales', icon: BarChart2 },
-      { label: 'Transactions', href: '/reports/transactions', icon: Receipt },
-      { label: 'Member Reviews', href: '/reports/reviews', icon: Star },
-      { label: 'Reference Members', href: '/reports/references', icon: Share2 },
-      { label: 'Report by Shift', href: '/reports/shift', icon: Clock },
-      { label: 'Near to Expire', href: '/reports/expiring', icon: AlertTriangle },
-    ],
-  },
-];
+function getNavItems(role: string | null, hasSectionAccess: (section: string) => boolean): NavItem[] {
+  const items: NavItem[] = [{ label: 'Dashboard', href: '/', icon: LayoutDashboard }];
 
-function isNavItemActive(item: NavItem, pathname: string) {
+  if (hasSectionAccess('members')) {
+    items.push({
+      label: 'Members',
+      icon: Users,
+      children: [
+        ...(role === 'admin' ? [{ label: 'Add Member', href: '/members/add', icon: UserPlus }] : []),
+        { label: 'Member List', href: '/members', icon: List, exact: true },
+        ...(role === 'admin' && hasSectionAccess('packages') ? [{ label: 'Package Types', href: '/members/packages', icon: Package }] : []),
+      ],
+    });
+  }
+
+  if (hasSectionAccess('diet_plans') || hasSectionAccess('exercise_plans')) {
+    items.push({
+      label: 'Diet and Exercise',
+      icon: Dumbbell,
+      children: [
+        ...(hasSectionAccess('diet_plans') ? [{ label: 'Diet Plans', href: '/diet-exercise/diet-plans', icon: List }] : []),
+        ...(hasSectionAccess('exercise_plans') ? [{ label: 'Exercise Plans', href: '/diet-exercise/exercise-plans', icon: List }] : []),
+      ],
+    });
+  }
+
+  if (hasSectionAccess('followups')) {
+    items.push({
+      label: 'Follow Ups',
+      icon: PhoneCall,
+      children: [
+        { label: 'Common Follow Up', href: '/followups/common', icon: MessageSquare },
+        { label: 'Payment Due', href: '/followups/payment-due', icon: CreditCard },
+        { label: 'Renewal Follow Up', href: '/followups/renewal', icon: RefreshCw },
+      ],
+    });
+  }
+
+  if (hasSectionAccess('enquiries')) {
+    items.push({
+      label: 'Enquiry',
+      icon: UserSearch,
+      children: [
+        { label: 'Add Enquiry', href: '/enquiry/add', icon: UserPlus },
+        { label: 'Data List', href: '/enquiry', icon: List, exact: true },
+        { label: 'Follow Up List', href: '/enquiry/followups', icon: Bell },
+        { label: 'Not Interested', href: '/enquiry/not-interested', icon: XCircle },
+      ],
+    });
+  }
+
+  if (hasSectionAccess('reports')) {
+    items.push({
+      label: 'Reports',
+      icon: BarChart2,
+      children: [
+        { label: 'Sales History', href: '/reports/sales', icon: BarChart2 },
+        { label: 'Transactions', href: '/reports/transactions', icon: Receipt },
+        { label: 'Member Reviews', href: '/reports/reviews', icon: Star },
+        { label: 'Reference Members', href: '/reports/references', icon: Share2 },
+        { label: 'Report by Shift', href: '/reports/shift', icon: Clock },
+        { label: 'Near to Expire', href: '/reports/expiring', icon: AlertTriangle },
+      ],
+    });
+  }
+
+  if (role === 'admin') {
+    items.push({
+      label: 'Staff',
+      icon: Users,
+      children: [
+        { label: 'Trainers', href: '/staff/trainers', icon: Users },
+      ],
+    });
+  }
+
+  return items;
+}
+
+function isNavItemActive(item: NavItem, pathname: string): any {
   if (!item.href) {
     return item.children?.some(child => isNavItemActive(child, pathname)) ?? false;
   }
@@ -102,8 +137,8 @@ function NavItemComponent({
         title={collapsed ? item.label : undefined}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150',
-          collapsed ? 'justify-center px-2' : '',
-          depth > 0 ? 'ml-4 pl-3' : '',
+          collapsed ? 'mx-auto h-11 w-11 justify-center rounded-xl px-0' : '',
+          depth > 0 && !collapsed ? 'ml-4 pl-3' : '',
           isActive
             ? 'bg-primary/15 text-primary font-medium shadow-sm'
             : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
@@ -128,8 +163,8 @@ function NavItemComponent({
         title={collapsed ? item.label : undefined}
         className={cn(
           'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150',
-          collapsed ? 'justify-center px-2' : '',
-          open ? 'text-sidebar-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+          collapsed ? 'mx-auto h-11 w-11 justify-center rounded-xl px-0' : '',
+          open ? 'bg-sidebar-accent/70 text-sidebar-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
         )}
       >
         <item.icon className="h-4 w-4 shrink-0" />
@@ -153,10 +188,11 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {
-  const { admin, gyms, selectedGymId, selectedGym, setSelectedGymId, signOut } = useAuth();
+  const { admin, staff, role, gyms, selectedGymId, selectedGym, setSelectedGymId, signOut, hasSectionAccess } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  const navItems = getNavItems(role, hasSectionAccess);
 
   const handleSignOut = async () => {
     await signOut();
@@ -174,13 +210,13 @@ export function AppLayout({ children, title }: AppLayoutProps) {
         {!collapsed && (
           <div className="min-w-0">
             <p className="truncate font-bold text-sidebar-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name) || 'GymOs'}</p>
-            <p className="truncate text-xs text-sidebar-foreground/70">{admin?.owner_name || 'Admin Panel'}</p>
+            <p className="truncate text-xs text-sidebar-foreground/70">{staff?.full_name || admin?.owner_name || 'Admin Panel'}</p>
           </div>
         )}
       </div>
 
       {/* Nav */}
-      <nav className={cn('flex-1 overflow-y-auto py-4 space-y-0.5', collapsed ? 'px-2' : 'px-3')}>
+      <nav className={cn('flex-1 overflow-y-auto py-4 space-y-1', collapsed ? 'px-3' : 'px-3')}>
         {navItems.map(item => (
           <NavItemComponent key={item.label} item={item} collapsed={collapsed} onExpand={() => setDesktopCollapsed(false)} />
         ))}
@@ -191,7 +227,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
-      <aside className={cn('hidden shrink-0 overflow-hidden border-r border-border transition-[width] duration-200 lg:block', desktopCollapsed ? 'w-20' : 'w-64')}>
+      <aside className={cn('hidden shrink-0 overflow-hidden border-r border-border transition-[width] duration-200 lg:block', desktopCollapsed ? 'w-[4.5rem]' : 'w-64')}>
         <Sidebar collapsed={desktopCollapsed} />
       </aside>
 
@@ -224,8 +260,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           </button>
           {title && <h1 className="font-semibold text-foreground">{title}</h1>}
           <div className="ml-auto flex items-center gap-3">
-            {gyms.length > 1 && (
-              <Select value={selectedGymId} onValueChange={setSelectedGymId}>
+             {gyms.length > 1 && role !== 'trainer' && (
+               <Select value={selectedGymId} onValueChange={setSelectedGymId}>
                 <SelectTrigger className="w-[150px] sm:w-[180px]">
                   <SelectValue placeholder="Filter gyms" />
                 </SelectTrigger>
@@ -238,8 +274,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
               </Select>
             )}
             <div className="hidden sm:block text-right">
-              <p className="text-sm font-medium text-foreground">{admin?.owner_name}</p>
-              <p className="text-xs text-muted-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name)}</p>
+               <p className="text-sm font-medium text-foreground">{staff?.full_name || admin?.owner_name}</p>
+               <p className="text-xs text-muted-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name)}</p>
             </div>
 
             <DropdownMenu>
@@ -250,18 +286,18 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   aria-label="Open account menu"
                 >
                   <Avatar className="h-8 w-8 border border-border/60 shadow-sm">
-                    <AvatarImage src={admin?.logo_url || undefined} alt={admin?.owner_name || 'Admin'} className="object-cover" />
-                    <AvatarFallback className="gradient-primary text-sm font-medium text-primary-foreground">
-                      {(admin?.owner_name || 'A')[0].toUpperCase()}
-                    </AvatarFallback>
+                     <AvatarImage src={admin?.logo_url || undefined} alt={staff?.full_name || admin?.owner_name || 'User'} className="object-cover" />
+                     <AvatarFallback className="gradient-primary text-sm font-medium text-primary-foreground">
+                       {(staff?.full_name || admin?.owner_name || 'A')[0].toUpperCase()}
+                     </AvatarFallback>
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="space-y-0.5">
-                    <p className="text-sm font-medium text-foreground">{admin?.owner_name || 'Admin'}</p>
-                    <p className="text-xs font-normal text-muted-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name) || 'GymOs'}</p>
+                     <p className="text-sm font-medium text-foreground">{staff?.full_name || admin?.owner_name || 'Admin'}</p>
+                     <p className="text-xs font-normal text-muted-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name) || 'GymOs'}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

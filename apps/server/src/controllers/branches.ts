@@ -79,16 +79,6 @@ export async function createBranch(req: AuthenticatedRequest, res: Response) {
     return res.status(400).json({ message: "Upgrade this account to branch mode before adding more gyms" });
   }
 
-  const syncError = await supabase
-    .from("gyms")
-    .update({ gym_type: "branch", updated_at: new Date().toISOString() })
-    .eq("admin_id", adminId)
-    .neq("gym_type", "branch");
-
-  if (syncError.error) {
-    return res.status(500).json({ message: syncError.error.message });
-  }
-
   const { data, error } = await supabase
     .from("gyms")
     .insert({
@@ -109,6 +99,18 @@ export async function createBranch(req: AuthenticatedRequest, res: Response) {
 
   if (error) {
     return res.status(500).json({ message: error.message });
+  }
+
+  const syncError = await supabase
+    .from("gyms")
+    .update({ gym_type: "branch", updated_at: new Date().toISOString() })
+    .eq("admin_id", adminId)
+    .neq("gym_type", "branch")
+    .neq("id", data.id);
+
+  if (syncError.error) {
+    await supabase.from("gyms").delete().eq("id", data.id).eq("admin_id", adminId);
+    return res.status(500).json({ message: syncError.error.message });
   }
 
   return res.status(201).json(data);

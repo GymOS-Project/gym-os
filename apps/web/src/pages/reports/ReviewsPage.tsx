@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Star, Plus } from "lucide-react";
 import { toast } from "sonner";
-import type { Review } from "@/types";
 
 const ANONYMOUS_MEMBER = "__anonymous__";
 
@@ -155,7 +155,7 @@ export default function ReviewsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Review Date</Label>
-              <Input type="date" value={form.review_date} onChange={(e) => setForm((p) => ({ ...p, review_date: e.target.value }))} />
+              <DatePicker value={form.review_date} onChange={(value) => setForm((p) => ({ ...p, review_date: value }))} placeholder="Select review date" allowClear={false} />
             </div>
             <div className="space-y-1.5">
               <Label>Comment</Label>

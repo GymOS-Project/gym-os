@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +15,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { Member } from "@/types";
 
 const NO_REFERENCE_MEMBER = "__none__";
 
@@ -164,7 +164,7 @@ export default function MemberListPage() {
         name: editForm.name,
         email: editForm.email || null,
         phone: editForm.phone,
-        gym_id: editForm.gym_id || null,
+        gym_id: editForm.gym_id || '',
         gender: (editForm.gender as Member["gender"]) || null,
         date_of_birth: editForm.date_of_birth || null,
         address: editForm.current_address || null,
@@ -263,7 +263,7 @@ export default function MemberListPage() {
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${m.phone}`)}>
                           <Phone className="h-3.5 w-3.5" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditModal(m.id)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => navigate(`/members/${m.id}/edit`)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleActive(m)}>
@@ -341,7 +341,7 @@ export default function MemberListPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Date of Birth</Label>
-                  <Input type="date" value={editForm.date_of_birth} onChange={(e) => setEdit("date_of_birth", e.target.value)} />
+                  <DatePicker value={editForm.date_of_birth} onChange={(value) => setEdit("date_of_birth", value)} placeholder="Select date of birth" />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Shift</Label>

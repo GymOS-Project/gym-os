@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { createFollowup, listFollowups, updateFollowup } from "../controllers/followups";
-import { requireAuthenticatedAdmin } from "../middleware/sessionAuth.middleware";
+import { requireAuthenticatedSession, requireSectionAccess } from "../middleware/sessionAuth.middleware";
 
 const router = Router();
 
-router.use(requireAuthenticatedAdmin);
+router.use(requireAuthenticatedSession, requireSectionAccess("followups"));
 
 router.get("/", listFollowups);
 router.post("/", createFollowup);

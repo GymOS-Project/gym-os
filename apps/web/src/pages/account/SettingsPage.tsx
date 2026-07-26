@@ -61,9 +61,11 @@ const EMPTY_PAYMENT_FORM: PaymentForm = {
 };
 
 export default function SettingsPage() {
-  const { admin, selectedGym, selectedGymId, refreshAdmin } = useAuth();
+  const { admin, role, selectedGym, selectedGymId, refreshAdmin } = useAuth();
+  const gymCount = admin?.gyms?.length ?? 0;
   const [saving, setSaving] = useState(false);
   const [branchSaving, setBranchSaving] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
   const [gymPhotos, setGymPhotos] = useState<File[]>([]);
@@ -71,6 +73,11 @@ export default function SettingsPage() {
   const [galleryPreviewUrls, setGalleryPreviewUrls] = useState<string[]>([]);
   const [paymentForm, setPaymentForm] = useState<PaymentForm>(EMPTY_PAYMENT_FORM);
   const [branchForm, setBranchForm] = useState<BranchForm>(EMPTY_BRANCH_FORM);
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
   const [form, setForm] = useState({
     gym_name: "",
     business_registration_name: "",
@@ -80,9 +87,10 @@ export default function SettingsPage() {
     address: "",
   });
 
-  const isSingleGymAccount = (admin?.gyms?.length || 0) === 1 && admin?.gym_type === "single";
-  const isBranchAccount = (admin?.gyms?.length || 0) > 1 || admin?.gym_type === "branch";
+  const isSingleGymAccount = gymCount === 1 && admin?.gym_type === "single";
+  const isBranchAccount = ((admin?.gyms || [])?.length || 0) > 1 || admin?.gym_type === "branch";
   const canEditSelectedGym = Boolean(selectedGym);
+  const isTrainer = role === "trainer";
 
   useEffect(() => {
     if (!selectedGym) {
@@ -123,6 +131,10 @@ export default function SettingsPage() {
 
   const updatePaymentField = (field: keyof PaymentForm, value: string) => {
     setPaymentForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const updatePasswordField = (field: keyof typeof passwordForm, value: string) => {
+    setPasswordForm((current) => ({ ...current, [field]: value }));
   };
 
   const resetUpgradeForms = () => {
@@ -255,9 +267,40 @@ export default function SettingsPage() {
     setBranchDialogOpen(true);
   };
 
+  const handlePasswordSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!passwordForm.current_password || !passwordForm.new_password || !passwordForm.confirm_password) {
+      toast.error("Fill all password fields");
+      return;
+    }
+
+    if (passwordForm.new_password.length < 6) {
+      toast.error("New password must be at least 6 characters");
+      return;
+    }
+
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      toast.error("New passwords do not match");
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      await api.updatePassword(passwordForm.current_password, passwordForm.new_password);
+      setPasswordForm({ current_password: "", new_password: "", confirm_password: "" });
+      toast.success("Password updated successfully");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update password");
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
   return (
     <AppLayout title="Settings">
       <div className="mx-auto max-w-5xl space-y-6">
+        {!isTrainer && (
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -268,7 +311,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </div>
               <Badge variant="outline" className="w-fit">
-                {admin?.gyms?.length || 0} gym{(admin?.gyms?.length || 0) === 1 ? "" : "s"}
+                {(admin?.gyms || [])?.length || 0} gym{((admin?.gyms || [])?.length || 0) === 1 ? "" : "s"}
               </Badge>
             </div>
           </CardHeader>
@@ -333,8 +376,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
-        {!canEditSelectedGym && admin?.gyms?.length > 1 ? (
+        {!isTrainer && (!canEditSelectedGym && gymCount > 1 ? (
           <div className="rounded-2xl border border-warning/20 bg-warning/10 p-4 text-sm text-warning">
             Select a specific gym from the global filter to edit its settings and photos. Branch management remains available above.
           </div>
@@ -353,7 +397,7 @@ export default function SettingsPage() {
                       <div className="flex min-h-10 items-center justify-between rounded-md border bg-muted/20 px-3 py-2 text-sm">
                         <span className="capitalize">{selectedGym.gym_type} gym</span>
                         <span className="text-xs text-muted-foreground">
-                          {(admin?.gyms?.length || 0) > 1 ? "Branch account" : "Single account"}
+                          {gymCount > 1 ? "Branch account" : "Single account"}
                         </span>
                       </div>
                     </div>
@@ -460,7 +504,43 @@ export default function SettingsPage() {
               </Card>
             </div>
           </div>
-        ) : null}
+        ) : null)}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Change Password</CardTitle>
+            <CardDescription>Update the password for your current account.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordSubmit} className="space-y-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="current_password">Current Password</Label>
+                  <Input id="current_password" type="password" value={passwordForm.current_password} onChange={(event) => updatePasswordField("current_password", event.target.value)} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new_password">New Password</Label>
+                  <Input id="new_password" type="password" value={passwordForm.new_password} onChange={(event) => updatePasswordField("new_password", event.target.value)} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm_password">Confirm New Password</Label>
+                  <Input id="confirm_password" type="password" value={passwordForm.confirm_password} onChange={(event) => updatePasswordField("confirm_password", event.target.value)} required />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+                Use at least 6 characters. After saving, your current session stays active with the new password.
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit" variant="gradient" disabled={passwordSaving} className="gap-2">
+                  <Lock className="h-4 w-4" />
+                  {passwordSaving ? "Updating..." : "Change Password"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
 
         <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
           <DialogContent className="sm:max-w-md">

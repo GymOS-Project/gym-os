@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Bell } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { EnquiryFollowup } from "@/types";
 import { toast } from "sonner";
 
 export default function EnquiryFollowupListPage() {

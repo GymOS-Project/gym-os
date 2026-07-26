@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, CreditCard as Edit, Check, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Followup, Member } from "@/types";
 
 const NO_MEMBER = "__none__";
 
@@ -175,11 +175,11 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Follow-up Date</Label>
-                <Input type="date" value={form.followup_date} onChange={(e) => setForm((p) => ({ ...p, followup_date: e.target.value }))} />
+                <DatePicker value={form.followup_date} onChange={(value) => setForm((p) => ({ ...p, followup_date: value }))} placeholder="Select follow-up date" allowClear={false} />
               </div>
               <div className="space-y-1.5">
                 <Label>Next Follow-up</Label>
-                <Input type="date" value={form.next_followup_date} onChange={(e) => setForm((p) => ({ ...p, next_followup_date: e.target.value }))} />
+                <DatePicker value={form.next_followup_date} onChange={(value) => setForm((p) => ({ ...p, next_followup_date: value }))} placeholder="Select next follow-up" />
               </div>
             </div>
             <div className="space-y-1.5">
