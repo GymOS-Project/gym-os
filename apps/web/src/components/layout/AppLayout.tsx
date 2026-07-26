@@ -6,7 +6,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X } from 'lucide-react';
+import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X, BadgePercent } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface NavItem {
@@ -38,6 +38,19 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
       children: [
         { label: 'Package Types', href: '/packages-shift/packages', icon: Package },
         { label: 'Shifts', href: '/packages-shift/shifts', icon: Clock },
+      ],
+    });
+  }
+
+  if (role === 'admin') {
+    items.push({
+      label: 'Payments',
+      icon: CreditCard,
+      children: [
+        { label: 'Collections', href: '/payments/collections', icon: Receipt },
+        { label: 'Sales', href: '/payments/sales', icon: Package },
+        { label: 'Analytics', href: '/payments/analytics', icon: BarChart2 },
+        { label: 'Coupons', href: '/payments/coupons', icon: BadgePercent },
       ],
     });
   }

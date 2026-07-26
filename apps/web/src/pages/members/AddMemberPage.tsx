@@ -29,6 +29,7 @@ export default function AddMemberPage() {
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [packages, setPackages] = useState<PackageType[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; gym_id: string }[]>([]);
   const [dietPlans, setDietPlans] = useState<DietPlan[]>([]);
@@ -38,6 +39,8 @@ export default function AddMemberPage() {
   const [selectedDietPlanId, setSelectedDietPlanId] = useState("");
   const [selectedExercisePlanId, setSelectedExercisePlanId] = useState("");
   const [assignmentSaving, setAssignmentSaving] = useState(false);
+  const [couponValidation, setCouponValidation] = useState<CouponValidationResult | null>(null);
+  const [couponValidating, setCouponValidating] = useState(false);
   const [previewPlan, setPreviewPlan] = useState<{ title: string; value: DietPlan | ExercisePlan | null } | null>(null);
   const [planEditor, setPlanEditor] = useState<{
     open: boolean;
@@ -64,6 +67,7 @@ export default function AddMemberPage() {
     gym_id: "",
     reference_member_id: NO_REFERENCE_MEMBER,
     package_type_id: "", start_date: format(new Date(), "yyyy-MM-dd"),
+    coupon_id: "",
     amount_paid: "", payment_mode: "cash",
   });
 
@@ -78,6 +82,7 @@ export default function AddMemberPage() {
     if (!isEditing) {
       api.getPlans().then((data) => setPackages(data.filter((p) => p.is_active)));
     }
+    api.getCoupons().then(setCoupons).catch(() => {});
     api.getShifts().then((data) => setShifts(data.filter((shift) => shift.is_active))).catch(() => {});
     if (canManageDietPlans) {
       api.getDietPlans().then(setDietPlans).catch(() => {});
@@ -115,6 +120,7 @@ export default function AddMemberPage() {
           reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER,
           package_type_id: "",
           start_date: format(new Date(), "yyyy-MM-dd"),
+          coupon_id: "",
           amount_paid: "",
           payment_mode: "cash",
         });
@@ -129,6 +135,7 @@ export default function AddMemberPage() {
   }, [admin, memberId, navigate]);
 
   const availablePackages = packages.filter((pkg) => !form.gym_id || pkg.gym_id === form.gym_id);
+  const availableCoupons = coupons.filter((coupon) => !coupon.gym_id || !form.gym_id || coupon.gym_id === form.gym_id);
   const availableShifts = shifts.filter((shift) => !form.gym_id || shift.gym_id === form.gym_id);
   const availableDietPlans = dietPlans.filter((plan) => plan.is_active && (!form.gym_id || plan.gym_id === form.gym_id));
   const availableExercisePlans = exercisePlans.filter((plan) => plan.is_active && (!form.gym_id || plan.gym_id === form.gym_id));
@@ -140,8 +147,32 @@ export default function AddMemberPage() {
         ? format(addDays(new Date(form.start_date), selectedPkg.duration_days), "yyyy-MM-dd")
         : ""
     : "";
+  const payableAmount = couponValidation?.netAmount ?? (parseFloat(form.amount_paid) || 0);
 
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    if (!form.package_type_id || !form.gym_id || !form.coupon_id || !form.amount_paid) {
+      setCouponValidation(null);
+      return;
+    }
+
+    const amount = parseFloat(form.amount_paid);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setCouponValidation(null);
+      return;
+    }
+
+    setCouponValidating(true);
+    api.validateCoupon({
+      gym_id: form.gym_id,
+      gross_amount: amount,
+      coupon_id: form.coupon_id,
+    })
+      .then((result) => setCouponValidation(result))
+      .catch(() => setCouponValidation(null))
+      .finally(() => setCouponValidating(false));
+  }, [form.amount_paid, form.coupon_id, form.gym_id, form.package_type_id]);
 
   const memberPayload = {
     name: form.name,
@@ -280,22 +311,15 @@ export default function AddMemberPage() {
         const member = await api.createMember(memberPayload);
 
         if (form.package_type_id && endDate) {
-          await api.createMemberPackage({
+          await api.createMemberSale({
             gym_id: form.gym_id,
             member_id: member.id,
             package_type_id: form.package_type_id,
-            package_name: selectedPkg!.name,
             start_date: form.start_date,
             end_date: endDate,
-            amount_paid: parseFloat(form.amount_paid) || selectedPkg!.price,
-            payment_mode: form.payment_mode as any,
-          });
-          await api.createTransaction({
-            gym_id: form.gym_id,
-            member_id: member.id,
-            type: "payment",
-            amount: parseFloat(form.amount_paid) || selectedPkg!.price,
-            payment_mode: form.payment_mode as any,
+            gross_amount: parseFloat(form.amount_paid) || selectedPkg!.price,
+            payment_mode: form.payment_mode,
+            coupon_id: form.coupon_id || null,
             description: `Package: ${selectedPkg!.name}`,
           });
         }
@@ -470,6 +494,16 @@ export default function AddMemberPage() {
                   <Input type="number" value={form.amount_paid} onChange={(e) => set("amount_paid", e.target.value)} placeholder="0.00" />
                 </div>
                 <div className="space-y-1.5">
+                  <Label>Coupon</Label>
+                  <Select value={form.coupon_id} onValueChange={(v) => set("coupon_id", v === "__none__" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Select coupon (optional)" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No Coupon</SelectItem>
+                      {availableCoupons.map((coupon) => <SelectItem key={coupon.id} value={coupon.id}>{coupon.code} - {coupon.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
                   <Label>Payment Mode</Label>
                   <Select value={form.payment_mode} onValueChange={(v) => set("payment_mode", v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -482,6 +516,28 @@ export default function AddMemberPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {(form.amount_paid || form.coupon_id) && (
+                  <div className="rounded-xl border bg-muted/20 p-4 sm:col-span-2">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Gross Amount</p>
+                        <p className="mt-1 font-semibold">₹{(parseFloat(form.amount_paid) || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Discount</p>
+                        <p className="mt-1 font-semibold text-success">₹{(couponValidation?.discountAmount || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Final Payable</p>
+                        <p className="mt-1 font-semibold text-primary">₹{payableAmount.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    {form.coupon_id && !couponValidation && !couponValidating ? (
+                      <p className="mt-3 text-xs text-muted-foreground">Coupon will be revalidated while creating the payment.</p>
+                    ) : null}
+                    {couponValidating ? <p className="mt-3 text-xs text-muted-foreground">Validating coupon...</p> : null}
+                  </div>
+                )}
               </div>
             </div>
           )}
