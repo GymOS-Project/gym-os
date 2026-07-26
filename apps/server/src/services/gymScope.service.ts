@@ -8,6 +8,23 @@ export type GymScope = {
   gymIds: string[];
 };
 
+function getSessionGymIds(req: AuthenticatedRequest) {
+  if (req.sessionRole === "trainer") {
+    return req.staff?.gym_id ? [req.staff.gym_id] : [];
+  }
+
+  const gyms = Array.isArray(req.admin?.gyms) ? req.admin.gyms : [];
+  const gymIds = gyms
+    .map((gym) => (gym && typeof gym.id === "string" ? gym.id : null))
+    .filter((gymId): gymId is string => Boolean(gymId));
+
+  if (gymIds.length > 0) {
+    return gymIds;
+  }
+
+  return req.admin?.id ? listAdminGyms(req.admin.id) : [];
+}
+
 export async function listAdminGyms(adminId: string) {
   const { data, error } = await supabase
     .from("gyms")
@@ -29,7 +46,7 @@ export async function resolveGymScope(req: AuthenticatedRequest, res: Response):
     return null;
   }
 
-  const gymIds = await listAdminGyms(adminId);
+  const gymIds = await getSessionGymIds(req);
   const requestedGymId = req.get("x-gym-id") || (typeof req.query.gym_id === "string" ? req.query.gym_id : null);
 
   if (requestedGymId && !gymIds.includes(requestedGymId)) {
@@ -37,9 +54,13 @@ export async function resolveGymScope(req: AuthenticatedRequest, res: Response):
     return null;
   }
 
+  const selectedGymId = req.sessionRole === "trainer"
+    ? gymIds[0] || null
+    : requestedGymId;
+
   return {
-    selectedGymId: requestedGymId,
-    gymIds: requestedGymId ? [requestedGymId] : gymIds,
+    selectedGymId,
+    gymIds: selectedGymId ? [selectedGymId] : gymIds,
   };
 }
 
@@ -74,6 +95,21 @@ export async function resolveWriteGymId(req: AuthenticatedRequest, res: Response
       : typeof req.admin?.gym_id === "string"
         ? req.admin.gym_id
         : null;
+
+  if (req.sessionRole === "trainer") {
+    const trainerGymId = req.staff?.gym_id || null;
+    if (!trainerGymId) {
+      res.status(403).json({ message: "Trainer is not assigned to a gym" });
+      return null;
+    }
+
+    if (requestedGymId && requestedGymId !== trainerGymId) {
+      res.status(403).json({ message: "Invalid gym" });
+      return null;
+    }
+
+    return trainerGymId;
+  }
 
   if (!requestedGymId) {
     res.status(400).json({ message: "gym_id is required" });

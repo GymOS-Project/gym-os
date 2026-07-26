@@ -101,7 +101,7 @@ export default function ProfilePage() {
 
   return (
     <AppLayout title="Profile">
-      {admin?.gyms?.length > 1 && selectedGymId === "all" ? (
+      {(admin?.gyms || [])?.length > 1 && selectedGymId === "all" ? (
         <div className="mx-auto max-w-3xl rounded-2xl border border-warning/20 bg-warning/10 p-4 text-sm text-warning">
           Select a specific gym from the global filter to edit its owner profile.
         </div>

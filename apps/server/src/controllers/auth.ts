@@ -207,6 +207,18 @@ function toAuthUser(user: { id: string; email?: string | null }): AuthUser {
   };
 }
 
+async function cleanupAuthUser(userId: string) {
+  await supabase.auth.admin.deleteUser(userId).catch(() => {});
+}
+
+async function cleanupAdminRecord(adminId: string) {
+  await supabase.from("admins").delete().eq("id", adminId);
+}
+
+async function cleanupGymRecord(adminId: string, gymId: string) {
+  await supabase.from("gyms").delete().eq("id", gymId).eq("admin_id", adminId);
+}
+
 export async function signup(req: Request, res: Response) {
   const {
     email,
@@ -245,40 +257,55 @@ export async function signup(req: Request, res: Response) {
   if (data.user) {
     let gymPhotoUrl: string | null = null;
     let gymPhotoUrls: string[] = [];
+    let createdAdminId: string | null = null;
 
-    if (gymPhotoFiles.length > 0) {
-      gymPhotoUrls = await uploadGymPhotos(gymPhotoFiles, data.user.id);
-      gymPhotoUrl = gymPhotoUrls[0] || null;
-    }
+    try {
+      if (gymPhotoFiles.length > 0) {
+        gymPhotoUrls = await uploadGymPhotos(gymPhotoFiles, data.user.id);
+        gymPhotoUrl = gymPhotoUrls[0] || null;
+      }
 
-    const { data: admin, error: adminError } = await supabase.from("admins").insert({
-      auth_id: data.user.id,
-    }).select("id").single();
+      const { data: admin, error: adminError } = await supabase.from("admins").insert({
+        auth_id: data.user.id,
+      }).select("id").single();
 
-    if (adminError) {
-      return res.status(500).json({ message: adminError.message });
-    }
+      if (adminError || !admin) {
+        await cleanupAuthUser(data.user.id);
+        return res.status(500).json({ message: adminError?.message || "Failed to create admin account" });
+      }
 
-    const { error: gymError } = await supabase.from("gyms").insert(
-      gyms.map((gym, index) => ({
-        admin_id: admin.id,
-        gym_type,
-        gym_name: gym.gym_name,
-        owner_name: gym.owner_name,
-        phone: gym.phone,
-        email: gym.gym_email,
-        website: gym.website,
-        instagram_page: gym.instagram_page,
-        address: gym.address,
-        business_registration_name: gym.business_registration_name,
-        owner_email: gym.owner_email,
-        gym_photo_url: index === 0 ? gymPhotoUrl : null,
-        gym_photo_urls: index === 0 ? gymPhotoUrls : [],
-      })),
-    );
+      createdAdminId = admin.id;
 
-    if (gymError) {
-      return res.status(500).json({ message: gymError.message });
+      const { error: gymError } = await supabase.from("gyms").insert(
+        gyms.map((gym, index) => ({
+          admin_id: admin.id,
+          gym_type,
+          gym_name: gym.gym_name,
+          owner_name: gym.owner_name,
+          phone: gym.phone,
+          email: gym.gym_email,
+          website: gym.website,
+          instagram_page: gym.instagram_page,
+          address: gym.address,
+          business_registration_name: gym.business_registration_name,
+          owner_email: gym.owner_email,
+          gym_photo_url: index === 0 ? gymPhotoUrl : null,
+          gym_photo_urls: index === 0 ? gymPhotoUrls : [],
+        })),
+      );
+
+      if (gymError) {
+        await cleanupAdminRecord(admin.id);
+        await cleanupAuthUser(data.user.id);
+        return res.status(500).json({ message: gymError.message });
+      }
+    } catch (uploadError) {
+      if (createdAdminId) {
+        await cleanupAdminRecord(createdAdminId);
+      }
+
+      await cleanupAuthUser(data.user.id);
+      return res.status(500).json({ message: uploadError instanceof Error ? uploadError.message : "Failed to create account" });
     }
   }
 
@@ -350,6 +377,7 @@ export async function forgotPassword(req: Request, res: Response) {
   if (!PASSWORD_RESET_REDIRECT_URL) {
     return res.status(500).json({ message: "Password reset redirect URL is not configured" });
   }
+  console.log(email)
 
   const authClient = createSupabaseAuthClient();
   const { error } = await authClient.auth.resetPasswordForEmail(email, {
@@ -520,19 +548,7 @@ export async function upgradeSingleGymToBranch(req: AuthenticatedRequest, res: R
 
     const upgradeTimestamp = new Date().toISOString();
 
-    const { error: updateExistingGymsError } = await supabase
-      .from("gyms")
-      .update({
-        gym_type: "branch",
-        updated_at: upgradeTimestamp,
-      })
-      .eq("admin_id", adminId);
-
-    if (updateExistingGymsError) {
-      return res.status(500).json({ message: updateExistingGymsError.message });
-    }
-
-    const { error: insertBranchError } = await supabase.from("gyms").insert({
+    const { data: insertedBranch, error: insertBranchError } = await supabase.from("gyms").insert({
       admin_id: adminId,
       gym_type: "branch",
       gym_name: newGym.gym_name,
@@ -544,15 +560,24 @@ export async function upgradeSingleGymToBranch(req: AuthenticatedRequest, res: R
       address: newGym.address,
       business_registration_name: newGym.business_registration_name,
       owner_email: newGym.owner_email,
-    });
+    }).select("id").single();
 
-    if (insertBranchError) {
-      await supabase
-        .from("gyms")
-        .update({ gym_type: "single", updated_at: upgradeTimestamp })
-        .eq("admin_id", adminId);
+    if (insertBranchError || !insertedBranch) {
+      return res.status(500).json({ message: insertBranchError?.message || "Failed to create new branch" });
+    }
 
-      return res.status(500).json({ message: insertBranchError.message });
+    const { error: updateExistingGymsError } = await supabase
+      .from("gyms")
+      .update({
+        gym_type: "branch",
+        updated_at: upgradeTimestamp,
+      })
+      .eq("admin_id", adminId)
+      .neq("id", insertedBranch.id);
+
+    if (updateExistingGymsError) {
+      await cleanupGymRecord(adminId, insertedBranch.id);
+      return res.status(500).json({ message: updateExistingGymsError.message });
     }
 
     const refreshedAdmin = await getAdminByAuthId(userId);

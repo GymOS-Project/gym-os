@@ -42,7 +42,7 @@ export async function listMemberPackages(req: AuthenticatedRequest, res: Respons
   }
 
   try {
-    return res.json(await attachMembersByMemberId(data || []));
+    return res.json(await attachMembersByMemberId(data || [], adminId, gymScope.gymIds));
   } catch (attachError) {
     return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load packages" });
   }
@@ -134,7 +134,7 @@ export async function getNearToExpire(req: AuthenticatedRequest, res: Response) 
   }
 
   try {
-    return res.json(await attachMembersByMemberId(data || [], "id, name, phone, email, shift"));
+    return res.json(await attachMembersByMemberId(data || [], adminId, gymScope.gymIds, "id, name, phone, email, shift"));
   } catch (attachError) {
     return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load expiring packages" });
   }
@@ -167,7 +167,7 @@ export async function listTransactions(req: AuthenticatedRequest, res: Response)
   }
 
   try {
-    return res.json(await attachMembersByMemberId(data || []));
+    return res.json(await attachMembersByMemberId(data || [], adminId, gymScope.gymIds));
   } catch (attachError) {
     return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load transactions" });
   }
@@ -249,7 +249,7 @@ export async function listReviews(req: AuthenticatedRequest, res: Response) {
   }
 
   try {
-    return res.json(await attachMembersByMemberId(data || []));
+    return res.json(await attachMembersByMemberId(data || [], adminId, gymScope.gymIds));
   } catch (attachError) {
     return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load reviews" });
   }
@@ -331,11 +331,28 @@ export async function listReferenceMembers(req: AuthenticatedRequest, res: Respo
   }
 
   const refIds = [...new Set((members || []).map((member) => member.reference_member_id))];
-  const { data: refs } = refIds.length
-    ? await supabase.from("members").select("id, name, phone").in("id", refIds as string[])
-    : { data: [] };
+  let refs: Array<{ id: string; name: string; phone: string }> = [];
 
-  const refMap = Object.fromEntries((refs || []).map((ref) => [ref.id, ref]));
+  if (refIds.length > 0) {
+    let refsQuery = supabase
+      .from("members")
+      .select("id, name, phone")
+      .eq("admin_id", adminId)
+      .in("id", refIds as string[]);
+
+    if (gymScope.selectedGymId) {
+      refsQuery = refsQuery.eq("gym_id", gymScope.selectedGymId);
+    }
+
+    const { data: refData, error: refError } = await refsQuery;
+    if (refError) {
+      return res.status(500).json({ message: refError.message });
+    }
+
+    refs = (refData || []) as Array<{ id: string; name: string; phone: string }>;
+  }
+
+  const refMap = Object.fromEntries(refs.map((ref) => [ref.id, ref]));
   const grouped: Record<string, { ref: unknown; referrals: unknown[] }> = {};
 
   (members || []).forEach((member) => {

@@ -47,7 +47,30 @@ export async function requireAuthenticatedSession(
   }
 }
 
-export const requireAuthenticatedAdmin = requireAuthenticatedSession;
+export async function requireAuthenticatedAdmin(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const session = await resolveAuthenticatedSession(req, res);
+    if (!session) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    if (session.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    req.authUser = session.user;
+    req.admin = session.admin;
+    req.staff = session.staff;
+    req.sessionRole = session.role;
+    return next();
+  } catch (error) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+}
 
 export function requireAdmin(
   req: AuthenticatedRequest,

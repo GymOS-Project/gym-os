@@ -75,7 +75,7 @@ export default function DashboardPage() {
           <p className="mt-1 text-muted-foreground">
             Here's what's happening at{" "}
             {selectedGym?.gym_name ||
-              (admin?.gyms?.length > 1 ? "all your gyms" : admin?.gym_name)}{" "}
+              ((admin?.gyms || []).length > 1 ? "all your gyms" : admin?.gym_name)}{" "}
             today.
           </p>
         </div>
@@ -194,8 +194,8 @@ export default function DashboardPage() {
                         border: "1px solid hsl(var(--border))",
                         borderRadius: "8px",
                       }}
-                      formatter={(v: number) => [
-                        `₹${v.toLocaleString()}`,
+                      formatter={(value) => [
+                        `₹${Number(value ?? 0).toLocaleString()}`,
                         "Revenue",
                       ]}
                     />

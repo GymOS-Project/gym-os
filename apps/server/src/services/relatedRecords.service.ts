@@ -23,8 +23,22 @@ type EnquirySummary = {
   status: string;
 };
 
+function applyGymScope<T extends { eq: Function; in: Function }>(query: T, gymIds: string[]) {
+  if (gymIds.length === 1) {
+    return query.eq("gym_id", gymIds[0]);
+  }
+
+  if (gymIds.length > 1) {
+    return query.in("gym_id", gymIds);
+  }
+
+  return query;
+}
+
 export async function attachMembersByMemberId<T extends WithMemberId>(
   records: T[],
+  adminId: string,
+  gymIds: string[],
   fields = "id, name, phone",
 ) {
   const memberIds = Array.from(
@@ -35,10 +49,15 @@ export async function attachMembersByMemberId<T extends WithMemberId>(
     return records.map((record) => ({ ...record, members: null }));
   }
 
-  const { data, error } = await supabase
-    .from("members")
-    .select(fields)
-    .in("id", memberIds);
+  const query = applyGymScope(
+    supabase
+      .from("members")
+      .select(fields)
+      .eq("admin_id", adminId)
+      .in("id", memberIds),
+    gymIds,
+  );
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);
@@ -55,7 +74,11 @@ export async function attachMembersByMemberId<T extends WithMemberId>(
   }));
 }
 
-export async function attachEnquiriesByEnquiryId<T extends WithEnquiryId>(records: T[]) {
+export async function attachEnquiriesByEnquiryId<T extends WithEnquiryId>(
+  records: T[],
+  adminId: string,
+  gymIds: string[],
+) {
   const enquiryIds = Array.from(
     new Set(records.map((record) => record.enquiry_id).filter((enquiryId): enquiryId is string => Boolean(enquiryId))),
   );
@@ -64,10 +87,15 @@ export async function attachEnquiriesByEnquiryId<T extends WithEnquiryId>(record
     return records.map((record) => ({ ...record, enquiries: null }));
   }
 
-  const { data, error } = await supabase
-    .from("enquiries")
-    .select("id, name, phone, status")
-    .in("id", enquiryIds);
+  const query = applyGymScope(
+    supabase
+      .from("enquiries")
+      .select("id, name, phone, status")
+      .eq("admin_id", adminId)
+      .in("id", enquiryIds),
+    gymIds,
+  );
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);

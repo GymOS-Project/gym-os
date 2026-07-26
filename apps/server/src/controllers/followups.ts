@@ -45,7 +45,7 @@ export async function listFollowups(req: AuthenticatedRequest, res: Response) {
   }
 
   try {
-    return res.json(await attachMembersByMemberId(data || []));
+    return res.json(await attachMembersByMemberId(data || [], adminId, gymScope.gymIds));
   } catch (attachError) {
     return res.status(500).json({ message: attachError instanceof Error ? attachError.message : "Failed to load followups" });
   }

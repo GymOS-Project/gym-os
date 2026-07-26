@@ -96,7 +96,7 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
   return items;
 }
 
-function isNavItemActive(item: NavItem, pathname: string) {
+function isNavItemActive(item: NavItem, pathname: string): any {
   if (!item.href) {
     return item.children?.some(child => isNavItemActive(child, pathname)) ?? false;
   }

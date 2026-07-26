@@ -75,7 +75,7 @@ export default function SharedPlanEditorPage({ planType }: Props) {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!form.name || !form.gym_id) {
       toast.error('Name and gym are required');

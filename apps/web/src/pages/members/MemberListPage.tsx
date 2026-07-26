@@ -164,7 +164,7 @@ export default function MemberListPage() {
         name: editForm.name,
         email: editForm.email || null,
         phone: editForm.phone,
-        gym_id: editForm.gym_id || null,
+        gym_id: editForm.gym_id || '',
         gender: (editForm.gender as Member["gender"]) || null,
         date_of_birth: editForm.date_of_birth || null,
         address: editForm.current_address || null,

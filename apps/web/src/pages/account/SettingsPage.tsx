@@ -62,6 +62,7 @@ const EMPTY_PAYMENT_FORM: PaymentForm = {
 
 export default function SettingsPage() {
   const { admin, role, selectedGym, selectedGymId, refreshAdmin } = useAuth();
+  const gymCount = admin?.gyms?.length ?? 0;
   const [saving, setSaving] = useState(false);
   const [branchSaving, setBranchSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
@@ -86,8 +87,8 @@ export default function SettingsPage() {
     address: "",
   });
 
-  const isSingleGymAccount = (admin?.gyms?.length || 0) === 1 && admin?.gym_type === "single";
-  const isBranchAccount = (admin?.gyms?.length || 0) > 1 || admin?.gym_type === "branch";
+  const isSingleGymAccount = gymCount === 1 && admin?.gym_type === "single";
+  const isBranchAccount = ((admin?.gyms || [])?.length || 0) > 1 || admin?.gym_type === "branch";
   const canEditSelectedGym = Boolean(selectedGym);
   const isTrainer = role === "trainer";
 
@@ -310,7 +311,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </div>
               <Badge variant="outline" className="w-fit">
-                {admin?.gyms?.length || 0} gym{(admin?.gyms?.length || 0) === 1 ? "" : "s"}
+                {(admin?.gyms || [])?.length || 0} gym{((admin?.gyms || [])?.length || 0) === 1 ? "" : "s"}
               </Badge>
             </div>
           </CardHeader>
@@ -377,7 +378,7 @@ export default function SettingsPage() {
         </Card>
         )}
 
-        {!isTrainer && (!canEditSelectedGym && admin?.gyms?.length > 1 ? (
+        {!isTrainer && (!canEditSelectedGym && gymCount > 1 ? (
           <div className="rounded-2xl border border-warning/20 bg-warning/10 p-4 text-sm text-warning">
             Select a specific gym from the global filter to edit its settings and photos. Branch management remains available above.
           </div>
@@ -396,7 +397,7 @@ export default function SettingsPage() {
                       <div className="flex min-h-10 items-center justify-between rounded-md border bg-muted/20 px-3 py-2 text-sm">
                         <span className="capitalize">{selectedGym.gym_type} gym</span>
                         <span className="text-xs text-muted-foreground">
-                          {(admin?.gyms?.length || 0) > 1 ? "Branch account" : "Single account"}
+                          {gymCount > 1 ? "Branch account" : "Single account"}
                         </span>
                       </div>
                     </div>

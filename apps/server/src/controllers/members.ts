@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { attachMemberPackages } from "../services/memberPackages.service";
-import { ensureGymBelongsToAdmin, resolveGymScope } from "../services/gymScope.service";
+import { ensureGymBelongsToAdmin, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { supabase } from "../supabase";
 
 type PlanTable = "diet_plans" | "exercise_plans";
@@ -507,28 +507,9 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
     return;
   }
 
-  const gymId = typeof req.admin?.gym_id === "string" ? req.admin.gym_id : null;
-  const requestedGymId = typeof req.body.gym_id === "string"
-    ? req.body.gym_id
-    : typeof req.query.gym_id === "string"
-      ? req.query.gym_id
-      : gymId;
-
+  const requestedGymId = await resolveWriteGymId(req, res);
   if (!requestedGymId) {
-    return res.status(400).json({ message: "gym_id is required" });
-  }
-
-  const belongsToAdmin = await ensureGymBelongsToAdmin(adminId, requestedGymId).catch((error) => {
-    res.status(500).json({ message: error instanceof Error ? error.message : "Failed to validate gym" });
-    return null;
-  });
-
-  if (belongsToAdmin === null) {
     return;
-  }
-
-  if (!belongsToAdmin) {
-    return res.status(403).json({ message: "Invalid gym" });
   }
 
   const {
@@ -625,6 +606,10 @@ export async function updateMember(req: AuthenticatedRequest, res: Response) {
     : undefined;
 
   if (gym_id && !(await ensureGymBelongsToAdmin(adminId, gym_id).catch(() => false))) {
+    return res.status(403).json({ message: "Invalid gym" });
+  }
+
+  if (req.sessionRole === "trainer" && gym_id && gym_id !== req.staff?.gym_id) {
     return res.status(403).json({ message: "Invalid gym" });
   }
 
