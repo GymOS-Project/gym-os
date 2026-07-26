@@ -165,6 +165,37 @@ export const api = {
     request<Shift>(`/shifts/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteShift: (id: string) => request<void>(`/shifts/${id}`, { method: "DELETE" }),
 
+  // Payments
+  getPaymentCollections: (params?: { date_from?: string; date_to?: string; type?: string; payment_mode?: string; member_id?: string }) =>
+    request<(Transaction & { members?: { id: string; name: string; phone: string; email?: string | null; shift?: string | null } | null })[]>(`/payments/collections${qs(params || {})}`),
+  createPaymentCollection: (data: Partial<Transaction>) =>
+    request<Transaction>("/payments/collections", { method: "POST", body: JSON.stringify(data) }),
+  getPaymentSales: (params?: { date_from?: string; date_to?: string; status?: string; package_type_id?: string; member_id?: string }) =>
+    request<(MemberPackage & { members?: { id: string; name: string; phone: string; email?: string | null; shift?: string | null } | null })[]>(`/payments/sales${qs(params || {})}`),
+  getPaymentAnalytics: (params?: { date_from?: string; date_to?: string }) =>
+    request<PaymentAnalytics>(`/payments/analytics${qs(params || {})}`),
+  getCoupons: (includeInactive = false) =>
+    request<Coupon[]>(`/payments/coupons${qs({ include_inactive: includeInactive ? "true" : undefined })}`),
+  createCoupon: (data: Partial<Coupon> & { applies_to_all_gyms?: boolean }) =>
+    request<Coupon>("/payments/coupons", { method: "POST", body: JSON.stringify(data) }),
+  updateCoupon: (id: string, data: Partial<Coupon> & { applies_to_all_gyms?: boolean }) =>
+    request<Coupon>(`/payments/coupons/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteCoupon: (id: string) => request<void>(`/payments/coupons/${id}`, { method: "DELETE" }),
+  validateCoupon: (data: { gym_id: string; gross_amount: number; member_id?: string | null; coupon_id?: string | null; coupon_code?: string | null }) =>
+    request<CouponValidationResult>("/payments/coupons/validate", { method: "POST", body: JSON.stringify(data) }),
+  createMemberSale: (data: {
+    gym_id: string;
+    member_id: string;
+    package_type_id: string;
+    start_date: string;
+    end_date: string;
+    gross_amount: number;
+    payment_mode: string;
+    coupon_id?: string | null;
+    coupon_code?: string | null;
+    description?: string | null;
+  }) => request<{ sale: MemberPackage; transaction: Transaction; applied_coupon: { id: string; code: string } | null; gross_amount: number; discount_amount: number; net_amount: number }>("/payments/member-sales", { method: "POST", body: JSON.stringify(data) }),
+
   // Member packages
   getMemberPackages: () => request<(MemberPackage & { members?: { name: string; phone: string } })[]>("/reports/packages"),
   createMemberPackage: (data: Partial<MemberPackage>) =>

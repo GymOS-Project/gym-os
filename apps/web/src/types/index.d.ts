@@ -175,10 +175,14 @@ interface MemberPackage {
   gym_id: string;
   member_id: string;
   package_type_id: string | null;
+  coupon_id: string | null;
   package_name: string;
   start_date: string;
   end_date: string;
   amount_paid: number;
+  gross_amount?: number | null;
+  discount_amount?: number | null;
+  net_amount?: number | null;
   payment_mode: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'other';
   status: 'active' | 'expired' | 'cancelled';
   notes: string | null;
@@ -238,13 +242,61 @@ interface Transaction {
   gym_id: string;
   member_id: string | null;
   member_package_id: string | null;
+  package_sale_id?: string | null;
+  coupon_id?: string | null;
   type: 'payment' | 'refund' | 'adjustment';
   amount: number;
+  gross_amount?: number | null;
+  discount_amount?: number | null;
+  net_amount?: number | null;
   payment_mode: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'other';
   description: string | null;
+  reference_no?: string | null;
   transaction_date: string;
   created_at: string;
   members?: Member;
+}
+
+interface Coupon {
+  id: string;
+  admin_id: string;
+  gym_id: string | null;
+  code: string;
+  name: string;
+  description: string | null;
+  discount_type: 'percentage' | 'flat';
+  discount_value: number;
+  max_discount_amount: number | null;
+  min_purchase_amount: number | null;
+  usage_limit: number | null;
+  usage_limit_per_member: number | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CouponValidationResult {
+  coupon: Coupon;
+  grossAmount: number;
+  discountAmount: number;
+  netAmount: number;
+}
+
+interface PaymentAnalytics {
+  totalCollections: number;
+  totalRefunds: number;
+  totalAdjustments: number;
+  netCollections: number;
+  totalSales: number;
+  averageSale: number;
+  totalDiscountGiven: number;
+  couponUsageCount: number;
+  revenueByMode: { mode: string; amount: number }[];
+  salesByPackage: { package_name: string; amount: number }[];
+  couponBreakdown: { coupon_code: string; discount_amount: number }[];
+  revenueSeries: { date: string; amount: number }[];
 }
 
 interface Review {

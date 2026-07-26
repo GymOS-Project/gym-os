@@ -16,6 +16,10 @@ import AddMemberPage from "@/pages/members/AddMemberPage";
 import MemberListPage from "@/pages/members/MemberListPage";
 import PackageTypesPage from "@/pages/members/PackageTypesPage";
 import ShiftsPage from "@/pages/operations/ShiftsPage";
+import PaymentsCollectionsPage from "@/pages/payments/PaymentsCollectionsPage";
+import PaymentsSalesPage from "@/pages/payments/PaymentsSalesPage";
+import PaymentsAnalyticsPage from "@/pages/payments/PaymentsAnalyticsPage";
+import CouponsPage from "@/pages/payments/CouponsPage";
 import DietPlansPage from "@/pages/diet-exercise/DietPlansPage";
 import DietPlanEditorPage from "@/pages/diet-exercise/DietPlanEditorPage";
 import ExercisePlansPage from "@/pages/diet-exercise/ExercisePlansPage";
@@ -56,6 +60,10 @@ const routes: RouteType[] = [
   { path: "/members/:id/edit", element: <AddMemberPage />, protected: true, section: "members" },
   { path: "/packages-shift/packages", element: <PackageTypesPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
   { path: "/packages-shift/shifts", element: <ShiftsPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
+  { path: "/payments/collections", element: <PaymentsCollectionsPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/payments/sales", element: <PaymentsSalesPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/payments/analytics", element: <PaymentsAnalyticsPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/payments/coupons", element: <CouponsPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/members/packages", element: <PackageTypesPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
   { path: "/diet-exercise/diet-plans", element: <DietPlansPage />, protected: true, section: "diet_plans" },
   { path: "/diet-exercise/diet-plans/create", element: <DietPlanEditorPage />, protected: true, section: "diet_plans" },
