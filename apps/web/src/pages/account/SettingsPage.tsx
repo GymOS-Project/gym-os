@@ -90,7 +90,7 @@ export default function SettingsPage() {
   const isSingleGymAccount = gymCount === 1 && admin?.gym_type === "single";
   const isBranchAccount = ((admin?.gyms || [])?.length || 0) > 1 || admin?.gym_type === "branch";
   const canEditSelectedGym = Boolean(selectedGym);
-  const isTrainer = role === "trainer";
+  const isTrainer = role === "staff";
 
   useEffect(() => {
     if (!selectedGym) {

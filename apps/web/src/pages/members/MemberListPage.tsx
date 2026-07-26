@@ -30,6 +30,7 @@ export default function MemberListPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [referenceMembers, setReferenceMembers] = useState<{ id: string; name: string; gym_id: string }[]>([]);
   const [editMemberId, setEditMemberId] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
@@ -56,6 +57,7 @@ export default function MemberListPage() {
   useEffect(() => {
     if (!admin) return;
     fetchMembers();
+    api.getShifts().then((data) => setShifts(data.filter((shift) => shift.is_active))).catch(() => {});
     api.getActiveMembers().then((data) => setReferenceMembers(data)).catch(() => {});
   }, [admin, selectedGymId]);
 
@@ -247,7 +249,7 @@ export default function MemberListPage() {
                         </div>
                         <div>
                           <p className="font-medium">{m.name}</p>
-                          {m.shift && <p className="text-xs text-muted-foreground capitalize">{m.shift} shift</p>}
+                          {m.shift && <p className="text-xs text-muted-foreground">{m.shift}</p>}
                         </div>
                       </div>
                     </TableCell>
@@ -348,9 +350,10 @@ export default function MemberListPage() {
                   <Select value={editForm.shift} onValueChange={(value) => setEdit("shift", value)}>
                     <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="morning">Morning</SelectItem>
-                      <SelectItem value="afternoon">Afternoon</SelectItem>
-                      <SelectItem value="evening">Evening</SelectItem>
+                      {shifts.filter((shift) => !editForm.gym_id || shift.gym_id === editForm.gym_id).length === 0
+                        ? <SelectItem value="__no_shifts__" disabled>No shifts. Add from Packages and Shift &gt; Shifts.</SelectItem>
+                        : shifts.filter((shift) => !editForm.gym_id || shift.gym_id === editForm.gym_id).map((shift) => <SelectItem key={shift.id} value={shift.name}>{shift.name}</SelectItem>)}
+                      {editForm.shift && !shifts.some((shift) => shift.name === editForm.shift && (!editForm.gym_id || shift.gym_id === editForm.gym_id)) ? <SelectItem value={editForm.shift}>{editForm.shift}</SelectItem> : null}
                     </SelectContent>
                   </Select>
                 </div>

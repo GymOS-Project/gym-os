@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { PlanContentPreviewDialog } from '@/components/plans/PlanContentPreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { api } from '@/lib/api';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Eye, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type PlanType = 'diet' | 'exercise';
@@ -38,6 +39,7 @@ export default function SharedPlanListPage({ planType }: Props) {
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [previewPlan, setPreviewPlan] = useState<PlanRecord | null>(null);
   const content = planContent[planType];
 
   const fetchPlans = async () => {
@@ -121,7 +123,10 @@ export default function SharedPlanListPage({ planType }: Props) {
                 <TableRow key={plan.id} className="hover:bg-muted/30">
                   <TableCell>
                     <div>
-                      <p className="font-medium">{plan.name}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{plan.name}</p>
+                        <Badge variant="outline">{plan.content_type === 'pdf' ? 'PDF' : 'Rich Text'}</Badge>
+                      </div>
                       {plan.description && <p className="text-xs text-muted-foreground">{plan.description}</p>}
                     </div>
                   </TableCell>
@@ -135,6 +140,9 @@ export default function SharedPlanListPage({ planType }: Props) {
                   <TableCell>{new Date(plan.updated_at).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPreviewPlan(plan)}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => navigate(`${content.basePath}/${plan.id}/edit`)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -162,6 +170,13 @@ export default function SharedPlanListPage({ planType }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PlanContentPreviewDialog
+        open={Boolean(previewPlan)}
+        onOpenChange={(open) => !open && setPreviewPlan(null)}
+        title={previewPlan?.name || `Preview ${content.singular}`}
+        value={previewPlan}
+      />
     </AppLayout>
   );
 }

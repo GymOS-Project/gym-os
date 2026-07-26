@@ -2,9 +2,8 @@ import type { Response } from "express";
 
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
+import { hasOwn, hasPlanContentInput, normalizeOptionalBoolean, normalizeOptionalString, resolvePlanContentFields, type PlanTable } from "../services/planContent.service";
 import { supabase } from "../supabase";
-
-type PlanTable = "diet_plans" | "exercise_plans";
 
 function getAdminId(req: AuthenticatedRequest, res: Response) {
   const adminId = req.admin?.id;
@@ -14,15 +13,6 @@ function getAdminId(req: AuthenticatedRequest, res: Response) {
   }
 
   return adminId;
-}
-
-function normalizeOptionalString(value: unknown) {
-  if (typeof value !== "string") {
-    return value == null ? null : String(value);
-  }
-
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
 }
 
 export function createSharedPlanController(table: PlanTable) {
@@ -99,6 +89,20 @@ export function createSharedPlanController(table: PlanTable) {
         return res.status(400).json({ message: "name is required" });
       }
 
+      let contentFields;
+
+      try {
+        contentFields = await resolvePlanContentFields({
+          adminId,
+          gymId,
+          table,
+          body: req.body as Record<string, unknown>,
+          file: req.file,
+        });
+      } catch (error) {
+        return res.status(400).json({ message: error instanceof Error ? error.message : "Invalid plan content" });
+      }
+
       const { data, error } = await supabase
         .from(table)
         .insert({
@@ -106,11 +110,11 @@ export function createSharedPlanController(table: PlanTable) {
           gym_id: gymId,
           name,
           description: normalizeOptionalString(req.body.description),
-          content: normalizeOptionalString(req.body.content),
           tag: normalizeOptionalString(req.body.tag),
-          created_by_type: req.sessionRole === "trainer" ? "trainer" : "admin",
-          created_by_staff_id: req.sessionRole === "trainer" ? req.staff?.id || null : null,
+          created_by_type: req.sessionRole === "staff" ? "staff" : "admin",
+          created_by_staff_id: req.sessionRole === "staff" ? req.staff?.id || null : null,
           plan_scope: "shared",
+          ...contentFields,
         })
         .select("*")
         .single();
@@ -133,11 +137,60 @@ export function createSharedPlanController(table: PlanTable) {
       }
 
       const updates: Record<string, unknown> = {};
-      if (req.body.name !== undefined) updates.name = normalizeOptionalString(req.body.name);
-      if (req.body.description !== undefined) updates.description = normalizeOptionalString(req.body.description);
-      if (req.body.content !== undefined) updates.content = normalizeOptionalString(req.body.content);
-      if (req.body.tag !== undefined) updates.tag = normalizeOptionalString(req.body.tag);
-      if (req.body.is_active !== undefined) updates.is_active = Boolean(req.body.is_active);
+      const body = req.body as Record<string, unknown>;
+      const hasPdfFile = Boolean(req.file);
+
+      if (hasOwn(body, "name")) updates.name = normalizeOptionalString(body.name);
+      if (hasOwn(body, "description")) updates.description = normalizeOptionalString(body.description);
+      if (hasOwn(body, "tag")) updates.tag = normalizeOptionalString(body.tag);
+
+      const normalizedIsActive = normalizeOptionalBoolean(body.is_active);
+      if (normalizedIsActive !== undefined) {
+        updates.is_active = normalizedIsActive;
+      }
+
+      if (hasPlanContentInput(body, req.file)) {
+        const existingPlanResult = await supabase
+          .from(table)
+          .select("content_type, content, pdf_url, pdf_file_name")
+          .eq("id", req.params.id)
+          .eq("admin_id", adminId)
+          .maybeSingle();
+
+        if (existingPlanResult.error) {
+          return res.status(500).json({ message: existingPlanResult.error.message });
+        }
+
+        if (!existingPlanResult.data) {
+          return res.status(404).json({ message: "Plan not found" });
+        }
+
+        const resolvedGymId = typeof body.gym_id === "string" && body.gym_id
+          ? body.gym_id
+          : typeof gymScope.selectedGymId === "string" && gymScope.selectedGymId
+            ? gymScope.selectedGymId
+            : typeof req.admin?.gym_id === "string"
+              ? req.admin.gym_id
+              : null;
+
+        if (!resolvedGymId) {
+          return res.status(400).json({ message: "gym_id is required" });
+        }
+
+        try {
+          const contentFields = await resolvePlanContentFields({
+            adminId,
+            gymId: resolvedGymId,
+            table,
+            body,
+            file: req.file,
+            existing: existingPlanResult.data,
+          });
+          Object.assign(updates, contentFields);
+        } catch (error) {
+          return res.status(400).json({ message: error instanceof Error ? error.message : "Invalid plan content" });
+        }
+      }
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ message: "No valid fields provided for update" });

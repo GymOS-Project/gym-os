@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const syncSelectedGym = (nextAdmin: Admin | null, nextStaff: StaffAccount | null, nextRole: SessionRole | null) => {
     const nextGyms = nextAdmin?.gyms || [];
-    if (nextRole === 'trainer' && nextStaff?.gym_id) {
+    if (nextRole === 'staff' && nextStaff?.gym_id) {
       setStoredGymFilter(nextStaff.gym_id);
       setSelectedGymIdState(nextStaff.gym_id);
       return;
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const setSelectedGymId = (gymId: string) => {
-    if (role === 'trainer') {
+    if (role === 'staff') {
       return;
     }
     setStoredGymFilter(gymId);

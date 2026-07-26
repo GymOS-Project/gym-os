@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { PlanContentEditor } from "@/components/plans/PlanContentEditor";
+import { PlanContentPreviewDialog } from "@/components/plans/PlanContentPreviewDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -11,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { buildPlanFormData, createPlanEditorValue, type PlanEditorValue } from "@/lib/planContent";
 import { toast } from "sonner";
 import { addDays, addMonths, format } from "date-fns";
 
@@ -26,6 +29,7 @@ export default function AddMemberPage() {
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [packages, setPackages] = useState<PackageType[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; gym_id: string }[]>([]);
   const [dietPlans, setDietPlans] = useState<DietPlan[]>([]);
   const [exercisePlans, setExercisePlans] = useState<ExercisePlan[]>([]);
@@ -34,22 +38,23 @@ export default function AddMemberPage() {
   const [selectedDietPlanId, setSelectedDietPlanId] = useState("");
   const [selectedExercisePlanId, setSelectedExercisePlanId] = useState("");
   const [assignmentSaving, setAssignmentSaving] = useState(false);
+  const [previewPlan, setPreviewPlan] = useState<{ title: string; value: DietPlan | ExercisePlan | null } | null>(null);
   const [planEditor, setPlanEditor] = useState<{
     open: boolean;
     type: "diet" | "exercise";
     assignmentId: string;
     name: string;
     description: string;
-    content: string;
     tag: string;
+    planContent: PlanEditorValue;
   }>({
     open: false,
     type: "diet",
     assignmentId: "",
     name: "",
     description: "",
-    content: "",
     tag: "",
+    planContent: createPlanEditorValue(),
   });
 
   const [form, setForm] = useState({
@@ -73,6 +78,7 @@ export default function AddMemberPage() {
     if (!isEditing) {
       api.getPlans().then((data) => setPackages(data.filter((p) => p.is_active)));
     }
+    api.getShifts().then((data) => setShifts(data.filter((shift) => shift.is_active))).catch(() => {});
     if (canManageDietPlans) {
       api.getDietPlans().then(setDietPlans).catch(() => {});
     }
@@ -123,6 +129,7 @@ export default function AddMemberPage() {
   }, [admin, memberId, navigate]);
 
   const availablePackages = packages.filter((pkg) => !form.gym_id || pkg.gym_id === form.gym_id);
+  const availableShifts = shifts.filter((shift) => !form.gym_id || shift.gym_id === form.gym_id);
   const availableDietPlans = dietPlans.filter((plan) => plan.is_active && (!form.gym_id || plan.gym_id === form.gym_id));
   const availableExercisePlans = exercisePlans.filter((plan) => plan.is_active && (!form.gym_id || plan.gym_id === form.gym_id));
   const selectedPkg = availablePackages.find((p) => p.id === form.package_type_id);
@@ -203,8 +210,8 @@ export default function AddMemberPage() {
       assignmentId: assignment.id,
       name: assignment.plan?.name || "",
       description: assignment.plan?.description || "",
-      content: assignment.plan?.content || "",
       tag: assignment.plan?.tag || "",
+      planContent: createPlanEditorValue(assignment.plan),
     });
   };
 
@@ -216,12 +223,14 @@ export default function AddMemberPage() {
 
     setAssignmentSaving(true);
     try {
-      const payload = {
-        name: planEditor.name,
-        description: planEditor.description || null,
-        content: planEditor.content || null,
-        tag: planEditor.tag || null,
-      };
+      const payload = buildPlanFormData(
+        {
+          name: planEditor.name,
+          description: planEditor.description || null,
+          tag: planEditor.tag || null,
+        },
+        planEditor.planContent,
+      );
 
       if (planEditor.type === "diet") {
         await api.updateAssignedDietPlan(memberId, planEditor.assignmentId, payload);
@@ -367,9 +376,14 @@ export default function AddMemberPage() {
                 <Select value={form.shift} onValueChange={(v) => set("shift", v)}>
                   <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="morning">Morning</SelectItem>
-                    <SelectItem value="afternoon">Afternoon</SelectItem>
-                    <SelectItem value="evening">Evening</SelectItem>
+                    {availableShifts.length === 0 ? (
+                      <SelectItem value="__no_shifts__" disabled>No shifts. Add from Packages and Shift &gt; Shifts.</SelectItem>
+                    ) : (
+                      availableShifts.map((shift) => <SelectItem key={shift.id} value={shift.name}>{shift.name}</SelectItem>)
+                    )}
+                    {form.shift && !availableShifts.some((shift) => shift.name === form.shift) ? (
+                      <SelectItem value={form.shift}>{form.shift}</SelectItem>
+                    ) : null}
                   </SelectContent>
                 </Select>
               </div>
@@ -436,7 +450,7 @@ export default function AddMemberPage() {
                     <SelectTrigger><SelectValue placeholder="Select package" /></SelectTrigger>
                     <SelectContent>
                       {availablePackages.length === 0
-                        ? <SelectItem value="__no_packages__" disabled>No packages. Add from Members &gt; Package Types.</SelectItem>
+                        ? <SelectItem value="__no_packages__" disabled>No packages. Add from Packages and Shift &gt; Package Types.</SelectItem>
                         : availablePackages.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} — ₹{p.price}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -502,12 +516,18 @@ export default function AddMemberPage() {
                           <Badge variant={assignment.plan?.plan_scope === 'member_custom' ? 'default' : 'secondary'}>
                             {assignment.plan?.plan_scope === 'member_custom' ? 'Custom Copy' : 'Shared Template'}
                           </Badge>
+                          <Badge variant="outline">{assignment.plan?.content_type === 'pdf' ? 'PDF' : 'Rich Text'}</Badge>
                           {assignment.plan?.tag && <Badge variant="outline">{assignment.plan.tag}</Badge>}
                         </div>
                         {assignment.plan?.description && <p className="mt-1 text-sm text-muted-foreground">{assignment.plan.description}</p>}
-                        {assignment.plan?.content && <p className="mt-3 whitespace-pre-wrap text-sm">{assignment.plan.content}</p>}
+                        {assignment.plan?.pdf_file_name && <p className="mt-2 text-xs text-muted-foreground">{assignment.plan.pdf_file_name}</p>}
                       </div>
                       <div className="flex gap-2">
+                        {assignment.plan && (
+                          <Button type="button" variant="outline" onClick={() => setPreviewPlan({ title: assignment.plan?.name || 'Diet plan preview', value: assignment.plan || null })}>
+                            Preview
+                          </Button>
+                        )}
                         <Button type="button" variant="outline" onClick={() => openPlanEditor('diet', assignment)} disabled={assignmentSaving}>
                           {assignment.plan?.plan_scope === 'member_custom' ? 'Edit Copy' : 'Customize'}
                         </Button>
@@ -552,12 +572,18 @@ export default function AddMemberPage() {
                           <Badge variant={assignment.plan?.plan_scope === 'member_custom' ? 'default' : 'secondary'}>
                             {assignment.plan?.plan_scope === 'member_custom' ? 'Custom Copy' : 'Shared Template'}
                           </Badge>
+                          <Badge variant="outline">{assignment.plan?.content_type === 'pdf' ? 'PDF' : 'Rich Text'}</Badge>
                           {assignment.plan?.tag && <Badge variant="outline">{assignment.plan.tag}</Badge>}
                         </div>
                         {assignment.plan?.description && <p className="mt-1 text-sm text-muted-foreground">{assignment.plan.description}</p>}
-                        {assignment.plan?.content && <p className="mt-3 whitespace-pre-wrap text-sm">{assignment.plan.content}</p>}
+                        {assignment.plan?.pdf_file_name && <p className="mt-2 text-xs text-muted-foreground">{assignment.plan.pdf_file_name}</p>}
                       </div>
                       <div className="flex gap-2">
+                        {assignment.plan && (
+                          <Button type="button" variant="outline" onClick={() => setPreviewPlan({ title: assignment.plan?.name || 'Exercise plan preview', value: assignment.plan || null })}>
+                            Preview
+                          </Button>
+                        )}
                         <Button type="button" variant="outline" onClick={() => openPlanEditor('exercise', assignment)} disabled={assignmentSaving}>
                           {assignment.plan?.plan_scope === 'member_custom' ? 'Edit Copy' : 'Customize'}
                         </Button>
@@ -581,34 +607,45 @@ export default function AddMemberPage() {
         </form>
 
         <Dialog open={planEditor.open} onOpenChange={(open) => setPlanEditor((current) => ({ ...current, open }))}>
-          <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{planEditor.type === 'diet' ? 'Customize Diet Plan' : 'Customize Exercise Plan'}</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-2">
-              <div className="space-y-1.5">
-                <Label>Name</Label>
-                <Input value={planEditor.name} onChange={(e) => setPlanEditor((current) => ({ ...current, name: e.target.value }))} />
+          <DialogContent className="max-h-[85vh] overflow-hidden p-0 sm:max-w-3xl">
+            <div className="flex max-h-[85vh] flex-col">
+              <DialogHeader className="border-b px-6 py-5 pr-12">
+                <DialogTitle>{planEditor.type === 'diet' ? 'Customize Diet Plan' : 'Customize Exercise Plan'}</DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                <div className="grid gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Name</Label>
+                    <Input value={planEditor.name} onChange={(e) => setPlanEditor((current) => ({ ...current, name: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Tag</Label>
+                    <Input value={planEditor.tag} onChange={(e) => setPlanEditor((current) => ({ ...current, tag: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Description</Label>
+                    <Textarea value={planEditor.description} onChange={(e) => setPlanEditor((current) => ({ ...current, description: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Plan Content</Label>
+                    <PlanContentEditor value={planEditor.planContent} onChange={(nextPlanContent) => setPlanEditor((current) => ({ ...current, planContent: nextPlanContent }))} />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Tag</Label>
-                <Input value={planEditor.tag} onChange={(e) => setPlanEditor((current) => ({ ...current, tag: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Description</Label>
-                <Textarea value={planEditor.description} onChange={(e) => setPlanEditor((current) => ({ ...current, description: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Content</Label>
-                <Textarea className="min-h-[220px]" value={planEditor.content} onChange={(e) => setPlanEditor((current) => ({ ...current, content: e.target.value }))} />
-              </div>
+              <DialogFooter className="border-t px-6 py-4 pr-12">
+                <Button type="button" variant="outline" onClick={() => setPlanEditor((current) => ({ ...current, open: false }))}>Cancel</Button>
+                <Button type="button" variant="gradient" onClick={savePlanCustomization} disabled={assignmentSaving}>Save Custom Copy</Button>
+              </DialogFooter>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setPlanEditor((current) => ({ ...current, open: false }))}>Cancel</Button>
-              <Button type="button" variant="gradient" onClick={savePlanCustomization} disabled={assignmentSaving}>Save Custom Copy</Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <PlanContentPreviewDialog
+          open={Boolean(previewPlan)}
+          onOpenChange={(open) => !open && setPreviewPlan(null)}
+          title={previewPlan?.title || "Plan Preview"}
+          value={previewPlan?.value || null}
+        />
       </div>
     </AppLayout>
   );

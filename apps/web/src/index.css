@@ -198,6 +198,70 @@
   .animate-scale-in {
     animation: scaleIn 0.3s ease-out forwards;
   }
+
+  .plan-editor .ProseMirror {
+    @apply min-h-[360px] bg-card text-foreground outline-none;
+  }
+
+  .plan-editor .ProseMirror,
+  .plan-editor .ProseMirror * {
+    color: hsl(var(--foreground));
+  }
+
+  .plan-editor .ProseMirror p.is-editor-empty:first-child::before {
+    @apply pointer-events-none float-left h-0 text-muted-foreground;
+    content: attr(data-placeholder);
+  }
+
+  .plan-editor .ProseMirror pre {
+    @apply mb-3 overflow-x-auto rounded-lg bg-muted px-4 py-3 text-sm;
+  }
+
+  .plan-editor .ProseMirror code {
+    @apply rounded bg-muted px-1.5 py-0.5 text-sm;
+  }
+
+  .plan-editor .ProseMirror blockquote {
+    @apply mb-3 border-l-4 border-primary/40 pl-4 italic text-muted-foreground;
+  }
+
+  .plan-content {
+    @apply text-sm leading-6 text-foreground;
+  }
+
+  .plan-content h1,
+  .plan-content h2,
+  .plan-content h3 {
+    @apply mb-3 mt-5 font-semibold text-foreground;
+  }
+
+  .plan-content h1 {
+    @apply text-2xl;
+  }
+
+  .plan-content h2 {
+    @apply text-xl;
+  }
+
+  .plan-content h3 {
+    @apply text-lg;
+  }
+
+  .plan-content p {
+    @apply mb-3 whitespace-pre-wrap;
+  }
+
+  .plan-content ul {
+    @apply mb-3 list-disc pl-5;
+  }
+
+  .plan-content ol {
+    @apply mb-3 list-decimal pl-5;
+  }
+
+  .plan-content li {
+    @apply mb-1;
+  }
 }
 
 @keyframes fadeIn {

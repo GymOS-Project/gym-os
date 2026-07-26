@@ -1,20 +1,11 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { attachMemberPackages } from "../services/memberPackages.service";
+import { hasOwn, hasPlanContentInput, normalizeOptionalString, resolvePlanContentFields, type PlanTable } from "../services/planContent.service";
 import { ensureGymBelongsToAdmin, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { supabase } from "../supabase";
 
-type PlanTable = "diet_plans" | "exercise_plans";
 type AssignmentTable = "member_diet_plan_assignments" | "member_exercise_plan_assignments";
-
-function normalizeOptionalString(value: unknown) {
-  if (typeof value !== "string") {
-    return value == null ? null : String(value);
-  }
-
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
-}
 
 function getAdminId(req: AuthenticatedRequest, res: Response) {
   const adminId = req.admin?.id;
@@ -256,21 +247,44 @@ async function updateAssignedPlan(
   }
 
   const updates = {
-    name: req.body.name !== undefined ? normalizeOptionalString(req.body.name) : currentPlan.name,
-    description: req.body.description !== undefined ? normalizeOptionalString(req.body.description) : currentPlan.description,
-    content: req.body.content !== undefined ? normalizeOptionalString(req.body.content) : currentPlan.content,
-    tag: req.body.tag !== undefined ? normalizeOptionalString(req.body.tag) : currentPlan.tag,
+    name: hasOwn(req.body as Record<string, unknown>, "name") ? normalizeOptionalString(req.body.name) : currentPlan.name,
+    description: hasOwn(req.body as Record<string, unknown>, "description") ? normalizeOptionalString(req.body.description) : currentPlan.description,
+    tag: hasOwn(req.body as Record<string, unknown>, "tag") ? normalizeOptionalString(req.body.tag) : currentPlan.tag,
   };
+
+  const body = req.body as Record<string, unknown>;
+  let contentFields = {
+    content_type: currentPlan.content_type,
+    content: currentPlan.content,
+    pdf_url: currentPlan.pdf_url,
+    pdf_file_name: currentPlan.pdf_file_name,
+  };
+
+  if (hasPlanContentInput(body, req.file)) {
+    try {
+      contentFields = await resolvePlanContentFields({
+        adminId,
+        gymId: member.gym_id,
+        table: planTable,
+        body,
+        file: req.file,
+        existing: currentPlan,
+      });
+    } catch (error) {
+      return res.status(400).json({ message: error instanceof Error ? error.message : "Invalid plan content" });
+    }
+  }
 
   let resolvedPlanId = currentPlan.id as string;
 
   if (currentPlan.plan_scope === "member_custom" && currentPlan.member_id === member.id) {
     const { error } = await supabase
       .from(planTable)
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+        .update({
+          ...updates,
+          ...contentFields,
+          updated_at: new Date().toISOString(),
+        })
       .eq("id", currentPlan.id)
       .eq("admin_id", adminId);
 
@@ -280,19 +294,20 @@ async function updateAssignedPlan(
   } else {
     const { data: clonedPlan, error: cloneError } = await supabase
       .from(planTable)
-      .insert({
-        admin_id: adminId,
-        gym_id: member.gym_id,
-        member_id: member.id,
-        source_plan_id: currentPlan.source_plan_id || currentPlan.id,
-        created_by_type: req.sessionRole === "trainer" ? "trainer" : "admin",
-        created_by_staff_id: req.staff?.id || null,
-        plan_scope: "member_custom",
-        is_active: true,
-        ...updates,
-      })
-      .select("*")
-      .single();
+        .insert({
+          admin_id: adminId,
+          gym_id: member.gym_id,
+          member_id: member.id,
+          source_plan_id: currentPlan.source_plan_id || currentPlan.id,
+          created_by_type: req.sessionRole === "staff" ? "staff" : "admin",
+          created_by_staff_id: req.staff?.id || null,
+          plan_scope: "member_custom",
+          is_active: true,
+          ...updates,
+          ...contentFields,
+        })
+        .select("*")
+        .single();
 
     if (cloneError || !clonedPlan) {
       return res.status(500).json({ message: cloneError?.message || "Failed to clone plan" });
@@ -609,7 +624,7 @@ export async function updateMember(req: AuthenticatedRequest, res: Response) {
     return res.status(403).json({ message: "Invalid gym" });
   }
 
-  if (req.sessionRole === "trainer" && gym_id && gym_id !== req.staff?.gym_id) {
+  if (req.sessionRole === "staff" && gym_id && gym_id !== req.staff?.gym_id) {
     return res.status(403).json({ message: "Invalid gym" });
   }
 
