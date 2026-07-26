@@ -11,6 +11,7 @@ import { downloadCsv } from "@/lib/csv";
 import { useAuth } from "@/contexts/AuthContext";
 import { Download, Package, Search } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 export default function PaymentsSalesPage() {
   const { admin, selectedGymId } = useAuth();
