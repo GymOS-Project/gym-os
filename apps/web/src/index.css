@@ -200,12 +200,29 @@
   }
 
   .plan-editor .ProseMirror {
-    @apply min-h-[280px] outline-none;
+    @apply min-h-[360px] bg-card text-foreground outline-none;
+  }
+
+  .plan-editor .ProseMirror,
+  .plan-editor .ProseMirror * {
+    color: hsl(var(--foreground));
   }
 
   .plan-editor .ProseMirror p.is-editor-empty:first-child::before {
     @apply pointer-events-none float-left h-0 text-muted-foreground;
     content: attr(data-placeholder);
+  }
+
+  .plan-editor .ProseMirror pre {
+    @apply mb-3 overflow-x-auto rounded-lg bg-muted px-4 py-3 text-sm;
+  }
+
+  .plan-editor .ProseMirror code {
+    @apply rounded bg-muted px-1.5 py-0.5 text-sm;
+  }
+
+  .plan-editor .ProseMirror blockquote {
+    @apply mb-3 border-l-4 border-primary/40 pl-4 italic text-muted-foreground;
   }
 
   .plan-content {

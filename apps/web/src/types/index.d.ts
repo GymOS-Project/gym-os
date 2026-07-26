@@ -1,6 +1,6 @@
 type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-type SessionRole = 'admin' | 'trainer';
+type SessionRole = 'admin' | 'staff';
 type PlanContentType = 'rich_text' | 'pdf';
 
 type RouteType = { path: string, element: React.JSX, protected?: boolean, section?: string, allowedRoles?: SessionRole[], guestOnly?: boolean }
@@ -52,7 +52,7 @@ interface StaffAccount {
   admin_id: string;
   gym_id: string;
   auth_user_id: string;
-  role: 'trainer';
+  role: string;
   full_name: string;
   email: string;
   phone: string | null;
@@ -121,6 +121,21 @@ interface PackageType {
   duration_days: number | null;
   price: number;
   description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Shift {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  name: string;
+  shift_type: 'recurring' | 'one_time';
+  description: string | null;
+  event_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

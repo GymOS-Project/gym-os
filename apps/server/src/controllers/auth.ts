@@ -331,7 +331,7 @@ export async function signup(req: Request, res: Response) {
     user: toAuthUser(signInResult.data.user),
     admin,
     staff: staffSession?.staff || null,
-    role: admin ? "admin" : staffSession?.staff.role || null,
+    role: admin ? "admin" : staffSession ? "staff" : null,
     authenticated: true,
   });
 }
@@ -362,7 +362,7 @@ export async function login(req: Request, res: Response) {
     user: toAuthUser(data.user),
     admin: admin || staffSession?.admin || null,
     staff: staffSession?.staff || null,
-    role: admin ? "admin" : staffSession?.staff.role || null,
+    role: admin ? "admin" : staffSession ? "staff" : null,
     authenticated: true,
   });
 }
@@ -437,7 +437,7 @@ export async function resetPassword(req: Request, res: Response) {
     user: toAuthUser(signInResult.data.user),
     admin: admin || staffSession?.admin || null,
     staff: staffSession?.staff || null,
-    role: admin ? "admin" : staffSession?.staff.role || null,
+    role: admin ? "admin" : staffSession ? "staff" : null,
     authenticated: true,
     message: "Password updated successfully.",
   });

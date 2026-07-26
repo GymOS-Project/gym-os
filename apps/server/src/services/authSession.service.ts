@@ -33,14 +33,14 @@ export type AuthSessionUser = {
   email?: string | null;
 };
 
-export type SessionRole = "admin" | "trainer";
+export type SessionRole = "admin" | "staff";
 
 export type StaffSessionProfile = {
   id: string;
   admin_id: string;
   gym_id: string;
   auth_user_id: string;
-  role: "trainer";
+  role: string;
   full_name: string;
   email: string;
   phone: string | null;
@@ -249,7 +249,7 @@ export async function getStaffByAuthId(authId: string) {
     admin,
     staff: {
       ...staff,
-      role: "trainer" as const,
+      role: typeof staff.role === "string" && staff.role.trim() ? staff.role.trim() : "staff",
       section_permissions: normalizeSectionPermissions(staff.section_permissions),
     } satisfies StaffSessionProfile,
   };
@@ -351,6 +351,6 @@ export async function resolveAuthenticatedSession(req: Request, res: Response) {
     user,
     admin: staffSession.admin,
     staff: staffSession.staff,
-    role: staffSession.staff.role,
+    role: "staff" as SessionRole,
   };
 }

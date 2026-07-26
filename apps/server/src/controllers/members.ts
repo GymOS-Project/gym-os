@@ -297,9 +297,9 @@ async function updateAssignedPlan(
         .insert({
           admin_id: adminId,
           gym_id: member.gym_id,
-        member_id: member.id,
-        source_plan_id: currentPlan.source_plan_id || currentPlan.id,
-        created_by_type: req.sessionRole === "trainer" ? "trainer" : "admin",
+          member_id: member.id,
+          source_plan_id: currentPlan.source_plan_id || currentPlan.id,
+          created_by_type: req.sessionRole === "staff" ? "staff" : "admin",
           created_by_staff_id: req.staff?.id || null,
           plan_scope: "member_custom",
           is_active: true,
@@ -624,7 +624,7 @@ export async function updateMember(req: AuthenticatedRequest, res: Response) {
     return res.status(403).json({ message: "Invalid gym" });
   }
 
-  if (req.sessionRole === "trainer" && gym_id && gym_id !== req.staff?.gym_id) {
+  if (req.sessionRole === "staff" && gym_id && gym_id !== req.staff?.gym_id) {
     return res.status(403).json({ message: "Invalid gym" });
   }
 

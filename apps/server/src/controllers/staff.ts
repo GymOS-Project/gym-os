@@ -53,6 +53,11 @@ export async function listStaff(req: AuthenticatedRequest, res: Response) {
     query = query.eq("gym_id", gymScope.selectedGymId);
   }
 
+  const roleFilter = normalizeOptionalString(req.query.role);
+  if (roleFilter) {
+    query = query.eq("role", roleFilter);
+  }
+
   const { data, error } = await query;
   if (error) {
     return res.status(500).json({ message: error.message });
@@ -77,12 +82,8 @@ export async function createStaff(req: AuthenticatedRequest, res: Response) {
   const password = normalizeOptionalString(req.body.password);
   const phone = normalizeOptionalString(req.body.phone);
   const specializations = normalizeOptionalString(req.body.specializations);
-  const role = normalizeOptionalString(req.body.role) || "trainer";
+  const role = normalizeOptionalString(req.body.role) || "staff";
   const sectionPermissions = normalizeSectionPermissions(req.body.section_permissions);
-
-  if (role !== "trainer") {
-    return res.status(400).json({ message: "Only trainer role is supported right now" });
-  }
 
   if (!fullName || !email || !password) {
     return res.status(400).json({ message: "full_name, email, and password are required" });
@@ -100,7 +101,7 @@ export async function createStaff(req: AuthenticatedRequest, res: Response) {
   });
 
   if (authError || !authUserData.user) {
-    return res.status(500).json({ message: authError?.message || "Failed to create trainer account" });
+    return res.status(500).json({ message: authError?.message || "Failed to create staff account" });
   }
 
   const { data, error } = await supabase
@@ -136,6 +137,7 @@ export async function updateStaff(req: AuthenticatedRequest, res: Response) {
   const updates: Record<string, unknown> = {};
 
   if (req.body.full_name !== undefined) updates.full_name = normalizeOptionalString(req.body.full_name);
+  if (req.body.role !== undefined) updates.role = normalizeOptionalString(req.body.role) || "staff";
   if (req.body.phone !== undefined) updates.phone = normalizeOptionalString(req.body.phone);
   if (req.body.specializations !== undefined) updates.specializations = normalizeOptionalString(req.body.specializations);
   if (req.body.section_permissions !== undefined) updates.section_permissions = normalizeSectionPermissions(req.body.section_permissions);

@@ -9,7 +9,7 @@ export type GymScope = {
 };
 
 function getSessionGymIds(req: AuthenticatedRequest) {
-  if (req.sessionRole === "trainer") {
+  if (req.sessionRole === "staff") {
     return req.staff?.gym_id ? [req.staff.gym_id] : [];
   }
 
@@ -54,7 +54,7 @@ export async function resolveGymScope(req: AuthenticatedRequest, res: Response):
     return null;
   }
 
-  const selectedGymId = req.sessionRole === "trainer"
+  const selectedGymId = req.sessionRole === "staff"
     ? gymIds[0] || null
     : requestedGymId;
 
@@ -96,10 +96,10 @@ export async function resolveWriteGymId(req: AuthenticatedRequest, res: Response
         ? req.admin.gym_id
         : null;
 
-  if (req.sessionRole === "trainer") {
+  if (req.sessionRole === "staff") {
     const trainerGymId = req.staff?.gym_id || null;
     if (!trainerGymId) {
-      res.status(403).json({ message: "Trainer is not assigned to a gym" });
+      res.status(403).json({ message: "Staff member is not assigned to a gym" });
       return null;
     }
 

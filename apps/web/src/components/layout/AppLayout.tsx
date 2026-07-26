@@ -27,7 +27,17 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
       children: [
         ...(role === 'admin' ? [{ label: 'Add Member', href: '/members/add', icon: UserPlus }] : []),
         { label: 'Member List', href: '/members', icon: List, exact: true },
-        ...(role === 'admin' && hasSectionAccess('packages') ? [{ label: 'Package Types', href: '/members/packages', icon: Package }] : []),
+      ],
+    });
+  }
+
+  if (role === 'admin' && hasSectionAccess('packages')) {
+    items.push({
+      label: 'Packages and Shift',
+      icon: Package,
+      children: [
+        { label: 'Package Types', href: '/packages-shift/packages', icon: Package },
+        { label: 'Shifts', href: '/packages-shift/shifts', icon: Clock },
       ],
     });
   }
@@ -88,7 +98,8 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
       label: 'Staff',
       icon: Users,
       children: [
-        { label: 'Trainers', href: '/staff/trainers', icon: Users },
+        { label: 'Create Staff', href: '/staff/create', icon: UserPlus },
+        { label: 'Staff List', href: '/staff/list', icon: Users },
       ],
     });
   }
@@ -260,7 +271,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           </button>
           {title && <h1 className="font-semibold text-foreground">{title}</h1>}
           <div className="ml-auto flex items-center gap-3">
-             {gyms.length > 1 && role !== 'trainer' && (
+             {gyms.length > 1 && role !== 'staff' && (
                <Select value={selectedGymId} onValueChange={setSelectedGymId}>
                 <SelectTrigger className="w-[150px] sm:w-[180px]">
                   <SelectValue placeholder="Filter gyms" />

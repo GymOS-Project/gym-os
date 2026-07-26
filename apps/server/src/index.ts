@@ -14,6 +14,7 @@ import branchesRouter from "./routes/branches";
 import dietPlansRouter from "./routes/dietPlans";
 import exercisePlansRouter from "./routes/exercisePlans";
 import staffRouter from "./routes/staff";
+import shiftsRouter from "./routes/shifts";
 import { createRateLimit } from "./middleware/rateLimit.middleware";
 
 import { startSubscriptionWorker, scheduleSubscriptionReminder } from "./jobs/subscriptionNotifier";
@@ -66,6 +67,7 @@ app.use("/branches", branchesRouter);
 app.use("/diet-plans", dietPlansRouter);
 app.use("/exercise-plans", exercisePlansRouter);
 app.use("/staff", staffRouter);
+app.use("/shifts", shiftsRouter);
 
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", message: "GymOS API running!" });

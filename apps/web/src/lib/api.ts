@@ -151,11 +151,19 @@ export const api = {
   deleteExercisePlan: (id: string) => request<void>(`/exercise-plans/${id}`, { method: "DELETE" }),
 
   // Staff
-  getTrainers: () => request<StaffAccount[]>("/staff/trainers"),
-  createTrainer: (data: Partial<StaffAccount> & { password: string }) =>
-    request<StaffAccount>("/staff/trainers", { method: "POST", body: JSON.stringify(data) }),
-  updateTrainer: (id: string, data: Partial<StaffAccount>) =>
-    request<StaffAccount>(`/staff/trainers/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  getStaff: (role?: string) => request<StaffAccount[]>(`/staff${qs({ role })}`),
+  createStaff: (data: Partial<StaffAccount> & { password: string }) =>
+    request<StaffAccount>("/staff", { method: "POST", body: JSON.stringify(data) }),
+  updateStaff: (id: string, data: Partial<StaffAccount>) =>
+    request<StaffAccount>(`/staff/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+
+  // Shifts
+  getShifts: () => request<Shift[]>("/shifts"),
+  createShift: (data: Partial<Shift>) =>
+    request<Shift>("/shifts", { method: "POST", body: JSON.stringify(data) }),
+  updateShift: (id: string, data: Partial<Shift>) =>
+    request<Shift>(`/shifts/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteShift: (id: string) => request<void>(`/shifts/${id}`, { method: "DELETE" }),
 
   // Member packages
   getMemberPackages: () => request<(MemberPackage & { members?: { name: string; phone: string } })[]>("/reports/packages"),

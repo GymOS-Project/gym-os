@@ -111,8 +111,8 @@ export function createSharedPlanController(table: PlanTable) {
           name,
           description: normalizeOptionalString(req.body.description),
           tag: normalizeOptionalString(req.body.tag),
-          created_by_type: req.sessionRole === "trainer" ? "trainer" : "admin",
-          created_by_staff_id: req.sessionRole === "trainer" ? req.staff?.id || null : null,
+          created_by_type: req.sessionRole === "staff" ? "staff" : "admin",
+          created_by_staff_id: req.sessionRole === "staff" ? req.staff?.id || null : null,
           plan_scope: "shared",
           ...contentFields,
         })

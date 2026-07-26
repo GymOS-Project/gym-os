@@ -15,6 +15,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import AddMemberPage from "@/pages/members/AddMemberPage";
 import MemberListPage from "@/pages/members/MemberListPage";
 import PackageTypesPage from "@/pages/members/PackageTypesPage";
+import ShiftsPage from "@/pages/operations/ShiftsPage";
 import DietPlansPage from "@/pages/diet-exercise/DietPlansPage";
 import DietPlanEditorPage from "@/pages/diet-exercise/DietPlanEditorPage";
 import ExercisePlansPage from "@/pages/diet-exercise/ExercisePlansPage";
@@ -34,7 +35,8 @@ import ShiftReportPage from "@/pages/reports/ShiftReportPage";
 import NearToExpirePage from "@/pages/reports/NearToExpirePage";
 import ProfilePage from "@/pages/account/ProfilePage";
 import SettingsPage from "@/pages/account/SettingsPage";
-import TrainersPage from "@/pages/staff/TrainersPage";
+import CreateStaffPage from "@/pages/staff/CreateStaffPage";
+import StaffListPage from "@/pages/staff/StaffListPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -52,6 +54,8 @@ const routes: RouteType[] = [
   { path: "/members", element: <MemberListPage />, protected: true, section: "members" },
   { path: "/members/add", element: <AddMemberPage />, protected: true, section: "members", allowedRoles: ["admin"] },
   { path: "/members/:id/edit", element: <AddMemberPage />, protected: true, section: "members" },
+  { path: "/packages-shift/packages", element: <PackageTypesPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
+  { path: "/packages-shift/shifts", element: <ShiftsPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
   { path: "/members/packages", element: <PackageTypesPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
   { path: "/diet-exercise/diet-plans", element: <DietPlansPage />, protected: true, section: "diet_plans" },
   { path: "/diet-exercise/diet-plans/create", element: <DietPlanEditorPage />, protected: true, section: "diet_plans" },
@@ -59,7 +63,9 @@ const routes: RouteType[] = [
   { path: "/diet-exercise/exercise-plans", element: <ExercisePlansPage />, protected: true, section: "exercise_plans" },
   { path: "/diet-exercise/exercise-plans/create", element: <ExercisePlanEditorPage />, protected: true, section: "exercise_plans" },
   { path: "/diet-exercise/exercise-plans/:id/edit", element: <ExercisePlanEditorPage />, protected: true, section: "exercise_plans" },
-  { path: "/staff/trainers", element: <TrainersPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/staff/create", element: <CreateStaffPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/staff/list", element: <StaffListPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/staff/trainers", element: <StaffListPage />, protected: true, allowedRoles: ["admin"] },
   {
     path: "/followups/common",
     element: (
