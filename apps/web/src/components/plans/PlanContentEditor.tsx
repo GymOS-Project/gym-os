@@ -67,7 +67,7 @@ export function PlanContentEditor({ value, onChange, className }: Props) {
 
     const nextContent = value.content || "";
     if (editor.getHTML() !== nextContent) {
-      editor.commands.setContent(nextContent, false);
+      editor.commands.setContent(nextContent, { emitUpdate: false});
     }
   }, [editor, value.content, value.content_type]);
 
