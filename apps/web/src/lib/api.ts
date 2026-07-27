@@ -2,12 +2,12 @@ import { getStoredGymFilter } from "@/lib/gymFilter";
 
 const API_BASE_URL =
   (import.meta as any).env.VITE_API_BASE_URL ||
-  ((import.meta as any).env.PROD ? "/api" : "http://localhost:3001");
+  "https://gymos.duckdns.org";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const isFormData = options?.body instanceof FormData;
   const headers = withGymHeader(path, options?.headers, isFormData);
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${API_BASE_URL}/api${path}`, {
     ...options,
     credentials: "include",
     headers,

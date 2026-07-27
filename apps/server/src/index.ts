@@ -17,7 +17,6 @@ import staffRouter from "./routes/staff";
 import shiftsRouter from "./routes/shifts";
 import paymentsRouter from "./routes/payments";
 import { createRateLimit } from "./middleware/rateLimit.middleware";
-
 import { startSubscriptionWorker, scheduleSubscriptionReminder } from "./jobs/subscriptionNotifier";
 
 dotenv.config();
@@ -53,26 +52,34 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cookieParser());
 
-app.get("/healthcheck", (_req: Request, res: Response) => {
+const apiRouter = express.Router();
+
+apiRouter.get("/healthcheck", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok" });
 });
 
-app.use("/auth", authRouter);
-app.use("/members", membersRouter);
-app.use("/plans", plansRouter);
-app.use("/followups", followupsRouter);
-app.use("/enquiries", enquiriesRouter);
-app.use("/reports", reportsRouter);
-app.use("/stats", statsRouter);
-app.use("/branches", branchesRouter);
-app.use("/diet-plans", dietPlansRouter);
-app.use("/exercise-plans", exercisePlansRouter);
-app.use("/staff", staffRouter);
-app.use("/shifts", shiftsRouter);
-app.use("/payments", paymentsRouter);
+apiRouter.use("/auth", authRouter);
+apiRouter.use("/members", membersRouter);
+apiRouter.use("/plans", plansRouter);
+apiRouter.use("/followups", followupsRouter);
+apiRouter.use("/enquiries", enquiriesRouter);
+apiRouter.use("/reports", reportsRouter);
+apiRouter.use("/stats", statsRouter);
+apiRouter.use("/branches", branchesRouter);
+apiRouter.use("/diet-plans", dietPlansRouter);
+apiRouter.use("/exercise-plans", exercisePlansRouter);
+apiRouter.use("/staff", staffRouter);
+apiRouter.use("/shifts", shiftsRouter);
+apiRouter.use("/payments", paymentsRouter);
+
+apiRouter.get("/", (_req: Request, res: Response) => {
+  res.status(200).json({ status: "ok", message: "GymOS API running!" });
+});
+
+app.use("/api", apiRouter);
 
 app.get("/", (_req: Request, res: Response) => {
-  res.status(200).json({ status: "ok", message: "GymOS API running!" });
+  res.status(200).json({ status: "ok", message: "GymOS backend is working fine!" });
 });
 
 const host = "0.0.0.0";
