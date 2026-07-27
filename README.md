@@ -1,7 +1,8 @@
 <div align="center">
+  
 # GymOS
 
-GymOS is comprehensive gym management software designed to help gym owners and their teams efficiently run daily operations from a single platform.
+A Comprehensive Gym Management Software designed to help gym owners and their teams efficiently run daily operations from a single platform.
 </div>
 
 ## What GymOS Helps With
