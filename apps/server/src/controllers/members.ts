@@ -1,5 +1,6 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { sendMemberWelcomeEmail } from "../services/email.service";
 import { attachMemberPackages } from "../services/memberPackages.service";
 import { hasOwn, hasPlanContentInput, normalizeOptionalString, resolvePlanContentFields, type PlanTable } from "../services/planContent.service";
 import { ensureGymBelongsToAdmin, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
@@ -552,6 +553,17 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
     return res.status(400).json({ message: "name and phone are required" });
   }
 
+  const { data: gymRecord, error: gymError } = await supabase
+    .from("gyms")
+    .select("gym_name")
+    .eq("id", requestedGymId)
+    .eq("admin_id", adminId)
+    .single();
+
+  if (gymError) {
+    return res.status(500).json({ message: gymError.message });
+  }
+
   const { data, error } = await supabase
     .from("members")
     .insert({
@@ -579,6 +591,17 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
 
   if (error) {
     return res.status(500).json({ message: error.message });
+  }
+
+  const memberEmail = normalizeOptionalString(email);
+  if (memberEmail) {
+    void sendMemberWelcomeEmail({
+      to: memberEmail,
+      fullName: String(name),
+      gymName: gymRecord?.gym_name || "your gym",
+    }).catch((emailError) => {
+      console.error("Failed to send member welcome email", emailError);
+    });
   }
 
   return res.status(201).json(data);

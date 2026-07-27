@@ -4,11 +4,14 @@ import {
   createCollection,
   createCoupon,
   createMemberSale,
+  deleteCollection,
   deactivateCoupon,
   getPaymentAnalytics,
   listCollections,
   listCoupons,
   listSales,
+  refundCollection,
+  updateCollection,
   updateCoupon,
   validateCoupon,
 } from "../controllers/payments";
@@ -20,6 +23,9 @@ router.use(requireAuthenticatedSession, requireAdmin);
 
 router.get("/collections", listCollections);
 router.post("/collections", createCollection);
+router.put("/collections/:id", updateCollection);
+router.delete("/collections/:id", deleteCollection);
+router.post("/collections/:id/refund", refundCollection);
 router.get("/sales", listSales);
 router.get("/analytics", getPaymentAnalytics);
 router.get("/coupons", listCoupons);

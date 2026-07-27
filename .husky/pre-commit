@@ -1,1 +1,2 @@
-bunx tsc --noEmit
+bunx tsc --noEmit -p apps/server/tsconfig.json
+bunx tsc --noEmit -p apps/web/tsconfig.json

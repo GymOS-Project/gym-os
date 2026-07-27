@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ export default function CouponsPage() {
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState<CouponForm>(EMPTY_FORM);
 
@@ -151,13 +153,16 @@ export default function CouponsPage() {
     }
   };
 
-  const handleDelete = async (couponId: string) => {
+  const handleDelete = async () => {
+    if (!deleteId) return;
     try {
-      await api.deleteCoupon(couponId);
+      await api.deleteCoupon(deleteId);
       toast.success("Coupon deactivated");
       await fetchCoupons();
     } catch (error: any) {
       toast.error(error.message || "Failed to deactivate coupon");
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -187,6 +192,7 @@ export default function CouponsPage() {
                 <TableHead>Coupon</TableHead>
                 <TableHead>Discount</TableHead>
                 <TableHead>Scope</TableHead>
+                <TableHead>Usage</TableHead>
                 <TableHead>Validity</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -194,9 +200,9 @@ export default function CouponsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-12 text-center text-muted-foreground">Loading...</TableCell></TableRow>
               ) : filteredCoupons.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">No coupons created yet.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-12 text-center text-muted-foreground">No coupons created yet.</TableCell></TableRow>
               ) : filteredCoupons.map((coupon) => {
                 const gym = gyms.find((item) => item.id === coupon.gym_id);
                 return (
@@ -204,12 +210,16 @@ export default function CouponsPage() {
                     <TableCell><p className="font-medium">{coupon.code}</p><p className="text-xs text-muted-foreground">{coupon.name}</p></TableCell>
                     <TableCell className="text-sm">{coupon.discount_type === "percentage" ? `${coupon.discount_value}%` : `₹${Number(coupon.discount_value).toLocaleString()}`}</TableCell>
                     <TableCell className="text-sm">{coupon.gym_id ? gym?.gym_name || "-" : "All gyms"}</TableCell>
+                    <TableCell className="text-sm">
+                      <p className="font-medium">{coupon.usage_count || 0} uses</p>
+                      <p className="text-xs text-muted-foreground">Discount: ₹{Number(coupon.total_discount_amount || 0).toLocaleString()}</p>
+                    </TableCell>
                     <TableCell className="text-sm">{coupon.starts_at ? new Date(coupon.starts_at).toLocaleDateString() : "Any"} to {coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString() : "Open"}</TableCell>
                     <TableCell>{coupon.is_active ? "Active" : "Inactive"}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(coupon)}><Pencil className="h-3.5 w-3.5" /></Button>
-                        {coupon.is_active ? <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(coupon.id)}><Trash2 className="h-3.5 w-3.5" /></Button> : null}
+                        {coupon.is_active ? <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(coupon.id)}><Trash2 className="h-3.5 w-3.5" /></Button> : null}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -307,6 +317,14 @@ export default function CouponsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <DeleteConfirmationDialog
+          open={Boolean(deleteId)}
+          onOpenChange={(open) => !open && setDeleteId(null)}
+          title="Deactivate Coupon?"
+          description="This will deactivate the coupon so it can no longer be used for new purchases. Existing usage history will remain unchanged."
+          onConfirm={handleDelete}
+        />
       </div>
     </AppLayout>
   );

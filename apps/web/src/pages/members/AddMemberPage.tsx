@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,7 @@ export default function AddMemberPage() {
   const [selectedDietPlanId, setSelectedDietPlanId] = useState("");
   const [selectedExercisePlanId, setSelectedExercisePlanId] = useState("");
   const [assignmentSaving, setAssignmentSaving] = useState(false);
+  const [pendingAssignmentDelete, setPendingAssignmentDelete] = useState<{ type: "diet" | "exercise"; assignmentId: string } | null>(null);
   const [couponValidation, setCouponValidation] = useState<CouponValidationResult | null>(null);
   const [couponValidating, setCouponValidating] = useState(false);
   const [previewPlan, setPreviewPlan] = useState<{ title: string; value: DietPlan | ExercisePlan | null } | null>(null);
@@ -295,6 +297,12 @@ export default function AddMemberPage() {
     } finally {
       setAssignmentSaving(false);
     }
+  };
+
+  const confirmRemoveAssignedPlan = async () => {
+    if (!pendingAssignmentDelete) return;
+    await removeAssignedPlan(pendingAssignmentDelete.type, pendingAssignmentDelete.assignmentId);
+    setPendingAssignmentDelete(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -587,7 +595,7 @@ export default function AddMemberPage() {
                         <Button type="button" variant="outline" onClick={() => openPlanEditor('diet', assignment)} disabled={assignmentSaving}>
                           {assignment.plan?.plan_scope === 'member_custom' ? 'Edit Copy' : 'Customize'}
                         </Button>
-                        <Button type="button" variant="outline" className="text-destructive hover:text-destructive" onClick={() => removeAssignedPlan('diet', assignment.id)} disabled={assignmentSaving}>
+                        <Button type="button" variant="outline" className="text-destructive hover:text-destructive" onClick={() => setPendingAssignmentDelete({ type: 'diet', assignmentId: assignment.id })} disabled={assignmentSaving}>
                           Remove
                         </Button>
                       </div>
@@ -643,7 +651,7 @@ export default function AddMemberPage() {
                         <Button type="button" variant="outline" onClick={() => openPlanEditor('exercise', assignment)} disabled={assignmentSaving}>
                           {assignment.plan?.plan_scope === 'member_custom' ? 'Edit Copy' : 'Customize'}
                         </Button>
-                        <Button type="button" variant="outline" className="text-destructive hover:text-destructive" onClick={() => removeAssignedPlan('exercise', assignment.id)} disabled={assignmentSaving}>
+                        <Button type="button" variant="outline" className="text-destructive hover:text-destructive" onClick={() => setPendingAssignmentDelete({ type: 'exercise', assignmentId: assignment.id })} disabled={assignmentSaving}>
                           Remove
                         </Button>
                       </div>
@@ -701,6 +709,16 @@ export default function AddMemberPage() {
           onOpenChange={(open) => !open && setPreviewPlan(null)}
           title={previewPlan?.title || "Plan Preview"}
           value={previewPlan?.value || null}
+        />
+
+        <DeleteConfirmationDialog
+          open={Boolean(pendingAssignmentDelete)}
+          onOpenChange={(open) => !open && setPendingAssignmentDelete(null)}
+          title={`Remove ${pendingAssignmentDelete?.type === 'diet' ? 'Diet' : 'Exercise'} Plan?`}
+          description="This removes the assigned plan from this member. The shared template and any other member assignments will remain unchanged."
+          onConfirm={confirmRemoveAssignedPlan}
+          confirmDisabled={assignmentSaving}
+          confirmLabel={assignmentSaving ? "Removing..." : "Remove"}
         />
       </div>
     </AppLayout>
