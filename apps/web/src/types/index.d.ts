@@ -3,7 +3,7 @@ type Json = string | number | boolean | null | { [key: string]: Json | undefined
 type SessionRole = 'admin' | 'staff';
 type PlanContentType = 'rich_text' | 'pdf';
 
-type RouteType = { path: string, element: React.JSX, protected?: boolean, section?: string, allowedRoles?: SessionRole[], guestOnly?: boolean }
+type RouteType = { path: string, element: JSX.Element, protected?: boolean, section?: string, allowedRoles?: SessionRole[], guestOnly?: boolean }
 
 interface Gym {
   id: string;
