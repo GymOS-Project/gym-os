@@ -27,3 +27,4 @@ apps/*/.env*
 *.sw?
 *.turbo
 target/
+*.pem
