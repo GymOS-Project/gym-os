@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { BrandLogo } from '@/components/brand-logo';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -242,9 +243,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Logo */}
       <div className={cn('flex h-14 items-center border-b border-sidebar-border px-4', collapsed ? 'justify-center' : 'gap-3')}>
-        <div className="gradient-primary flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground shadow-md">
-          <Dumbbell className="h-5 w-5" />
-        </div>
+        <BrandLogo className="h-9 w-9" />
         {!collapsed && (
           <div className="min-w-0">
             <p className="truncate font-bold text-sidebar-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name) || 'GymOs'}</p>

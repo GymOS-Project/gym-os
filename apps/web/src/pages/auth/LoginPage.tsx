@@ -1,11 +1,12 @@
 import {  useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Dumbbell, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -54,7 +55,7 @@ export default function LoginPage() {
         <div className="relative z-10 text-center max-w-md">
           <div className="flex items-center justify-center mb-8">
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/25 bg-primary/15 backdrop-blur">
-              <Dumbbell className="h-10 w-10 text-primary" />
+              <BrandLogo tone="light" className="h-10 w-10" />
             </div>
           </div>
           <h1 className="text-4xl font-bold text-white mb-4">GymOs Admin</h1>
@@ -76,9 +77,7 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card/85 p-8 shadow-elevated backdrop-blur-xl">
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="gradient-primary flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground shadow-sm">
-              <Dumbbell className="h-5 w-5" />
-            </div>
+            <BrandLogo className="h-10 w-10" />
             <h1 className="text-2xl font-bold">GymOs</h1>
           </div>
 
