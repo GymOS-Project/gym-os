@@ -47,6 +47,11 @@ export type StaffSessionProfile = {
   specializations: string | null;
   section_permissions: string[];
   is_active: boolean;
+  external_user_code?: string | null;
+  compensation_type?: string;
+  base_salary?: number;
+  per_session_rate?: number;
+  commission_percent?: number;
   created_at?: string;
   updated_at?: string;
 };

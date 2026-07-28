@@ -66,6 +66,7 @@ export default function AddMemberPage() {
     name: "", email: "", phone: "", gender: "", date_of_birth: "",
     current_address: "", permanent_address: "", emergency_contact: "", shift: "", notes: "",
     aadhar_card_no: "", driving_license_no: "", pan_card_no: "", marital_status: "",
+    external_user_code: "",
     gym_id: "",
     reference_member_id: NO_REFERENCE_MEMBER,
     package_type_id: "", start_date: format(new Date(), "yyyy-MM-dd"),
@@ -118,6 +119,7 @@ export default function AddMemberPage() {
           driving_license_no: member.driving_license_no || "",
           pan_card_no: member.pan_card_no || "",
           marital_status: member.marital_status || "",
+          external_user_code: member.external_user_code || "",
           gym_id: member.gym_id || "",
           reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER,
           package_type_id: "",
@@ -191,6 +193,7 @@ export default function AddMemberPage() {
     driving_license_no: form.driving_license_no || null,
     pan_card_no: form.pan_card_no || null,
     marital_status: form.marital_status || null,
+    external_user_code: form.external_user_code || null,
     shift: form.shift || null,
     notes: form.notes || null,
     reference_member_id:
@@ -318,14 +321,15 @@ export default function AddMemberPage() {
       } else {
         const member = await api.createMember(memberPayload);
 
-        if (form.package_type_id && endDate) {
+        const amountPaid = parseFloat(form.amount_paid);
+        if (form.package_type_id && endDate && Number.isFinite(amountPaid) && amountPaid > 0) {
           await api.createMemberSale({
             gym_id: form.gym_id,
             member_id: member.id,
             package_type_id: form.package_type_id,
             start_date: form.start_date,
             end_date: endDate,
-            gross_amount: parseFloat(form.amount_paid) || selectedPkg!.price,
+            gross_amount: amountPaid,
             payment_mode: form.payment_mode,
             coupon_id: form.coupon_id || null,
             description: `Package: ${selectedPkg!.name}`,
@@ -383,6 +387,10 @@ export default function AddMemberPage() {
               <div className="space-y-1.5">
                 <Label>Phone *</Label>
                 <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+91 9876543210" required />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Attendance / Device Code</Label>
+                <Input value={form.external_user_code} onChange={(e) => set("external_user_code", e.target.value)} placeholder="Optional eSSL user code" />
               </div>
               <div className="space-y-1.5">
                 <Label>Email</Label>
@@ -478,7 +486,7 @@ export default function AddMemberPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Package Type</Label>
-                  <Select value={form.package_type_id} onValueChange={(v) => { set("package_type_id", v); const p = packages.find((pkg) => pkg.id === v); if (p) set("amount_paid", String(p.price)); }}>
+                  <Select value={form.package_type_id} onValueChange={(v) => set("package_type_id", v)}>
                     <SelectTrigger><SelectValue placeholder="Select package" /></SelectTrigger>
                     <SelectContent>
                       {availablePackages.length === 0

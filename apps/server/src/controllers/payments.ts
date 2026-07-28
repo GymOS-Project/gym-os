@@ -1,6 +1,7 @@
 import type { Response } from "express";
 
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { logActivity } from "../services/activityLog.service";
 import { attachMembersByMemberId } from "../services/relatedRecords.service";
 import { ensureMemberBelongsToGym, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { normalizeOptionalNumber, normalizeOptionalString, validateCouponForSale } from "../services/payments.service";
@@ -143,6 +144,7 @@ export async function createCollection(req: AuthenticatedRequest, res: Response)
     .single();
 
   if (error) return res.status(500).json({ message: error.message });
+  await logActivity(req, { action: "create", entityType: "transaction", entityId: data.id, gymId, after: data });
   return res.status(201).json(data);
 }
 
@@ -211,6 +213,7 @@ export async function updateCollection(req: AuthenticatedRequest, res: Response)
     .single();
 
   if (error) return res.status(500).json({ message: error.message });
+  await logActivity(req, { action: "update", entityType: "transaction", entityId: data.id, gymId: data.gym_id, before: transaction, after: data });
   return res.json(data);
 }
 
@@ -244,6 +247,7 @@ export async function deleteCollection(req: AuthenticatedRequest, res: Response)
     .eq("admin_id", adminId);
 
   if (error) return res.status(500).json({ message: error.message });
+  await logActivity(req, { action: "delete", entityType: "transaction", entityId: transactionId, gymId: transaction.gym_id, before: transaction });
   return res.status(204).send();
 }
 
@@ -307,6 +311,7 @@ export async function refundCollection(req: AuthenticatedRequest, res: Response)
     .single();
 
   if (error) return res.status(500).json({ message: error.message });
+  await logActivity(req, { action: "refund", entityType: "transaction", entityId: data.id, gymId: data.gym_id, before: transaction, after: data });
   return res.status(201).json(data);
 }
 
@@ -675,7 +680,11 @@ export async function createMemberSale(req: AuthenticatedRequest, res: Response)
   if (packageType === null) return;
   if (!packageType) return res.status(400).json({ message: "Package type not found" });
 
-  const grossAmount = roundCurrency(grossAmountInput ?? Number(packageType.price || 0));
+  if (!grossAmountInput) {
+    return res.status(400).json({ message: "gross_amount is required" });
+  }
+
+  const grossAmount = roundCurrency(grossAmountInput);
   let discountAmount = 0;
   let netAmount = grossAmount;
   let appliedCoupon: { id: string; code: string } | null = null;
@@ -770,6 +779,18 @@ export async function createMemberSale(req: AuthenticatedRequest, res: Response)
       return res.status(500).json({ message: couponUsageInsert.error.message });
     }
   }
+
+  await logActivity(req, {
+    action: "create_sale",
+    entityType: "member_package",
+    entityId: saleInsert.data.id,
+    gymId,
+    after: {
+      sale: saleInsert.data,
+      transaction: transactionInsert.data,
+      applied_coupon: appliedCoupon,
+    },
+  });
 
   return res.status(201).json({
     sale: saleInsert.data,

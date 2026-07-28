@@ -1,6 +1,7 @@
 import type { Response } from "express";
 
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { logActivity } from "../services/activityLog.service";
 import { resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { supabase } from "../supabase";
 
@@ -97,6 +98,8 @@ export async function createShift(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ message: error.message });
   }
 
+  await logActivity(req, { action: "create", entityType: "shift", entityId: data.id, gymId, after: data });
+
   return res.status(201).json(data);
 }
 
@@ -161,10 +164,20 @@ export async function updateShift(req: AuthenticatedRequest, res: Response) {
     query = query.eq("gym_id", gymScope.selectedGymId);
   }
 
+  const existing = await supabase.from("shifts").select("*").eq("id", req.params.id).eq("admin_id", adminId).maybeSingle();
+  if (existing.error) {
+    return res.status(500).json({ message: existing.error.message });
+  }
+  if (!existing.data) {
+    return res.status(404).json({ message: "Shift not found" });
+  }
+
   const { data, error } = await query.select("*").single();
   if (error) {
     return res.status(500).json({ message: error.message });
   }
+
+  await logActivity(req, { action: "update", entityType: "shift", entityId: data.id, gymId: data.gym_id, before: existing.data, after: data });
 
   return res.json(data);
 }
@@ -180,6 +193,14 @@ export async function deleteShift(req: AuthenticatedRequest, res: Response) {
     return;
   }
 
+  const existing = await supabase.from("shifts").select("*").eq("id", req.params.id).eq("admin_id", adminId).maybeSingle();
+  if (existing.error) {
+    return res.status(500).json({ message: existing.error.message });
+  }
+  if (!existing.data) {
+    return res.status(404).json({ message: "Shift not found" });
+  }
+
   let query = supabase.from("shifts").delete().eq("id", req.params.id).eq("admin_id", adminId);
   if (gymScope.selectedGymId) {
     query = query.eq("gym_id", gymScope.selectedGymId);
@@ -189,6 +210,8 @@ export async function deleteShift(req: AuthenticatedRequest, res: Response) {
   if (error) {
     return res.status(500).json({ message: error.message });
   }
+
+  await logActivity(req, { action: "delete", entityType: "shift", entityId: String(req.params.id), gymId: existing.data.gym_id, before: existing.data });
 
   return res.status(204).send();
 }

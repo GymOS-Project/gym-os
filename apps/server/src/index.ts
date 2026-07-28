@@ -16,6 +16,13 @@ import exercisePlansRouter from "./routes/exercisePlans";
 import staffRouter from "./routes/staff";
 import shiftsRouter from "./routes/shifts";
 import paymentsRouter from "./routes/payments";
+import classesRouter from "./routes/classes";
+import ptRouter from "./routes/pt";
+import attendanceRouter from "./routes/attendance";
+import activityLogsRouter from "./routes/activityLogs";
+import invoicesRouter from "./routes/invoices";
+import payrollRouter from "./routes/payroll";
+import esslRouter from "./routes/essl";
 import { createRateLimit } from "./middleware/rateLimit.middleware";
 import { startSubscriptionWorker, scheduleSubscriptionReminder } from "./jobs/subscriptionNotifier";
 
@@ -71,6 +78,13 @@ apiRouter.use("/exercise-plans", exercisePlansRouter);
 apiRouter.use("/staff", staffRouter);
 apiRouter.use("/shifts", shiftsRouter);
 apiRouter.use("/payments", paymentsRouter);
+apiRouter.use("/classes", classesRouter);
+apiRouter.use("/pt", ptRouter);
+apiRouter.use("/attendance", attendanceRouter);
+apiRouter.use("/activity-logs", activityLogsRouter);
+apiRouter.use("/invoices", invoicesRouter);
+apiRouter.use("/payroll", payrollRouter);
+apiRouter.use("/essl", esslRouter);
 
 apiRouter.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", message: "GymOS API running!" });
