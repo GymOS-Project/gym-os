@@ -80,6 +80,11 @@ export interface DashboardStats {
   memberStatusChart: { name: string; value: number; color: string }[];
 }
 
+export interface CreatedPayrollRun {
+  run: PayrollRun;
+  entries: PayrollEntry[];
+}
+
 export const api = {
   // Auth
   login: (email: string, password: string) =>
@@ -156,6 +161,69 @@ export const api = {
     request<StaffAccount>("/staff", { method: "POST", body: JSON.stringify(data) }),
   updateStaff: (id: string, data: Partial<StaffAccount>) =>
     request<StaffAccount>(`/staff/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+
+  // Classes
+  getClassSessions: () => request<ClassSession[]>("/classes"),
+  createClassSession: (data: Partial<ClassSession>) =>
+    request<ClassSession>("/classes", { method: "POST", body: JSON.stringify(data) }),
+  updateClassSession: (id: string, data: Partial<ClassSession>) =>
+    request<ClassSession>(`/classes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteClassSession: (id: string) => request<void>(`/classes/${id}`, { method: "DELETE" }),
+  getClassBookings: (id: string) => request<ClassBooking[]>(`/classes/${id}/bookings`),
+  createClassBooking: (id: string, data: Partial<ClassBooking>) =>
+    request<ClassBooking>(`/classes/${id}/bookings`, { method: "POST", body: JSON.stringify(data) }),
+  deleteClassBooking: (id: string, bookingId: string) =>
+    request<void>(`/classes/${id}/bookings/${bookingId}`, { method: "DELETE" }),
+
+  // PT sessions
+  getPtSessions: () => request<PtSession[]>("/pt"),
+  createPtSession: (data: Partial<PtSession>) =>
+    request<PtSession>("/pt", { method: "POST", body: JSON.stringify(data) }),
+  updatePtSession: (id: string, data: Partial<PtSession>) =>
+    request<PtSession>(`/pt/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deletePtSession: (id: string) => request<void>(`/pt/${id}`, { method: "DELETE" }),
+
+  // Attendance
+  getAttendanceLogs: (params?: { entity_type?: string; attendance_date?: string }) =>
+    request<AttendanceLog[]>(`/attendance${qs(params || {})}`),
+  checkInAttendance: (data: Partial<AttendanceLog>) =>
+    request<AttendanceLog>("/attendance/check-in", { method: "POST", body: JSON.stringify(data) }),
+  checkOutAttendance: (id: string, data?: Partial<AttendanceLog>) =>
+    request<AttendanceLog>(`/attendance/${id}/check-out`, { method: "POST", body: JSON.stringify(data || {}) }),
+  updateAttendanceLog: (id: string, data: Partial<AttendanceLog>) =>
+    request<AttendanceLog>(`/attendance/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteAttendanceLog: (id: string) => request<void>(`/attendance/${id}`, { method: "DELETE" }),
+
+  // Activity logs
+  getActivityLogs: (params?: { entity_type?: string; action?: string }) =>
+    request<ActivityLog[]>(`/activity-logs${qs(params || {})}`),
+
+  // Invoices
+  getInvoices: () => request<Invoice[]>("/invoices"),
+  createInvoice: (data: Partial<Invoice>) =>
+    request<Invoice>("/invoices", { method: "POST", body: JSON.stringify(data) }),
+  updateInvoice: (id: string, data: Partial<Invoice>) =>
+    request<Invoice>(`/invoices/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  markInvoicePaid: (id: string) =>
+    request<Invoice>(`/invoices/${id}/mark-paid`, { method: "POST", body: JSON.stringify({}) }),
+
+  // Payroll
+  getPayrollRuns: () => request<PayrollRun[]>("/payroll/runs"),
+  createPayrollRun: (data: Partial<PayrollRun>) =>
+    request<CreatedPayrollRun>("/payroll/runs", { method: "POST", body: JSON.stringify(data) }),
+  getPayrollEntries: (runId: string) => request<PayrollEntry[]>(`/payroll/runs/${runId}/entries`),
+  updatePayrollEntry: (id: string, data: Partial<PayrollEntry>) =>
+    request<PayrollEntry>(`/payroll/entries/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deletePayrollRun: (id: string) => request<void>(`/payroll/runs/${id}`, { method: "DELETE" }),
+
+  // eSSL
+  getEsslDevices: () => request<EsslDevice[]>("/essl/devices"),
+  createEsslDevice: (data: Partial<EsslDevice>) =>
+    request<EsslDevice>("/essl/devices", { method: "POST", body: JSON.stringify(data) }),
+  updateEsslDevice: (id: string, data: Partial<EsslDevice>) =>
+    request<EsslDevice>(`/essl/devices/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteEsslDevice: (id: string) => request<void>(`/essl/devices/${id}`, { method: "DELETE" }),
+  getEsslRawLogs: () => request<EsslRawPunchLog[]>("/essl/raw-logs"),
 
   // Shifts
   getShifts: () => request<Shift[]>("/shifts"),

@@ -1,6 +1,7 @@
 export const ADMIN_SECTIONS = [
   'members', 'packages', 'enquiries', 'followups',
   'transactions', 'reviews', 'reports', 'settings',
+  'classes', 'pt', 'attendance', 'activity_logs', 'payroll', 'integrations',
 ] as const;
 
 export type AdminSectionKey = (typeof ADMIN_SECTIONS)[number];

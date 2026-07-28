@@ -34,6 +34,11 @@ export default function CreateStaffPage() {
         phone: form.phone || null,
         role: form.role.trim(),
         specializations: form.specializations || null,
+        external_user_code: form.external_user_code || null,
+        compensation_type: form.compensation_type,
+        base_salary: Number(form.base_salary || 0),
+        per_session_rate: Number(form.per_session_rate || 0),
+        commission_percent: Number(form.commission_percent || 0),
         section_permissions: Array.from(form.permissions),
       });
       toast.success("Staff member created");

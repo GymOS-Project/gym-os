@@ -16,10 +16,13 @@ import AddMemberPage from "@/pages/members/AddMemberPage";
 import MemberListPage from "@/pages/members/MemberListPage";
 import PackageTypesPage from "@/pages/members/PackageTypesPage";
 import ShiftsPage from "@/pages/operations/ShiftsPage";
+import ClassSchedulePage from "@/pages/operations/ClassSchedulePage";
+import AttendancePage from "@/pages/operations/AttendancePage";
 import PaymentsCollectionsPage from "@/pages/payments/PaymentsCollectionsPage";
 import PaymentsSalesPage from "@/pages/payments/PaymentsSalesPage";
 import PaymentsAnalyticsPage from "@/pages/payments/PaymentsAnalyticsPage";
 import CouponsPage from "@/pages/payments/CouponsPage";
+import InvoicesPage from "@/pages/payments/InvoicesPage";
 import DietPlansPage from "@/pages/diet-exercise/DietPlansPage";
 import DietPlanEditorPage from "@/pages/diet-exercise/DietPlanEditorPage";
 import ExercisePlansPage from "@/pages/diet-exercise/ExercisePlansPage";
@@ -37,8 +40,12 @@ import ShiftReportPage from "@/pages/reports/ShiftReportPage";
 import NearToExpirePage from "@/pages/reports/NearToExpirePage";
 import ProfilePage from "@/pages/account/ProfilePage";
 import SettingsPage from "@/pages/account/SettingsPage";
+import IntegrationsPage from "@/pages/account/IntegrationsPage";
 import CreateStaffPage from "@/pages/staff/CreateStaffPage";
 import StaffListPage from "@/pages/staff/StaffListPage";
+import PTSessionsPage from "@/pages/staff/PTSessionsPage";
+import PayrollPage from "@/pages/staff/PayrollPage";
+import ActivityLogPage from "@/pages/reports/ActivityLogPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -58,10 +65,13 @@ const routes: RouteType[] = [
   { path: "/members/:id/edit", element: <AddMemberPage />, protected: true, section: "members" },
   { path: "/packages-shift/packages", element: <PackageTypesPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
   { path: "/packages-shift/shifts", element: <ShiftsPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
+  { path: "/operations/classes", element: <ClassSchedulePage />, protected: true, section: "classes" },
+  { path: "/operations/attendance", element: <AttendancePage />, protected: true, section: "attendance" },
   { path: "/payments/collections", element: <PaymentsCollectionsPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/payments/sales", element: <PaymentsSalesPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/payments/analytics", element: <PaymentsAnalyticsPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/payments/coupons", element: <CouponsPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/payments/invoices", element: <InvoicesPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/members/packages", element: <PackageTypesPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
   { path: "/diet-exercise/diet-plans", element: <DietPlansPage />, protected: true, section: "diet_plans" },
   { path: "/diet-exercise/diet-plans/create", element: <DietPlanEditorPage />, protected: true, section: "diet_plans" },
@@ -72,6 +82,8 @@ const routes: RouteType[] = [
   { path: "/staff/create", element: <CreateStaffPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/staff/list", element: <StaffListPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/staff/trainers", element: <StaffListPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/staff/pt-sessions", element: <PTSessionsPage />, protected: true, section: "pt" },
+  { path: "/staff/payroll", element: <PayrollPage />, protected: true, allowedRoles: ["admin"] },
   {
     path: "/followups/common",
     element: (
@@ -154,8 +166,10 @@ const routes: RouteType[] = [
   },
   { path: "/reports/shift", element: <ShiftReportPage />, protected: true, section: "reports" },
   { path: "/reports/expiring", element: <NearToExpirePage />, protected: true, section: "reports" },
+  { path: "/reports/activity-logs", element: <ActivityLogPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/profile", element: <ProfilePage />, protected: true },
   { path: "/settings", element: <SettingsPage />, protected: true },
+  { path: "/settings/integrations", element: <IntegrationsPage />, protected: true, allowedRoles: ["admin"] },
   { path: "*", element: <NotFound /> },
 ];
 

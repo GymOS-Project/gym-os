@@ -13,6 +13,9 @@ export const STAFF_PERMISSION_OPTIONS = [
   "enquiries",
   "followups",
   "reports",
+  "classes",
+  "pt",
+  "attendance",
 ] as const;
 
 export type StaffFormValue = {
@@ -23,6 +26,11 @@ export type StaffFormValue = {
   phone: string;
   role: string;
   specializations: string;
+  external_user_code: string;
+  compensation_type: string;
+  base_salary: string;
+  per_session_rate: string;
+  commission_percent: string;
   is_active: boolean;
   permissions: Set<string>;
 };
@@ -47,6 +55,11 @@ export function createEmptyStaffForm(gymId = ""): StaffFormValue {
     phone: "",
     role: "staff",
     specializations: "",
+    external_user_code: "",
+    compensation_type: "fixed",
+    base_salary: "0",
+    per_session_rate: "0",
+    commission_percent: "0",
     is_active: true,
     permissions: new Set<string>(["members", "diet_plans", "exercise_plans"]),
   };
@@ -107,6 +120,38 @@ export function StaffForm({ gyms, value, onChange, onSubmit, onCancel, saving, e
         <div className="space-y-1.5 sm:col-span-2">
           <Label>Notes / Specialty</Label>
           <Textarea value={value.specializations} onChange={(e) => setField("specializations", e.target.value)} placeholder="Optional notes, speciality, responsibility, etc." />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Attendance / Device Code</Label>
+          <Input value={value.external_user_code} onChange={(e) => setField("external_user_code", e.target.value)} placeholder="Optional eSSL user code" />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Compensation Type</Label>
+          <Select value={value.compensation_type} onValueChange={(nextValue) => setField("compensation_type", nextValue)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fixed">Fixed Salary</SelectItem>
+              <SelectItem value="per_session">Per Session</SelectItem>
+              <SelectItem value="commission">Commission Driven</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Base Salary</Label>
+          <Input type="number" min="0" step="0.01" value={value.base_salary} onChange={(e) => setField("base_salary", e.target.value)} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Per Session Rate</Label>
+          <Input type="number" min="0" step="0.01" value={value.per_session_rate} onChange={(e) => setField("per_session_rate", e.target.value)} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Commission %</Label>
+          <Input type="number" min="0" step="0.01" value={value.commission_percent} onChange={(e) => setField("commission_percent", e.target.value)} />
         </div>
 
         <div className="space-y-2 sm:col-span-2">
