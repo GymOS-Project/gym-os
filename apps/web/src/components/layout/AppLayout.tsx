@@ -279,7 +279,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
       )}
 
       {/* Main */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden relative">
         <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border/80 bg-background/85 px-4 backdrop-blur-xl lg:px-6">
           <button
             className="lg:hidden text-muted-foreground hover:text-foreground"
