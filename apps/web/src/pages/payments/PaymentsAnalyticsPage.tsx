@@ -5,11 +5,13 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { todayDateValue } from "@/lib/date";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChartBar as BarChart2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PaymentsAnalyticsPage() {
+  const today = todayDateValue();
   const { admin, selectedGymId } = useAuth();
   const [filters, setFilters] = useState({ date_from: "", date_to: "" });
   const [analytics, setAnalytics] = useState<PaymentAnalytics | null>(null);
@@ -46,8 +48,8 @@ export default function PaymentsAnalyticsPage() {
         </div>
 
         <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row">
-          <DatePicker value={filters.date_from} onChange={(value) => setFilters((current) => ({ ...current, date_from: value }))} placeholder="From date" className="flex-1" />
-          <DatePicker value={filters.date_to} onChange={(value) => setFilters((current) => ({ ...current, date_to: value }))} placeholder="To date" className="flex-1" />
+          <DatePicker value={filters.date_from} onChange={(value) => setFilters((current) => ({ ...current, date_from: value }))} placeholder="From date" className="flex-1" maxDate={filters.date_to || today} />
+          <DatePicker value={filters.date_to} onChange={(value) => setFilters((current) => ({ ...current, date_to: value }))} placeholder="To date" className="flex-1" minDate={filters.date_from || undefined} maxDate={today} />
           <Button variant="outline" onClick={() => setFilters({ date_from: "", date_to: "" })}>Reset</Button>
         </div>
 

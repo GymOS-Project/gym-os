@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { isDateAfter, isDateBefore, todayDateValue } from "@/lib/date";
 import { Plus, CreditCard as Edit, Check, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +23,7 @@ interface FollowupsPageProps {
 }
 
 export default function FollowupsPage({ type, title, description }: FollowupsPageProps) {
+  const today = todayDateValue();
   const { admin, gyms, selectedGymId } = useAuth();
   const [followups, setFollowups] = useState<(Followup & { members: Member | null })[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; phone: string; gym_id: string }[]>([]);
@@ -29,7 +31,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editFu, setEditFu] = useState<Followup | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER, followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" });
+  const [form, setForm] = useState({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER, followup_date: todayDateValue(), next_followup_date: "", notes: "", status: "pending" });
 
   useEffect(() => { if (admin) { fetchFollowups(); fetchMembers(); } }, [admin, selectedGymId, type]);
 
@@ -54,11 +56,19 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
     catch {}
   };
 
-  const openAdd = () => { setEditFu(null); setForm({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER, followup_date: new Date().toISOString().split("T")[0], next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
+  const openAdd = () => { setEditFu(null); setForm({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER, followup_date: todayDateValue(), next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
   const openEdit = (fu: Followup) => { setEditFu(fu); setForm({ gym_id: fu.gym_id, member_id: fu.member_id || NO_MEMBER, followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || "", notes: fu.notes || "", status: fu.status }); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!admin) return;
+    if (isDateAfter(form.followup_date, today)) {
+      toast.error("Follow-up date cannot be in the future");
+      return;
+    }
+    if (form.next_followup_date && isDateBefore(form.next_followup_date, form.followup_date)) {
+      toast.error("Next follow-up date must be on or after the follow-up date");
+      return;
+    }
     setSaving(true);
     const payload = { gym_id: form.gym_id, type, member_id: form.member_id !== NO_MEMBER ? form.member_id : undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
     try {
@@ -175,11 +185,11 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Follow-up Date</Label>
-                <DatePicker value={form.followup_date} onChange={(value) => setForm((p) => ({ ...p, followup_date: value }))} placeholder="Select follow-up date" allowClear={false} />
+                <DatePicker value={form.followup_date} onChange={(value) => setForm((p) => ({ ...p, followup_date: value }))} placeholder="Select follow-up date" allowClear={false} maxDate={today} />
               </div>
               <div className="space-y-1.5">
                 <Label>Next Follow-up</Label>
-                <DatePicker value={form.next_followup_date} onChange={(value) => setForm((p) => ({ ...p, next_followup_date: value }))} placeholder="Select next follow-up" />
+                <DatePicker value={form.next_followup_date} onChange={(value) => setForm((p) => ({ ...p, next_followup_date: value }))} placeholder="Select next follow-up" minDate={form.followup_date || today} />
               </div>
             </div>
             <div className="space-y-1.5">

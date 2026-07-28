@@ -1,5 +1,5 @@
 import * as React from "react";
-import { format, isValid, parseISO } from "date-fns";
+import { format, isAfter, isBefore, isValid, parseISO } from "date-fns";
 import { CalendarIcon, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -16,6 +16,8 @@ interface DatePickerProps {
   className?: string;
   buttonClassName?: string;
   allowClear?: boolean;
+  minDate?: string;
+  maxDate?: string;
 }
 
 function getSelectedDate(value?: string | null) {
@@ -38,11 +40,15 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
       className,
       buttonClassName,
       allowClear = true,
+      minDate,
+      maxDate,
     },
     ref,
   ) => {
     const [open, setOpen] = React.useState(false);
     const selectedDate = getSelectedDate(value);
+    const minSelectableDate = getSelectedDate(minDate);
+    const maxSelectableDate = getSelectedDate(maxDate);
 
     return (
       <div className={cn("flex items-center gap-2", className)}>
@@ -70,8 +76,12 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
               selected={selectedDate}
               defaultMonth={selectedDate}
               captionLayout="dropdown"
-              startMonth={new Date(1900, 0)}
-              endMonth={new Date(new Date().getFullYear() + 10, 11)}
+              startMonth={minSelectableDate || new Date(1900, 0)}
+              endMonth={maxSelectableDate || new Date(new Date().getFullYear() + 10, 11)}
+              disabled={(date) => Boolean(
+                (minSelectableDate && isBefore(date, minSelectableDate))
+                || (maxSelectableDate && isAfter(date, maxSelectableDate))
+              )}
               onSelect={(date) => {
                 onChange(date ? format(date, "yyyy-MM-dd") : "");
                 setOpen(false);

@@ -10,13 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { isDateAfter, isDateBefore, todayDateValue } from "@/lib/date";
 import { FileText, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const EMPTY_FORM = {
   gym_id: "",
   member_id: "",
-  issue_date: new Date().toISOString().slice(0, 10),
+  issue_date: todayDateValue(),
   due_date: "",
   subtotal: "0",
   tax_amount: "0",
@@ -25,6 +26,7 @@ const EMPTY_FORM = {
 };
 
 export default function InvoicesPage() {
+  const today = todayDateValue();
   const { gyms, selectedGymId } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; phone: string; gym_id: string }[]>([]);
@@ -79,6 +81,14 @@ export default function InvoicesPage() {
   const handleSave = async () => {
     if (!form.gym_id) {
       toast.error("Gym is required");
+      return;
+    }
+    if (isDateAfter(form.issue_date, today)) {
+      toast.error("Issue date cannot be in the future");
+      return;
+    }
+    if (form.due_date && isDateBefore(form.due_date, form.issue_date)) {
+      toast.error("Due date cannot be before the issue date");
       return;
     }
 
@@ -188,8 +198,8 @@ export default function InvoicesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5"><Label>Issue Date</Label><Input type="date" value={form.issue_date} onChange={(e) => setForm((current) => ({ ...current, issue_date: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>Due Date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm((current) => ({ ...current, due_date: e.target.value }))} /></div>
+            <div className="space-y-1.5"><Label>Issue Date</Label><Input type="date" max={today} value={form.issue_date} onChange={(e) => setForm((current) => ({ ...current, issue_date: e.target.value }))} /></div>
+            <div className="space-y-1.5"><Label>Due Date</Label><Input type="date" min={form.issue_date || undefined} value={form.due_date} onChange={(e) => setForm((current) => ({ ...current, due_date: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Subtotal</Label><Input type="number" value={form.subtotal} onChange={(e) => setForm((current) => ({ ...current, subtotal: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Tax</Label><Input type="number" value={form.tax_amount} onChange={(e) => setForm((current) => ({ ...current, tax_amount: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Discount</Label><Input type="number" value={form.discount_amount} onChange={(e) => setForm((current) => ({ ...current, discount_amount: e.target.value }))} /></div>
