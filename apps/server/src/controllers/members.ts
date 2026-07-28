@@ -1,5 +1,6 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { logActivity } from "../services/activityLog.service";
 import { sendMemberWelcomeEmail } from "../services/email.service";
 import { attachMemberPackages } from "../services/memberPackages.service";
 import { hasOwn, hasPlanContentInput, normalizeOptionalString, resolvePlanContentFields, type PlanTable } from "../services/planContent.service";
@@ -545,6 +546,7 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
     shift,
     notes,
     reference_member_id,
+    external_user_code,
   } = req.body;
 
   const resolvedCurrentAddress = normalizeOptionalString(current_address ?? address);
@@ -583,6 +585,7 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
       shift,
       notes,
       reference_member_id,
+      external_user_code: normalizeOptionalString(external_user_code),
       admin_id: adminId,
       gym_id: requestedGymId,
     })
@@ -603,6 +606,8 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
       console.error("Failed to send member welcome email", emailError);
     });
   }
+
+  await logActivity(req, { action: "create", entityType: "member", entityId: data.id, gymId: requestedGymId, after: data });
 
   return res.status(201).json(data);
 }
@@ -637,6 +642,7 @@ export async function updateMember(req: AuthenticatedRequest, res: Response) {
     notes,
     is_active,
     gym_id,
+    external_user_code,
   } = req.body;
 
   const resolvedCurrentAddress = current_address !== undefined || address !== undefined
@@ -684,12 +690,13 @@ export async function updateMember(req: AuthenticatedRequest, res: Response) {
       pan_card_no,
       marital_status,
       reference_member_id,
-      shift,
-      notes,
-      is_active,
-      gym_id,
-      updated_at: new Date().toISOString(),
-    })
+        shift,
+        notes,
+        is_active,
+        gym_id,
+        external_user_code: normalizeOptionalString(external_user_code),
+        updated_at: new Date().toISOString(),
+      })
     .eq("id", req.params.id)
     .eq("admin_id", adminId)
     .select()
@@ -698,6 +705,8 @@ export async function updateMember(req: AuthenticatedRequest, res: Response) {
   if (error) {
     return res.status(500).json({ message: error.message });
   }
+
+  await logActivity(req, { action: "update", entityType: "member", entityId: data.id, gymId: data.gym_id, before: existing, after: data });
 
   return res.json(data);
 }
@@ -738,6 +747,8 @@ export async function deleteMember(req: AuthenticatedRequest, res: Response) {
   if (error) {
     return res.status(500).json({ message: error.message });
   }
+
+  await logActivity(req, { action: "delete", entityType: "member", entityId: String(req.params.id), before: existing });
 
   return res.status(204).send();
 }

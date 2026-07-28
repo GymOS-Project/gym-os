@@ -1,6 +1,7 @@
 import type { Response } from "express";
 
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { logActivity } from "../services/activityLog.service";
 import { ensureGymBelongsToAdmin, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { sendStaffAccountCreatedEmail } from "../services/email.service";
 import { supabase } from "../supabase";
@@ -31,6 +32,11 @@ function normalizeSectionPermissions(value: unknown) {
 
   const permissions = value.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
   return permissions.length > 0 ? permissions : ["members", "diet_plans", "exercise_plans"];
+}
+
+function normalizeOptionalNumber(value: unknown) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Math.round(numeric * 100) / 100 : 0;
 }
 
 export async function listStaff(req: AuthenticatedRequest, res: Response) {
@@ -85,6 +91,11 @@ export async function createStaff(req: AuthenticatedRequest, res: Response) {
   const specializations = normalizeOptionalString(req.body.specializations);
   const role = normalizeOptionalString(req.body.role) || "staff";
   const sectionPermissions = normalizeSectionPermissions(req.body.section_permissions);
+  const externalUserCode = normalizeOptionalString(req.body.external_user_code);
+  const compensationType = normalizeOptionalString(req.body.compensation_type) || "fixed";
+  const baseSalary = normalizeOptionalNumber(req.body.base_salary);
+  const perSessionRate = normalizeOptionalNumber(req.body.per_session_rate);
+  const commissionPercent = normalizeOptionalNumber(req.body.commission_percent);
 
   if (!fullName || !email || !password) {
     return res.status(400).json({ message: "full_name, email, and password are required" });
@@ -128,6 +139,11 @@ export async function createStaff(req: AuthenticatedRequest, res: Response) {
       phone,
       specializations,
       section_permissions: sectionPermissions,
+      external_user_code: externalUserCode,
+      compensation_type: compensationType,
+      base_salary: baseSalary,
+      per_session_rate: perSessionRate,
+      commission_percent: commissionPercent,
     })
     .select("*")
     .single();
@@ -146,6 +162,8 @@ export async function createStaff(req: AuthenticatedRequest, res: Response) {
     console.error("Failed to send staff account email", emailError);
   });
 
+  await logActivity(req, { action: "create", entityType: "staff_account", entityId: data.id, gymId, after: data });
+
   return res.status(201).json(data);
 }
 
@@ -163,6 +181,11 @@ export async function updateStaff(req: AuthenticatedRequest, res: Response) {
   if (req.body.specializations !== undefined) updates.specializations = normalizeOptionalString(req.body.specializations);
   if (req.body.section_permissions !== undefined) updates.section_permissions = normalizeSectionPermissions(req.body.section_permissions);
   if (req.body.is_active !== undefined) updates.is_active = Boolean(req.body.is_active);
+  if (req.body.external_user_code !== undefined) updates.external_user_code = normalizeOptionalString(req.body.external_user_code);
+  if (req.body.compensation_type !== undefined) updates.compensation_type = normalizeOptionalString(req.body.compensation_type) || "fixed";
+  if (req.body.base_salary !== undefined) updates.base_salary = normalizeOptionalNumber(req.body.base_salary);
+  if (req.body.per_session_rate !== undefined) updates.per_session_rate = normalizeOptionalNumber(req.body.per_session_rate);
+  if (req.body.commission_percent !== undefined) updates.commission_percent = normalizeOptionalNumber(req.body.commission_percent);
 
   if (req.body.gym_id !== undefined) {
     const gymId = normalizeOptionalString(req.body.gym_id);
@@ -184,6 +207,21 @@ export async function updateStaff(req: AuthenticatedRequest, res: Response) {
 
   updates.updated_at = new Date().toISOString();
 
+  const existing = await supabase
+    .from("staff_accounts")
+    .select("*")
+    .eq("id", req.params.id)
+    .eq("admin_id", adminId)
+    .maybeSingle();
+
+  if (existing.error) {
+    return res.status(500).json({ message: existing.error.message });
+  }
+
+  if (!existing.data) {
+    return res.status(404).json({ message: "Staff member not found" });
+  }
+
   const { data, error } = await supabase
     .from("staff_accounts")
     .update(updates)
@@ -195,6 +233,8 @@ export async function updateStaff(req: AuthenticatedRequest, res: Response) {
   if (error) {
     return res.status(500).json({ message: error.message });
   }
+
+  await logActivity(req, { action: "update", entityType: "staff_account", entityId: data.id, gymId: data.gym_id, before: existing.data, after: data });
 
   return res.json(data);
 }

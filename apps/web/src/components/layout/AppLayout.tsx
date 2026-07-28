@@ -6,7 +6,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X, BadgePercent } from 'lucide-react';
+import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X, BadgePercent, CalendarDays, CalendarClock, Fingerprint } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface NavItem {
@@ -42,6 +42,18 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
     });
   }
 
+  if (hasSectionAccess('classes') || hasSectionAccess('pt') || hasSectionAccess('attendance')) {
+    items.push({
+      label: 'Operations',
+      icon: CalendarDays,
+      children: [
+        ...(hasSectionAccess('classes') ? [{ label: 'Classes', href: '/operations/classes', icon: CalendarDays }] : []),
+        ...(hasSectionAccess('attendance') ? [{ label: 'Attendance', href: '/operations/attendance', icon: Clock }] : []),
+        ...(hasSectionAccess('pt') ? [{ label: 'PT Sessions', href: '/staff/pt-sessions', icon: CalendarClock }] : []),
+      ],
+    });
+  }
+
   if (role === 'admin') {
     items.push({
       label: 'Payments',
@@ -51,6 +63,7 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
         { label: 'Sales', href: '/payments/sales', icon: Package },
         { label: 'Analytics', href: '/payments/analytics', icon: BarChart2 },
         { label: 'Coupons', href: '/payments/coupons', icon: BadgePercent },
+        { label: 'Invoices', href: '/payments/invoices', icon: Receipt },
       ],
     });
   }
@@ -100,6 +113,7 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
         { label: 'Reference Members', href: '/reports/references', icon: Share2 },
         { label: 'Report by Shift', href: '/reports/shift', icon: Clock },
         { label: 'Near to Expire', href: '/reports/expiring', icon: AlertTriangle },
+        ...(role === 'admin' ? [{ label: 'Activity Logs', href: '/reports/activity-logs', icon: List }] : []),
       ],
     });
   }
@@ -111,6 +125,8 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
       children: [
         { label: 'Create Staff', href: '/staff/create', icon: UserPlus },
         { label: 'Staff List', href: '/staff/list', icon: Users },
+        { label: 'Payroll', href: '/staff/payroll', icon: Receipt },
+        { label: 'Integrations', href: '/settings/integrations', icon: Fingerprint },
       ],
     });
   }

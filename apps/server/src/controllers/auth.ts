@@ -1,17 +1,16 @@
 import type { Request, Response } from "express";
-import { createSupabaseAuthClient, supabase } from "../supabase";
+import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import {
   clearSessionCookies,
   decryptCookieValue,
   getAdminByAuthId,
   getStaffByAuthId,
-  resolveAuthenticatedUser,
   resolveAuthenticatedSession,
-  setSessionCookies,
+  setSessionCookies
 } from "../services/authSession.service";
 import { sendGymOnboardingWelcomeEmail } from "../services/email.service";
-import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { ensureGymBelongsToAdmin } from "../services/gymScope.service";
+import { createSupabaseAuthClient, supabase } from "../supabase";
 
 const SESSION_COOKIE_NAME = "sessionToken";
 const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";

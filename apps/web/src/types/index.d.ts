@@ -58,6 +58,11 @@ interface StaffAccount {
   phone: string | null;
   specializations: string | null;
   section_permissions: string[];
+   external_user_code?: string | null;
+   compensation_type?: 'fixed' | 'per_session' | 'commission' | string;
+   base_salary?: number;
+   per_session_rate?: number;
+   commission_percent?: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -160,6 +165,7 @@ interface Member {
   pan_card_no: string | null;
   marital_status: string | null;
   reference_member_id: string | null;
+   external_user_code?: string | null;
   shift: string | null;
   notes: string | null;
   is_active: boolean;
@@ -312,4 +318,173 @@ interface Review {
   review_date: string;
   created_at: string;
   members?: Member;
+}
+
+interface ClassSession {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  name: string;
+  description: string | null;
+  trainer_staff_id: string | null;
+  capacity: number;
+  session_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  recurrence_label: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ClassBooking {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  class_session_id: string;
+  member_id: string;
+  status: 'booked' | 'attended' | 'cancelled' | string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PtSession {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  trainer_staff_id: string;
+  member_id: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  status: 'scheduled' | 'completed' | 'cancelled' | 'no_show' | string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AttendanceLog {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  entity_type: 'member' | 'staff' | string;
+  member_id: string | null;
+  staff_account_id: string | null;
+  class_session_id: string | null;
+  pt_session_id: string | null;
+  attendance_date: string;
+  check_in_at: string | null;
+  check_out_at: string | null;
+  source: 'manual' | 'essl' | string;
+  status: 'present' | 'late' | 'absent' | string;
+  notes: string | null;
+  external_punch_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ActivityLog {
+  id: string;
+  admin_id: string;
+  gym_id: string | null;
+  actor_user_id: string | null;
+  actor_staff_id: string | null;
+  actor_role: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  before_json: Json | null;
+  after_json: Json | null;
+  metadata_json: Json | null;
+  created_at: string;
+}
+
+interface Invoice {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  member_id: string | null;
+  member_package_id: string | null;
+  transaction_id: string | null;
+  invoice_number: string;
+  receipt_number: string | null;
+  status: 'draft' | 'paid' | 'cancelled' | string;
+  issue_date: string;
+  due_date: string | null;
+  subtotal: number;
+  tax_amount: number;
+  discount_amount: number;
+  total_amount: number;
+  notes: string | null;
+  line_items: Json[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface PayrollRun {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  title: string;
+  period_start: string;
+  period_end: string;
+  status: 'draft' | 'processed' | 'paid' | string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PayrollEntry {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  payroll_run_id: string;
+  staff_id: string;
+  compensation_type: 'fixed' | 'per_session' | 'commission' | string;
+  base_amount: number;
+  session_count: number;
+  session_rate: number;
+  commission_percent: number;
+  commission_amount: number;
+  bonus_amount: number;
+  deductions: number;
+  net_amount: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface EsslDevice {
+  id: string;
+  admin_id: string;
+  gym_id: string;
+  device_name: string;
+  serial_number: string | null;
+  integration_mode: 'adms' | 'middleware' | 'sdk' | string;
+  ip_address: string | null;
+  port: number | null;
+  server_address: string | null;
+  server_port: number | null;
+  status: string;
+  is_active: boolean;
+  last_synced_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface EsslRawPunchLog {
+  id: string;
+  admin_id: string | null;
+  gym_id: string | null;
+  essl_device_id: string | null;
+  serial_number: string | null;
+  user_code: string | null;
+  punch_at: string | null;
+  payload: Json;
+  processing_status: string;
+  resolved_member_id: string | null;
+  resolved_staff_id: string | null;
+  created_at: string;
+  updated_at: string;
 }

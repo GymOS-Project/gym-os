@@ -63,6 +63,11 @@ export default function StaffListPage() {
       phone: staff.phone || "",
       role: staff.role || "staff",
       specializations: staff.specializations || "",
+      external_user_code: staff.external_user_code || "",
+      compensation_type: staff.compensation_type || "fixed",
+      base_salary: String(staff.base_salary ?? 0),
+      per_session_rate: String(staff.per_session_rate ?? 0),
+      commission_percent: String(staff.commission_percent ?? 0),
       is_active: staff.is_active,
       permissions: new Set<string>(staff.section_permissions),
     });
@@ -82,6 +87,11 @@ export default function StaffListPage() {
         phone: form.phone || null,
         role: form.role.trim(),
         specializations: form.specializations || null,
+        external_user_code: form.external_user_code || null,
+        compensation_type: form.compensation_type,
+        base_salary: Number(form.base_salary || 0),
+        per_session_rate: Number(form.per_session_rate || 0),
+        commission_percent: Number(form.commission_percent || 0),
         is_active: form.is_active,
         section_permissions: Array.from(form.permissions),
       });
