@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Dumbbell } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ForgotPasswordPage() {
@@ -34,9 +34,7 @@ export default function ForgotPasswordPage() {
       </div>
       <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card/85 p-8 shadow-elevated backdrop-blur-xl">
         <div className="mb-8 flex items-center gap-3">
-          <div className="gradient-primary flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground shadow-sm">
-            <Dumbbell className="h-5 w-5" />
-          </div>
+          <BrandLogo className="h-10 w-10" />
           <h1 className="text-2xl font-bold">Forgot Password</h1>
         </div>
 
