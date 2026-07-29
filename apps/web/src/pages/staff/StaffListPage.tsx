@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
@@ -65,35 +66,31 @@ export default function StaffListPage() {
       specializations: staff.specializations || "",
       external_user_code: staff.external_user_code || "",
       compensation_type: staff.compensation_type || "fixed",
-      base_salary: String(staff.base_salary ?? 0),
-      per_session_rate: String(staff.per_session_rate ?? 0),
-      commission_percent: String(staff.commission_percent ?? 0),
+      base_salary: staff.base_salary ? String(staff.base_salary) : "",
+      per_session_rate: staff.per_session_rate ? String(staff.per_session_rate) : "",
+      commission_percent: staff.commission_percent ? String(staff.commission_percent) : "",
       is_active: staff.is_active,
-      permissions: new Set<string>(staff.section_permissions),
+      permissions: staff.section_permissions,
     });
   };
 
-  const handleUpdate = async () => {
-    if (!editingStaff || !form.full_name || !form.gym_id || !form.role.trim()) {
-      toast.error("Name, role, and gym are required");
-      return;
-    }
-
+  const handleUpdate = async (values: StaffFormValue) => {
+    if (!editingStaff) return;
     setSaving(true);
     try {
       await api.updateStaff(editingStaff.id, {
-        gym_id: form.gym_id,
-        full_name: form.full_name,
-        phone: form.phone || null,
-        role: form.role.trim(),
-        specializations: form.specializations || null,
-        external_user_code: form.external_user_code || null,
-        compensation_type: form.compensation_type,
-        base_salary: Number(form.base_salary || 0),
-        per_session_rate: Number(form.per_session_rate || 0),
-        commission_percent: Number(form.commission_percent || 0),
-        is_active: form.is_active,
-        section_permissions: Array.from(form.permissions),
+        gym_id: values.gym_id,
+        full_name: values.full_name,
+        phone: values.phone || null,
+        role: values.role.trim(),
+        specializations: values.specializations || null,
+        external_user_code: values.external_user_code || null,
+        compensation_type: values.compensation_type,
+        base_salary: Number(values.base_salary || 0),
+        per_session_rate: Number(values.per_session_rate || 0),
+        commission_percent: Number(values.commission_percent || 0),
+        is_active: values.is_active,
+        section_permissions: values.permissions,
       });
       toast.success("Staff member updated");
       setEditingStaff(null);
@@ -140,7 +137,7 @@ export default function StaffListPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={5} className="py-12 text-center text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="py-12"><div className="flex justify-center"><LoadingSpinner /></div></TableCell></TableRow>
               ) : filteredStaff.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="py-12 text-center text-muted-foreground">No staff records found.</TableCell></TableRow>
               ) : filteredStaff.map((staff) => {
@@ -178,7 +175,6 @@ export default function StaffListPage() {
             <StaffForm
               gyms={gyms}
               value={form}
-              onChange={setForm}
               onSubmit={handleUpdate}
               onCancel={() => setEditingStaff(null)}
               saving={saving}

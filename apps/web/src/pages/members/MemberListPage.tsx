@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { Input } from "@/components/ui/input";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isDateAfter, todayDateValue } from "@/lib/date";
@@ -241,7 +242,7 @@ export default function MemberListPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="py-12"><div className="flex justify-center"><LoadingSpinner /></div></TableCell></TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">No members found</TableCell></TableRow>
               ) : filtered.map((m) => {
@@ -306,7 +307,7 @@ export default function MemberListPage() {
           </DialogHeader>
 
           {editLoading ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">Loading member...</div>
+            <div className="flex justify-center py-10"><LoadingSpinner /></div>
           ) : (
             <form onSubmit={handleEditSubmit} className="space-y-5">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

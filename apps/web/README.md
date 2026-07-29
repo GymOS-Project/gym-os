@@ -26,13 +26,19 @@ Example:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3001
+VITE_POSTHOG_KEY=phc_your_project_key
+VITE_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
 For production:
 
 ```env
 VITE_API_BASE_URL=https://api.yourdomain.com
+VITE_POSTHOG_KEY=phc_your_project_key
+VITE_POSTHOG_HOST=https://us.i.posthog.com
 ```
+
+`VITE_POSTHOG_KEY` is optional. If it is not set, analytics stays disabled.
 
 ## Local Run
 

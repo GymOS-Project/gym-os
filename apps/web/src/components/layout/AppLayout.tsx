@@ -7,7 +7,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LayoutDashboard, Users, UserPlus, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X, BadgePercent, CalendarDays, CalendarClock, Fingerprint } from 'lucide-react';
+import { LayoutDashboard, Users, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X, BadgePercent, CalendarDays, CalendarClock, Fingerprint, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface NavItem {
@@ -25,10 +25,7 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
     items.push({
       label: 'Members',
       icon: Users,
-      children: [
-        ...(role === 'admin' ? [{ label: 'Add Member', href: '/members/add', icon: UserPlus }] : []),
-        { label: 'Member List', href: '/members', icon: List, exact: true },
-      ],
+      children: [{ label: 'Member List', href: '/members', icon: List, exact: true }],
     });
   }
 
@@ -97,7 +94,6 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
       label: 'Enquiry',
       icon: UserSearch,
       children: [
-        { label: 'Add Enquiry', href: '/enquiry/add', icon: UserPlus },
         { label: 'Data List', href: '/enquiry', icon: List, exact: true },
         { label: 'Follow Up List', href: '/enquiry/followups', icon: Bell },
         { label: 'Not Interested', href: '/enquiry/not-interested', icon: XCircle },
