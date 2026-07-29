@@ -488,3 +488,66 @@ interface EsslRawPunchLog {
   created_at: string;
   updated_at: string;
 }
+
+
+type StaffFormValue = {
+  gym_id: string;
+  full_name: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: string;
+  specializations: string;
+  external_user_code: string;
+  compensation_type: string;
+  base_salary: string;
+  per_session_rate: string;
+  commission_percent: string;
+  is_active: boolean;
+  permissions: string[];
+};
+
+type Props = {
+  gyms: Gym[];
+  value: StaffFormValue;
+  onSubmit: (value: StaffFormValue) => void | Promise<void>;
+  onCancel?: () => void;
+  saving?: boolean;
+  editing?: boolean;
+  submitLabel: string;
+};
+
+
+type CompensationType = "fixed" | "per_session" | "commission";
+
+interface StaffFormGym {
+  id: string;
+  gym_name: string;
+}
+
+interface StaffFormValue {
+  gym_id: string;
+  full_name: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: string;
+  specializations: string;
+  external_user_code: string;
+  compensation_type: CompensationType;
+  base_salary: string;
+  per_session_rate: string;
+  commission_percent: string;
+  is_active: boolean;
+  permissions: StaffPermission[];
+}
+
+interface Props {
+  gyms: StaffFormGym[];
+  value: StaffFormValue;
+  onSubmit: (v: StaffFormValue) => Promise<void> | void;
+  onCancel?: () => void;
+  saving?: boolean;
+  editing?: boolean;
+  submitLabel: string;
+}

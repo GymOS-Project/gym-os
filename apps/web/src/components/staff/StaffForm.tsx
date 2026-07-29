@@ -2,28 +2,19 @@ import { useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { STAFF_PERMISSION_OPTIONS } from "@/utils/constants";
+type StaffPermission = (typeof STAFF_PERMISSION_OPTIONS)[number];
 
-export const STAFF_PERMISSION_OPTIONS = [
-  "members",
-  "packages",
-  "diet_plans",
-  "exercise_plans",
-  "enquiries",
-  "followups",
-  "reports",
-  "classes",
-  "pt",
-  "attendance",
-] as const;
 
-export type StaffFormValue = {
+type CompensationType = "fixed" | "per_session" | "commission";
+
+export interface StaffFormValue {
   gym_id: string;
   full_name: string;
   email: string;
@@ -32,34 +23,46 @@ export type StaffFormValue = {
   role: string;
   specializations: string;
   external_user_code: string;
-  compensation_type: string;
+  compensation_type: CompensationType;
   base_salary: string;
   per_session_rate: string;
   commission_percent: string;
   is_active: boolean;
-  permissions: string[];
-};
+  permissions: StaffPermission[];
+}
 
-type Props = {
+interface Gym {
+  id: string;
+  gym_name: string;
+}
+
+interface Props {
   gyms: Gym[];
   value: StaffFormValue;
-  onSubmit: (value: StaffFormValue) => void | Promise<void>;
+  onSubmit: (val: StaffFormValue) => Promise<void> | void;
   onCancel?: () => void;
   saving?: boolean;
   editing?: boolean;
-  submitLabel: string;
-};
+  submitLabel?: string;
+}
 
 function optionalNumberString(label: string) {
-  return z.string().refine((value) => value === "" || (!Number.isNaN(Number(value)) && Number(value) >= 0), `${label} must be 0 or more`);
+  return z
+    .string()
+    .refine(
+      (value) => value === "" || (!Number.isNaN(Number(value)) && Number(value) >= 0),
+      { message: `${label} must be 0 or more` }
+    );
 }
 
 function createSchema(editing?: boolean) {
   return z.object({
     gym_id: z.string().min(1, "Gym is required"),
     full_name: z.string().trim().min(1, "Full name is required"),
-    email: z.email("Enter a valid email"),
-    password: editing ? z.string() : z.string().min(6, "Temporary password must be at least 6 characters"),
+    email: z.string().email("Enter a valid email"),
+    password: editing
+      ? z.string()
+      : z.string().min(6, "Temporary password must be at least 6 characters"),
     phone: z.string(),
     role: z.string().trim().min(1, "Role is required"),
     specializations: z.string(),
@@ -69,7 +72,8 @@ function createSchema(editing?: boolean) {
     per_session_rate: optionalNumberString("Per session rate"),
     commission_percent: optionalNumberString("Commission %"),
     is_active: z.boolean(),
-    permissions: z.array(z.string()).min(1, "Select at least one permission"),
+    permissions: z
+      .array(z.enum(STAFF_PERMISSION_OPTIONS)),
   });
 }
 
@@ -96,7 +100,15 @@ function RequiredMark() {
   return <span className="text-destructive">*</span>;
 }
 
-export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, submitLabel }: Props) {
+export function StaffForm({
+  gyms,
+  value,
+  onSubmit,
+  onCancel,
+  saving,
+  editing,
+  submitLabel,
+}: Props) {
   const schema = useMemo(() => createSchema(editing), [editing]);
   const methods = useForm<StaffFormValue>({
     resolver: zodResolver(schema),
@@ -109,12 +121,16 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
     methods.reset(value);
   }, [methods, value]);
 
-  const togglePermission = (permission: string, checked: boolean) => {
+  // Toggle permissions (enforce strong typing)
+  const togglePermission = (permission: StaffPermission, checked: boolean) => {
     const nextPermissions = checked
       ? Array.from(new Set([...permissions, permission]))
       : permissions.filter((item) => item !== permission);
 
-    methods.setValue("permissions", nextPermissions, { shouldDirty: true, shouldValidate: true });
+    methods.setValue("permissions", nextPermissions, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   };
 
   const handleSubmit = async (formValue: StaffFormValue) => {
@@ -131,19 +147,30 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
 
   return (
     <Form {...methods}>
-      <form onSubmit={methods.handleSubmit(handleSubmit)} className="space-y-5">
+      <form
+        onSubmit={methods.handleSubmit(handleSubmit)}
+        className="space-y-5"
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             control={methods.control}
             name="gym_id"
             render={({ field }) => (
               <FormItem className="sm:col-span-2">
-                <FormLabel>Gym <RequiredMark /></FormLabel>
+                <FormLabel>
+                  Gym <RequiredMark />
+                </FormLabel>
                 <FormControl>
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gym" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {gyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
+                      {gyms.map((gym) => (
+                        <SelectItem key={gym.id} value={gym.id}>
+                          {gym.gym_name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </FormControl>
@@ -157,7 +184,9 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
             name="full_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Full Name <RequiredMark /></FormLabel>
+                <FormLabel>
+                  Full Name <RequiredMark />
+                </FormLabel>
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
@@ -171,7 +200,9 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email <RequiredMark /></FormLabel>
+                <FormLabel>
+                  Email <RequiredMark />
+                </FormLabel>
                 <FormControl>
                   <Input {...field} type="email" disabled={editing} />
                 </FormControl>
@@ -186,7 +217,9 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Temporary Password <RequiredMark /></FormLabel>
+                  <FormLabel>
+                    Temporary Password <RequiredMark />
+                  </FormLabel>
                   <FormControl>
                     <Input {...field} type="password" />
                   </FormControl>
@@ -215,7 +248,9 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
             name="role"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Designation / Role Tag <RequiredMark /></FormLabel>
+                <FormLabel>
+                  Designation / Role Tag <RequiredMark />
+                </FormLabel>
                 <FormControl>
                   <Input {...field} placeholder="e.g. Trainer, Desk Manager, Peon" />
                 </FormControl>
@@ -231,7 +266,10 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
               <FormItem className="sm:col-span-2">
                 <FormLabel>Notes / Specialty</FormLabel>
                 <FormControl>
-                  <Textarea {...field} placeholder="Optional notes, speciality, responsibility, etc." />
+                  <Textarea
+                    {...field}
+                    placeholder="Optional notes, speciality, responsibility, etc."
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -245,7 +283,10 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
               <FormItem>
                 <FormLabel>Attendance / Device Code</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Optional eSSL user code" />
+                  <Input
+                    {...field}
+                    placeholder="Optional eSSL user code"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -260,7 +301,9 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
                 <FormLabel>Compensation Type</FormLabel>
                 <FormControl>
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="fixed">Fixed Salary</SelectItem>
                       <SelectItem value="per_session">Per Session</SelectItem>
@@ -280,7 +323,13 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
               <FormItem>
                 <FormLabel>Base Salary</FormLabel>
                 <FormControl>
-                  <Input {...field} type="number" min="0" step="0.01" placeholder="0.00" />
+                  <Input
+                    {...field}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -294,7 +343,13 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
               <FormItem>
                 <FormLabel>Per Session Rate</FormLabel>
                 <FormControl>
-                  <Input {...field} type="number" min="0" step="0.01" placeholder="0.00" />
+                  <Input
+                    {...field}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -308,7 +363,13 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
               <FormItem>
                 <FormLabel>Commission %</FormLabel>
                 <FormControl>
-                  <Input {...field} type="number" min="0" step="0.01" placeholder="0" />
+                  <Input
+                    {...field}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -323,9 +384,17 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
                 <FormLabel>Permissions</FormLabel>
                 <div className="grid gap-3 rounded-lg border p-4 sm:grid-cols-2 xl:grid-cols-3">
                   {STAFF_PERMISSION_OPTIONS.map((permission) => (
-                    <label key={permission} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm capitalize">
+                    <label
+                      key={permission}
+                      className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm capitalize"
+                    >
                       <span>{permission.replace(/_/g, " ")}</span>
-                      <Switch checked={permissions.includes(permission)} onCheckedChange={(checked) => togglePermission(permission, checked)} />
+                      <Switch
+                        checked={permissions.includes(permission)}
+                        onCheckedChange={(checked) =>
+                          togglePermission(permission, checked)
+                        }
+                      />
                     </label>
                   ))}
                 </div>
@@ -343,10 +412,15 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
                   <div className="flex items-center justify-between rounded-lg border px-4 py-3">
                     <div>
                       <FormLabel>Active account</FormLabel>
-                      <p className="text-sm text-muted-foreground">Inactive staff members cannot log in.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Inactive staff members cannot log in.
+                      </p>
                     </div>
                     <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
                     </FormControl>
                   </div>
                 </FormItem>
@@ -356,8 +430,14 @@ export function StaffForm({ gyms, value, onSubmit, onCancel, saving, editing, su
         </div>
 
         <div className="flex gap-3">
-          {onCancel ? <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button> : null}
-          <Button type="submit" variant="gradient" disabled={saving}>{saving ? "Saving..." : submitLabel}</Button>
+          {onCancel ? (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          ) : null}
+          <Button type="submit" variant="gradient" disabled={saving}>
+            {saving ? "Saving..." : submitLabel}
+          </Button>
         </div>
       </form>
     </Form>

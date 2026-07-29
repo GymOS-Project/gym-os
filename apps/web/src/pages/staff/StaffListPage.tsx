@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { StaffForm, createEmptyStaffForm, type StaffFormValue } from "@/components/staff/StaffForm";
+import { StaffForm, createEmptyStaffForm } from "@/components/staff/StaffForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +13,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { Pencil, Search } from "lucide-react";
 import { toast } from "sonner";
+import { STAFF_PERMISSION_OPTIONS } from "@/utils/constants";
+type StaffPermission = (typeof STAFF_PERMISSION_OPTIONS)[number];
+
 
 export default function StaffListPage() {
   const { gyms } = useAuth();
@@ -65,12 +68,12 @@ export default function StaffListPage() {
       role: staff.role || "staff",
       specializations: staff.specializations || "",
       external_user_code: staff.external_user_code || "",
-      compensation_type: staff.compensation_type || "fixed",
+      compensation_type: (staff.compensation_type as CompensationType) || "fixed",
       base_salary: staff.base_salary ? String(staff.base_salary) : "",
       per_session_rate: staff.per_session_rate ? String(staff.per_session_rate) : "",
       commission_percent: staff.commission_percent ? String(staff.commission_percent) : "",
       is_active: staff.is_active,
-      permissions: staff.section_permissions,
+      permissions: (staff.section_permissions as StaffPermission[]),
     });
   };
 
@@ -174,7 +177,7 @@ export default function StaffListPage() {
             </DialogHeader>
             <StaffForm
               gyms={gyms}
-              value={form}
+              value={form as any}
               onSubmit={handleUpdate}
               onCancel={() => setEditingStaff(null)}
               saving={saving}
