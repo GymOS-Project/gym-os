@@ -9,7 +9,7 @@
     "dev": "tsc --watch & node --watch dist/index.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.56.0",
+    "@supabase/supabase-js": "^2.111.0",
     "axios": "^1.7.4",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.79.2",
