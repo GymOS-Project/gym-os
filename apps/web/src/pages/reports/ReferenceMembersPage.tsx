@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Share2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
@@ -60,7 +61,7 @@ export default function ReferenceMembersPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={3} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={3} className="py-12"><div className="flex justify-center"><LoadingSpinner /></div></TableCell></TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={3} className="text-center py-12 text-muted-foreground">No referrals found</TableCell></TableRow>
               ) : filtered.flatMap((d) =>

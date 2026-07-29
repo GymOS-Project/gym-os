@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -205,7 +206,7 @@ export default function CouponsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="py-12 text-center text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-12"><div className="flex justify-center"><LoadingSpinner /></div></TableCell></TableRow>
               ) : filteredCoupons.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="py-12 text-center text-muted-foreground">No coupons created yet.</TableCell></TableRow>
               ) : filteredCoupons.map((coupon) => {

@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { TriangleAlert as AlertTriangle } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ export default function NearToExpirePage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="py-12"><div className="flex justify-center"><LoadingSpinner /></div></TableCell></TableRow>
               ) : members.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No expiring packages in this period</TableCell></TableRow>
               ) : members.map((m) => {

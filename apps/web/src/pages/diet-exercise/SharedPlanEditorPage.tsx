@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { api } from '@/lib/api';
@@ -120,7 +121,7 @@ export default function SharedPlanEditorPage({ planType }: Props) {
   if (pageLoading) {
     return (
       <AppLayout title={isEditing ? `Edit ${content.title}` : `Create ${content.title}`}>
-        <div className="flex min-h-[320px] items-center justify-center text-muted-foreground">Loading...</div>
+        <div className="flex min-h-[320px] items-center justify-center"><LoadingSpinner /></div>
       </AppLayout>
     );
   }

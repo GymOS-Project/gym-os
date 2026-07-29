@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -137,7 +138,7 @@ export default function PaymentsSalesPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={8} className="py-12 text-center text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="py-12"><div className="flex justify-center"><LoadingSpinner /></div></TableCell></TableRow>
               ) : filteredSales.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="py-12 text-center text-muted-foreground">No sales found.</TableCell></TableRow>
               ) : filteredSales.map((sale) => (

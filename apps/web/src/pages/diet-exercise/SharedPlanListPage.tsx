@@ -5,6 +5,7 @@ import { PlanContentPreviewDialog } from '@/components/plans/PlanContentPreviewD
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { api } from '@/lib/api';
@@ -116,7 +117,7 @@ export default function SharedPlanListPage({ planType }: Props) {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={5} className="py-12 text-center text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="py-12"><div className="flex justify-center"><LoadingSpinner /></div></TableCell></TableRow>
               ) : plans.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="py-12 text-center text-muted-foreground">{content.empty}</TableCell></TableRow>
               ) : plans.map((plan) => (

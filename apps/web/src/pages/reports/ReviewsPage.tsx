@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,7 @@ export default function ReviewsPage() {
           </div>
         </div>
         {loading ? (
-          <p className="text-center text-muted-foreground py-12">Loading...</p>
+          <div className="flex justify-center py-12"><LoadingSpinner /></div>
         ) : reviews.length === 0 ? (
           <div className="rounded-xl border-2 border-dashed p-10 text-center">
             <Star className="h-10 w-10 mx-auto text-muted-foreground mb-3" />

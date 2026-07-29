@@ -1,137 +1,255 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { isDateBefore, todayDateValue } from "@/lib/date";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { isDateBefore, todayDateValue } from "@/lib/date";
 import { toast } from "sonner";
 
+const today = todayDateValue();
+
+const enquirySchema = z.object({
+  gym_id: z.string().min(1, "Gym is required"),
+  name: z.string().trim().min(1, "Full name is required"),
+  phone: z.string().trim().min(1, "Phone is required"),
+  email: z.string().trim().refine((value) => !value || z.email().safeParse(value).success, "Enter a valid email"),
+  source: z.string(),
+  interest: z.string(),
+  assigned_to: z.string(),
+  next_followup_date: z.string().refine((value) => !value || !isDateBefore(value, today), "Next follow-up date cannot be in the past"),
+  notes: z.string(),
+});
+
+type EnquiryFormValues = z.infer<typeof enquirySchema>;
+
+function RequiredMark() {
+  return <span className="text-destructive">*</span>;
+}
+
 export default function AddEnquiryPage() {
-  const today = todayDateValue();
   const { admin, gyms, selectedGymId } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    gym_id: selectedGymId !== "all" ? selectedGymId : "",
-    name: "", phone: "", email: "", source: "", interest: "",
-    assigned_to: "", next_followup_date: "", notes: "",
-  });
-
   const availableGyms = gyms.length > 0 ? gyms : [];
 
-  const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+  const methods = useForm<EnquiryFormValues>({
+    resolver: zodResolver(enquirySchema),
+    defaultValues: {
+      gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "",
+      name: "",
+      phone: "",
+      email: "",
+      source: "",
+      interest: "",
+      assigned_to: "",
+      next_followup_date: "",
+      notes: "",
+    },
+  });
+
+  const loading = methods.formState.isSubmitting;
+  const gymId = methods.watch("gym_id");
 
   useEffect(() => {
-    setForm((current) => ({
-      ...current,
-      gym_id: selectedGymId !== "all" ? selectedGymId : current.gym_id || gyms[0]?.id || "",
-    }));
-  }, [gyms, selectedGymId]);
-
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-    if (!admin) return;
-    if (!form.gym_id) { toast.error("Gym is required"); return; }
-    if (!form.name || !form.phone) { toast.error("Name and phone are required"); return; }
-    if (form.next_followup_date && isDateBefore(form.next_followup_date, today)) {
-      toast.error("Next follow-up date cannot be in the past");
-      return;
+    const nextGymId = selectedGymId !== "all" ? selectedGymId : gymId || gyms[0]?.id || "";
+    if (nextGymId && nextGymId !== gymId) {
+      methods.setValue("gym_id", nextGymId, { shouldDirty: false });
     }
-    setLoading(true);
+  }, [gyms, gymId, methods, selectedGymId]);
+
+  const handleSubmit = async (values: EnquiryFormValues) => {
+    if (!admin) return;
+
     try {
       await api.createEnquiry({
-        gym_id: form.gym_id,
-        name: form.name,
-        phone: form.phone,
-        email: form.email || undefined,
-        source: form.source || undefined,
-        interest: form.interest || undefined,
-        assigned_to: form.assigned_to || undefined,
-        next_followup_date: form.next_followup_date || undefined,
-        notes: form.notes || undefined,
+        gym_id: values.gym_id,
+        name: values.name.trim(),
+        phone: values.phone.trim(),
+        email: values.email.trim() || undefined,
+        source: values.source || undefined,
+        interest: values.interest.trim() || undefined,
+        assigned_to: values.assigned_to.trim() || undefined,
+        next_followup_date: values.next_followup_date || undefined,
+        notes: values.notes.trim() || undefined,
       });
       toast.success("Enquiry added!");
       navigate("/enquiry");
-    } catch { toast.error("Failed to add enquiry"); }
-    setLoading(false);
+    } catch {
+      toast.error("Failed to add enquiry");
+    }
   };
 
   return (
     <AppLayout title="Add Enquiry">
-      <div className="max-w-2xl mx-auto">
+      <div className="mx-auto max-w-2xl">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Add New Enquiry</h1>
-          <p className="text-muted-foreground mt-1">Register a new lead or prospective member</p>
+          <p className="mt-1 text-muted-foreground">Register a new lead or prospective member</p>
         </div>
-        <form onSubmit={handleSubmit} className="rounded-xl border bg-card p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {availableGyms.length > 1 && (
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Gym *</Label>
-                <Select value={form.gym_id} onValueChange={(v) => set("gym_id", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
-                  <SelectContent>
-                    {availableGyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label>Full Name *</Label>
-              <Input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Enquiry name" required />
+        <Form {...methods}>
+          <form onSubmit={methods.handleSubmit(handleSubmit)} className="space-y-4 rounded-xl border bg-card p-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {availableGyms.length > 1 && (
+                <FormField
+                  control={methods.control}
+                  name="gym_id"
+                  render={({ field }) => (
+                    <FormItem className="sm:col-span-2">
+                      <FormLabel>Gym <RequiredMark /></FormLabel>
+                      <FormControl>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
+                          <SelectContent>
+                            {availableGyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={methods.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name <RequiredMark /></FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Enquiry name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={methods.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone <RequiredMark /></FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="+91 9876543210" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={methods.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="email" placeholder="email@example.com" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={methods.control}
+                name="source"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Source</FormLabel>
+                    <FormControl>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger><SelectValue placeholder="How did they find you?" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="walk_in">Walk In</SelectItem>
+                          <SelectItem value="referral">Referral</SelectItem>
+                          <SelectItem value="instagram">Instagram</SelectItem>
+                          <SelectItem value="facebook">Facebook</SelectItem>
+                          <SelectItem value="google">Google</SelectItem>
+                          <SelectItem value="flyer">Flyer / Poster</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={methods.control}
+                name="interest"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Interest</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. Weight loss, Bodybuilding" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={methods.control}
+                name="assigned_to"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assigned To</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Staff member name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={methods.control}
+                name="next_followup_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Next Follow-up Date</FormLabel>
+                    <FormControl>
+                      <DatePicker value={field.value} onChange={field.onChange} placeholder="Select next follow-up" minDate={today} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={methods.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Additional notes" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-            <div className="space-y-1.5">
-              <Label>Phone *</Label>
-              <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+91 9876543210" required />
+
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => navigate("/enquiry")}>Cancel</Button>
+              <Button type="submit" variant="gradient" disabled={loading}>
+                {loading ? "Adding..." : "Add Enquiry"}
+              </Button>
             </div>
-            <div className="space-y-1.5">
-              <Label>Email</Label>
-              <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="email@example.com" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Source</Label>
-              <Select value={form.source} onValueChange={(v) => set("source", v)}>
-                <SelectTrigger><SelectValue placeholder="How did they find you?" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="walk_in">Walk In</SelectItem>
-                  <SelectItem value="referral">Referral</SelectItem>
-                  <SelectItem value="instagram">Instagram</SelectItem>
-                  <SelectItem value="facebook">Facebook</SelectItem>
-                  <SelectItem value="google">Google</SelectItem>
-                  <SelectItem value="flyer">Flyer / Poster</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Interest</Label>
-              <Input value={form.interest} onChange={(e) => set("interest", e.target.value)} placeholder="e.g. Weight loss, Bodybuilding" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Assigned To</Label>
-              <Input value={form.assigned_to} onChange={(e) => set("assigned_to", e.target.value)} placeholder="Staff member name" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Next Follow-up Date</Label>
-              <DatePicker value={form.next_followup_date} onChange={(value) => set("next_followup_date", value)} placeholder="Select next follow-up" minDate={today} />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>Notes</Label>
-              <Input value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Additional notes" />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => navigate("/enquiry")}>Cancel</Button>
-            <Button type="submit" variant="gradient" disabled={loading}>
-              {loading ? "Adding..." : "Add Enquiry"}
-            </Button>
-          </div>
-        </form>
+          </form>
+        </Form>
       </div>
     </AppLayout>
   );

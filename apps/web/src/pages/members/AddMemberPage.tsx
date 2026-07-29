@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { PlanContentEditor } from "@/components/plans/PlanContentEditor";
 import { PlanContentPreviewDialog } from "@/components/plans/PlanContentPreviewDialog";
@@ -11,6 +14,7 @@ import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-di
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +24,33 @@ import { toast } from "sonner";
 import { addDays, addMonths, format } from "date-fns";
 
 const NO_REFERENCE_MEMBER = "__none__";
+
+const memberSchema = z.object({
+  name: z.string().trim().min(1, "Full name is required"),
+  email: z.string().trim().refine((value) => !value || z.email().safeParse(value).success, "Enter a valid email"),
+  phone: z.string().trim().min(1, "Phone is required"),
+  gender: z.string(),
+  date_of_birth: z.string().refine((value) => !value || !isDateAfter(value, todayDateValue()), "Date of birth cannot be in the future"),
+  current_address: z.string(),
+  permanent_address: z.string(),
+  emergency_contact: z.string(),
+  shift: z.string(),
+  notes: z.string(),
+  aadhar_card_no: z.string(),
+  driving_license_no: z.string(),
+  pan_card_no: z.string(),
+  marital_status: z.string(),
+  external_user_code: z.string(),
+  gym_id: z.string().min(1, "Gym selection is required"),
+  reference_member_id: z.string(),
+  package_type_id: z.string(),
+  start_date: z.string(),
+  coupon_id: z.string(),
+  amount_paid: z.string(),
+  payment_mode: z.string(),
+});
+
+type MemberFormValues = z.infer<typeof memberSchema>;
 
 export default function AddMemberPage() {
   const today = todayDateValue();
@@ -64,25 +95,43 @@ export default function AddMemberPage() {
     planContent: createPlanEditorValue(),
   });
 
-  const [form, setForm] = useState({
-    name: "", email: "", phone: "", gender: "", date_of_birth: "",
-    current_address: "", permanent_address: "", emergency_contact: "", shift: "", notes: "",
-    aadhar_card_no: "", driving_license_no: "", pan_card_no: "", marital_status: "",
-    external_user_code: "",
-    gym_id: "",
-    reference_member_id: NO_REFERENCE_MEMBER,
-    package_type_id: "", start_date: format(new Date(), "yyyy-MM-dd"),
-    coupon_id: "",
-    amount_paid: "", payment_mode: "cash",
+  const methods = useForm<MemberFormValues>({
+    resolver: zodResolver(memberSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      gender: "",
+      date_of_birth: "",
+      current_address: "",
+      permanent_address: "",
+      emergency_contact: "",
+      shift: "",
+      notes: "",
+      aadhar_card_no: "",
+      driving_license_no: "",
+      pan_card_no: "",
+      marital_status: "",
+      external_user_code: "",
+      gym_id: "",
+      reference_member_id: NO_REFERENCE_MEMBER,
+      package_type_id: "",
+      start_date: format(new Date(), "yyyy-MM-dd"),
+      coupon_id: "",
+      amount_paid: "",
+      payment_mode: "cash",
+    },
   });
+  const form = methods.watch();
+  const errors = methods.formState.errors;
 
   useEffect(() => {
     if (!admin) return;
     if (!isEditing) {
-      setForm((current) => ({
-        ...current,
-        gym_id: selectedGymId !== "all" ? selectedGymId : current.gym_id || gyms[0]?.id || "",
-      }));
+      const nextGymId = selectedGymId !== "all" ? selectedGymId : form.gym_id || gyms[0]?.id || "";
+      if (nextGymId && nextGymId !== form.gym_id) {
+        methods.setValue("gym_id", nextGymId, { shouldDirty: false });
+      }
     }
     if (!isEditing) {
       api.getPlans().then((data) => setPackages(data.filter((p) => p.is_active)));
@@ -98,7 +147,7 @@ export default function AddMemberPage() {
     api.getActiveMembers().then((data) => {
       setMembers(isEditing ? data.filter((member) => member.id !== memberId) : data);
     });
-  }, [admin, canManageDietPlans, canManageExercisePlans, gyms, isEditing, memberId, selectedGymId]);
+  }, [admin, canManageDietPlans, canManageExercisePlans, form.gym_id, gyms, isEditing, memberId, methods, selectedGymId]);
 
   useEffect(() => {
     if (!admin || !memberId) return;
@@ -106,7 +155,7 @@ export default function AddMemberPage() {
     setPageLoading(true);
     api.getMember(memberId)
       .then((member) => {
-        setForm({
+        methods.reset({
           name: member.name,
           email: member.email || "",
           phone: member.phone,
@@ -138,7 +187,7 @@ export default function AddMemberPage() {
         navigate("/members");
       })
       .finally(() => setPageLoading(false));
-  }, [admin, memberId, navigate]);
+  }, [admin, memberId, methods, navigate]);
 
   const availablePackages = packages.filter((pkg) => !form.gym_id || pkg.gym_id === form.gym_id);
   const availableCoupons = coupons.filter((coupon) => !coupon.gym_id || !form.gym_id || coupon.gym_id === form.gym_id);
@@ -155,7 +204,7 @@ export default function AddMemberPage() {
     : "";
   const payableAmount = couponValidation?.netAmount ?? (parseFloat(form.amount_paid) || 0);
 
-  const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+  const set = (k: keyof MemberFormValues, v: string) => methods.setValue(k, v, { shouldDirty: true, shouldValidate: true });
 
   useEffect(() => {
     if (!form.package_type_id || !form.gym_id || !form.coupon_id || !form.amount_paid) {
@@ -310,15 +359,8 @@ export default function AddMemberPage() {
     setPendingAssignmentDelete(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: MemberFormValues) => {
     if (!admin) return;
-    if (!form.name || !form.phone) { toast.error("Name and phone are required"); return; }
-    if (!form.gym_id) { toast.error("Gym selection is required"); return; }
-    if (form.date_of_birth && isDateAfter(form.date_of_birth, today)) {
-      toast.error("Date of birth cannot be in the future");
-      return;
-    }
     setLoading(true);
     try {
       if (isEditing && memberId) {
@@ -327,20 +369,20 @@ export default function AddMemberPage() {
       } else {
         const member = await api.createMember(memberPayload);
 
-        const amountPaid = parseFloat(form.amount_paid);
-        if (form.package_type_id && endDate && Number.isFinite(amountPaid) && amountPaid > 0) {
-          await api.createMemberSale({
-            gym_id: form.gym_id,
-            member_id: member.id,
-            package_type_id: form.package_type_id,
-            start_date: form.start_date,
-            end_date: endDate,
-            gross_amount: amountPaid,
-            payment_mode: form.payment_mode,
-            coupon_id: form.coupon_id || null,
-            description: `Package: ${selectedPkg!.name}`,
-          });
-        }
+         const amountPaid = parseFloat(values.amount_paid);
+         if (values.package_type_id && endDate && Number.isFinite(amountPaid) && amountPaid > 0) {
+           await api.createMemberSale({
+             gym_id: values.gym_id,
+             member_id: member.id,
+             package_type_id: values.package_type_id,
+             start_date: values.start_date,
+             end_date: endDate,
+             gross_amount: amountPaid,
+             payment_mode: values.payment_mode,
+             coupon_id: values.coupon_id || null,
+             description: `Package: ${selectedPkg!.name}`,
+           });
+         }
 
         toast.success("Member added successfully!");
       }
@@ -356,7 +398,7 @@ export default function AddMemberPage() {
   if (pageLoading) {
     return (
       <AppLayout title={isEditing ? "Edit Member" : "Add Member"}>
-        <div className="flex min-h-[320px] items-center justify-center text-muted-foreground">Loading member...</div>
+        <div className="flex min-h-[320px] items-center justify-center"><LoadingSpinner /></div>
       </AppLayout>
     );
   }
@@ -371,7 +413,7 @@ export default function AddMemberPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={methods.handleSubmit(handleSubmit)} className="space-y-6">
           <div className="rounded-xl border bg-card p-6 space-y-4">
             <h2 className="font-semibold text-base border-b pb-3">Personal Information</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -384,15 +426,18 @@ export default function AddMemberPage() {
                       {gyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {errors.gym_id ? <p className="text-sm font-medium text-destructive">{errors.gym_id.message}</p> : null}
                 </div>
               )}
               <div className="space-y-1.5">
                 <Label>Full Name *</Label>
-                <Input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Member name" required />
+                <Input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Member name" />
+                {errors.name ? <p className="text-sm font-medium text-destructive">{errors.name.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <Label>Phone *</Label>
-                <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+91 9876543210" required />
+                <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+91 9876543210" />
+                {errors.phone ? <p className="text-sm font-medium text-destructive">{errors.phone.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <Label>Attendance / Device Code</Label>
@@ -401,6 +446,7 @@ export default function AddMemberPage() {
               <div className="space-y-1.5">
                 <Label>Email</Label>
                 <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="member@email.com" />
+                {errors.email ? <p className="text-sm font-medium text-destructive">{errors.email.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <Label>Gender</Label>
@@ -416,6 +462,7 @@ export default function AddMemberPage() {
               <div className="space-y-1.5">
                 <Label>Date of Birth</Label>
                 <DatePicker value={form.date_of_birth} onChange={(value) => set("date_of_birth", value)} placeholder="Select date of birth" maxDate={today} />
+                {errors.date_of_birth ? <p className="text-sm font-medium text-destructive">{errors.date_of_birth.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <Label>Shift</Label>

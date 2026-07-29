@@ -18,28 +18,23 @@ export default function CreateStaffPage() {
     }));
   }, [gyms, selectedGymId]);
 
-  const handleSave = async () => {
-    if (!form.full_name || !form.email || !form.gym_id || !form.password || !form.role.trim()) {
-      toast.error("Name, email, role, gym, and password are required");
-      return;
-    }
-
+  const handleSave = async (values: StaffFormValue) => {
     setSaving(true);
     try {
       await api.createStaff({
-        gym_id: form.gym_id,
-        full_name: form.full_name,
-        email: form.email,
-        password: form.password,
-        phone: form.phone || null,
-        role: form.role.trim(),
-        specializations: form.specializations || null,
-        external_user_code: form.external_user_code || null,
-        compensation_type: form.compensation_type,
-        base_salary: Number(form.base_salary || 0),
-        per_session_rate: Number(form.per_session_rate || 0),
-        commission_percent: Number(form.commission_percent || 0),
-        section_permissions: Array.from(form.permissions),
+        gym_id: values.gym_id,
+        full_name: values.full_name,
+        email: values.email,
+        password: values.password,
+        phone: values.phone || null,
+        role: values.role.trim(),
+        specializations: values.specializations || null,
+        external_user_code: values.external_user_code || null,
+        compensation_type: values.compensation_type,
+        base_salary: Number(values.base_salary || 0),
+        per_session_rate: Number(values.per_session_rate || 0),
+        commission_percent: Number(values.commission_percent || 0),
+        section_permissions: values.permissions,
       });
       toast.success("Staff member created");
       setForm(createEmptyStaffForm(selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || ""));
@@ -59,7 +54,7 @@ export default function CreateStaffPage() {
         </div>
 
         <div className="rounded-xl border bg-card p-6">
-          <StaffForm gyms={gyms} value={form} onChange={setForm} onSubmit={handleSave} saving={saving} submitLabel="Create Staff Member" />
+          <StaffForm gyms={gyms} value={form} onSubmit={handleSave} saving={saving} submitLabel="Create Staff Member" />
         </div>
       </div>
     </AppLayout>
