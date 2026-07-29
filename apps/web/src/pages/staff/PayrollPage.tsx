@@ -10,14 +10,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { isDateAfter, todayDateValue } from "@/lib/date";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const EMPTY_RUN = {
   gym_id: "",
   title: "",
-  period_start: new Date().toISOString().slice(0, 10),
-  period_end: new Date().toISOString().slice(0, 10),
+  period_start: todayDateValue(),
+  period_end: todayDateValue(),
   notes: "",
 };
 
@@ -71,6 +72,10 @@ export default function PayrollPage() {
   const handleCreateRun = async () => {
     if (!runForm.gym_id || !runForm.title || !runForm.period_start || !runForm.period_end) {
       toast.error("Gym, title, start date, and end date are required");
+      return;
+    }
+    if (isDateAfter(runForm.period_start, runForm.period_end)) {
+      toast.error("End date must be on or after the start date");
       return;
     }
 
@@ -202,8 +207,8 @@ export default function PayrollPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5"><Label>Title</Label><Input value={runForm.title} onChange={(e) => setRunForm((current) => ({ ...current, title: e.target.value }))} placeholder="July 2026 payroll" /></div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5"><Label>Start Date</Label><Input type="date" value={runForm.period_start} onChange={(e) => setRunForm((current) => ({ ...current, period_start: e.target.value }))} /></div>
-              <div className="space-y-1.5"><Label>End Date</Label><Input type="date" value={runForm.period_end} onChange={(e) => setRunForm((current) => ({ ...current, period_end: e.target.value }))} /></div>
+              <div className="space-y-1.5"><Label>Start Date</Label><Input type="date" max={runForm.period_end || undefined} value={runForm.period_start} onChange={(e) => setRunForm((current) => ({ ...current, period_start: e.target.value }))} /></div>
+              <div className="space-y-1.5"><Label>End Date</Label><Input type="date" min={runForm.period_start || undefined} value={runForm.period_end} onChange={(e) => setRunForm((current) => ({ ...current, period_end: e.target.value }))} /></div>
             </div>
             <div className="space-y-1.5"><Label>Notes</Label><Textarea value={runForm.notes} onChange={(e) => setRunForm((current) => ({ ...current, notes: e.target.value }))} /></div>
           </div>

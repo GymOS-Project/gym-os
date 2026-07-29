@@ -9,6 +9,7 @@ import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-di
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { isDateAfter, todayDateValue } from "@/lib/date";
 import { Search, Plus, Trash2, Phone, UserX, UserCheck, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,6 +24,7 @@ interface MemberWithPackage extends Member {
 }
 
 export default function MemberListPage() {
+  const today = todayDateValue();
   const { admin, gyms, selectedGymId } = useAuth();
   const navigate = useNavigate();
   const [members, setMembers] = useState<MemberWithPackage[]>([]);
@@ -157,6 +159,10 @@ export default function MemberListPage() {
     if (!editMemberId) return;
     if (!editForm.name || !editForm.phone) {
       toast.error("Name and phone are required");
+      return;
+    }
+    if (editForm.date_of_birth && isDateAfter(editForm.date_of_birth, today)) {
+      toast.error("Date of birth cannot be in the future");
       return;
     }
 
@@ -337,9 +343,9 @@ export default function MemberListPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Date of Birth</Label>
-                  <DatePicker value={editForm.date_of_birth} onChange={(value) => setEdit("date_of_birth", value)} placeholder="Select date of birth" />
-                </div>
+                   <Label>Date of Birth</Label>
+                   <DatePicker value={editForm.date_of_birth} onChange={(value) => setEdit("date_of_birth", value)} placeholder="Select date of birth" maxDate={today} />
+                 </div>
                 <div className="space-y-1.5">
                   <Label>Shift</Label>
                   <Select value={editForm.shift} onValueChange={(value) => setEdit("shift", value)}>

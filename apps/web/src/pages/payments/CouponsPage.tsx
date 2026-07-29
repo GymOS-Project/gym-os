@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { isDateAfter } from "@/lib/date";
 import { BadgePercent, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -115,6 +116,10 @@ export default function CouponsPage() {
   const handleSave = async () => {
     if (!form.code || !form.name || !form.discount_value) {
       toast.error("Code, name, and discount value are required");
+      return;
+    }
+    if (form.starts_at && form.ends_at && isDateAfter(form.starts_at, form.ends_at)) {
+      toast.error("End date must be on or after the start date");
       return;
     }
 
@@ -277,11 +282,11 @@ export default function CouponsPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Start Date</Label>
-                <DatePicker value={form.starts_at} onChange={(value) => setForm((current) => ({ ...current, starts_at: value }))} placeholder="Select start date" />
+                <DatePicker value={form.starts_at} onChange={(value) => setForm((current) => ({ ...current, starts_at: value }))} placeholder="Select start date" maxDate={form.ends_at || undefined} />
               </div>
               <div className="space-y-1.5">
                 <Label>End Date</Label>
-                <DatePicker value={form.ends_at} onChange={(value) => setForm((current) => ({ ...current, ends_at: value }))} placeholder="Select end date" />
+                <DatePicker value={form.ends_at} onChange={(value) => setForm((current) => ({ ...current, ends_at: value }))} placeholder="Select end date" minDate={form.starts_at || undefined} />
               </div>
               <div className="flex items-center justify-between rounded-lg border px-4 py-3 sm:col-span-2">
                 <div>

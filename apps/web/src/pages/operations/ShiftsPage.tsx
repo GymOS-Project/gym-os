@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { isDateBefore, todayDateValue } from "@/lib/date";
 import { Clock3, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,6 +38,7 @@ const EMPTY_FORM: ShiftForm = {
 };
 
 export default function ShiftsPage() {
+  const today = todayDateValue();
   const { gyms, selectedGymId } = useAuth();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +98,14 @@ export default function ShiftsPage() {
 
     if (form.shift_type === "one_time" && !form.event_date) {
       toast.error("Event date is required for one-time shifts");
+      return;
+    }
+    if (form.shift_type === "one_time" && isDateBefore(form.event_date, today)) {
+      toast.error("Event date cannot be in the past");
+      return;
+    }
+    if (form.start_time && form.end_time && form.end_time <= form.start_time) {
+      toast.error("End time must be after start time");
       return;
     }
 
@@ -231,7 +241,7 @@ export default function ShiftsPage() {
             {form.shift_type === "one_time" && (
               <div className="space-y-1.5">
                 <Label>Event Date</Label>
-                <DatePicker value={form.event_date} onChange={(value) => setForm((current) => ({ ...current, event_date: value }))} placeholder="Select event date" />
+                <DatePicker value={form.event_date} onChange={(value) => setForm((current) => ({ ...current, event_date: value }))} placeholder="Select event date" minDate={today} />
               </div>
             )}
             <div className="grid gap-4 sm:grid-cols-2">
