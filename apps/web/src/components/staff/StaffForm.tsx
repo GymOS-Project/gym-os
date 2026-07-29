@@ -9,42 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { STAFF_PERMISSION_OPTIONS } from "@/utils/constants";
-type StaffPermission = (typeof STAFF_PERMISSION_OPTIONS)[number];
-
-
-type CompensationType = "fixed" | "per_session" | "commission";
-
-export interface StaffFormValue {
-  gym_id: string;
-  full_name: string;
-  email: string;
-  password: string;
-  phone: string;
-  role: string;
-  specializations: string;
-  external_user_code: string;
-  compensation_type: CompensationType;
-  base_salary: string;
-  per_session_rate: string;
-  commission_percent: string;
-  is_active: boolean;
-  permissions: StaffPermission[];
-}
-
-interface Gym {
-  id: string;
-  gym_name: string;
-}
-
-interface Props {
-  gyms: Gym[];
-  value: StaffFormValue;
-  onSubmit: (val: StaffFormValue) => Promise<void> | void;
-  onCancel?: () => void;
-  saving?: boolean;
-  editing?: boolean;
-  submitLabel?: string;
-}
 
 function optionalNumberString(label: string) {
   return z
@@ -108,7 +72,7 @@ export function StaffForm({
   saving,
   editing,
   submitLabel,
-}: Props) {
+}: StaffFormProps) {
   const schema = useMemo(() => createSchema(editing), [editing]);
   const methods = useForm<StaffFormValue>({
     resolver: zodResolver(schema),

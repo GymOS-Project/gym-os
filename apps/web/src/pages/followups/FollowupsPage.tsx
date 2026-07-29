@@ -11,17 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { isDateAfter, isDateBefore, todayDateValue } from "@/lib/date";
+import { NO_MEMBER_OPTION } from "@/utils/constants";
 import { Plus, CreditCard as Edit, Check, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-const NO_MEMBER = "__none__";
-
-interface FollowupsPageProps {
-  type: "general" | "payment_due" | "renewal";
-  title: string;
-  description: string;
-}
 
 export default function FollowupsPage({ type, title, description }: FollowupsPageProps) {
   const today = todayDateValue();
@@ -32,7 +25,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editFu, setEditFu] = useState<Followup | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER, followup_date: todayDateValue(), next_followup_date: "", notes: "", status: "pending" });
+  const [form, setForm] = useState({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER_OPTION, followup_date: todayDateValue(), next_followup_date: "", notes: "", status: "pending" });
 
   useEffect(() => { if (admin) { fetchFollowups(); fetchMembers(); } }, [admin, selectedGymId, type]);
 
@@ -57,8 +50,8 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
     catch {}
   };
 
-  const openAdd = () => { setEditFu(null); setForm({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER, followup_date: todayDateValue(), next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
-  const openEdit = (fu: Followup) => { setEditFu(fu); setForm({ gym_id: fu.gym_id, member_id: fu.member_id || NO_MEMBER, followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || "", notes: fu.notes || "", status: fu.status }); setDialogOpen(true); };
+  const openAdd = () => { setEditFu(null); setForm({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER_OPTION, followup_date: todayDateValue(), next_followup_date: "", notes: "", status: "pending" }); setDialogOpen(true); };
+  const openEdit = (fu: Followup) => { setEditFu(fu); setForm({ gym_id: fu.gym_id, member_id: fu.member_id || NO_MEMBER_OPTION, followup_date: fu.followup_date, next_followup_date: fu.next_followup_date || "", notes: fu.notes || "", status: fu.status }); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!admin) return;
@@ -71,7 +64,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
       return;
     }
     setSaving(true);
-    const payload = { gym_id: form.gym_id, type, member_id: form.member_id !== NO_MEMBER ? form.member_id : undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
+    const payload = { gym_id: form.gym_id, type, member_id: form.member_id !== NO_MEMBER_OPTION ? form.member_id : undefined, followup_date: form.followup_date, next_followup_date: form.next_followup_date || undefined, notes: form.notes || undefined, status: form.status as any };
     try {
       if (editFu) await api.updateFollowup(editFu.id, payload);
       else await api.createFollowup(payload);
@@ -166,7 +159,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Gym</Label>
-                <Select value={form.gym_id} onValueChange={(v) => setForm((p) => ({ ...p, gym_id: v, member_id: NO_MEMBER }))}>
+                <Select value={form.gym_id} onValueChange={(v) => setForm((p) => ({ ...p, gym_id: v, member_id: NO_MEMBER_OPTION }))}>
                   <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
                   <SelectContent>
                     {gyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
@@ -178,7 +171,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
                 <Select value={form.member_id} onValueChange={(v) => setForm((p) => ({ ...p, member_id: v }))}>
                     <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_MEMBER}>None</SelectItem>
+                    <SelectItem value={NO_MEMBER_OPTION}>None</SelectItem>
                     {members.filter((m) => !form.gym_id || m.gym_id === form.gym_id).map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.phone}</SelectItem>)}
                   </SelectContent>
                 </Select>

@@ -10,14 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LayoutDashboard, Users, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X, BadgePercent, CalendarDays, CalendarClock, Fingerprint, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface NavItem {
-  label: string;
-  href?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  exact?: boolean;
-  children?: NavItem[];
-}
-
 function getNavItems(role: string | null, hasSectionAccess: (section: string) => boolean): NavItem[] {
   const items: NavItem[] = [{ label: 'Dashboard', href: '/', icon: LayoutDashboard }];
 
@@ -215,11 +207,6 @@ function NavItemComponent({
       )}
     </div>
   );
-}
-
-interface AppLayoutProps {
-  children: React.ReactNode;
-  title?: string;
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {

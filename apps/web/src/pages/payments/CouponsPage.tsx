@@ -15,42 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { isDateAfter } from "@/lib/date";
+import { EMPTY_COUPON_FORM } from "@/utils/constants";
 import { BadgePercent, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-
-type CouponForm = {
-  gym_id: string;
-  applies_to_all_gyms: boolean;
-  code: string;
-  name: string;
-  description: string;
-  discount_type: "percentage" | "flat";
-  discount_value: string;
-  max_discount_amount: string;
-  min_purchase_amount: string;
-  usage_limit: string;
-  usage_limit_per_member: string;
-  starts_at: string;
-  ends_at: string;
-  is_active: boolean;
-};
-
-const EMPTY_FORM: CouponForm = {
-  gym_id: "",
-  applies_to_all_gyms: false,
-  code: "",
-  name: "",
-  description: "",
-  discount_type: "percentage",
-  discount_value: "",
-  max_discount_amount: "",
-  min_purchase_amount: "",
-  usage_limit: "",
-  usage_limit_per_member: "",
-  starts_at: "",
-  ends_at: "",
-  is_active: true,
-};
 
 export default function CouponsPage() {
   const { gyms, selectedGymId } = useAuth();
@@ -61,7 +28,7 @@ export default function CouponsPage() {
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [form, setForm] = useState<CouponForm>(EMPTY_FORM);
+  const [form, setForm] = useState<CouponForm>(EMPTY_COUPON_FORM);
 
   const fetchCoupons = async () => {
     setLoading(true);
@@ -89,7 +56,7 @@ export default function CouponsPage() {
 
   const openCreate = () => {
     setEditingCoupon(null);
-    setForm({ ...EMPTY_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
+    setForm({ ...EMPTY_COUPON_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
     setDialogOpen(true);
   };
 

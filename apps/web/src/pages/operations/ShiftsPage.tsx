@@ -14,28 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { isDateBefore, todayDateValue } from "@/lib/date";
+import { EMPTY_SHIFT_FORM } from "@/utils/constants";
 import { Clock3, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-
-type ShiftForm = {
-  gym_id: string;
-  name: string;
-  shift_type: "recurring" | "one_time";
-  description: string;
-  event_date: string;
-  start_time: string;
-  end_time: string;
-};
-
-const EMPTY_FORM: ShiftForm = {
-  gym_id: "",
-  name: "",
-  shift_type: "recurring",
-  description: "",
-  event_date: "",
-  start_time: "",
-  end_time: "",
-};
 
 export default function ShiftsPage() {
   const today = todayDateValue();
@@ -46,7 +27,7 @@ export default function ShiftsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
-  const [form, setForm] = useState<ShiftForm>(EMPTY_FORM);
+  const [form, setForm] = useState<ShiftForm>(EMPTY_SHIFT_FORM);
 
   useEffect(() => {
     setForm((current) => ({
@@ -72,7 +53,7 @@ export default function ShiftsPage() {
 
   const openCreate = () => {
     setEditingShift(null);
-    setForm({ ...EMPTY_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
+    setForm({ ...EMPTY_SHIFT_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
     setDialogOpen(true);
   };
 

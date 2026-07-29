@@ -7,19 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-interface DatePickerProps {
-  id?: string;
-  value?: string | null;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  className?: string;
-  buttonClassName?: string;
-  allowClear?: boolean;
-  minDate?: string;
-  maxDate?: string;
-}
-
 function getSelectedDate(value?: string | null) {
   if (!value) {
     return undefined;

@@ -9,17 +9,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type DeleteConfirmationDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  description: string;
-  onConfirm: () => void;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  confirmDisabled?: boolean;
-};
-
 export function DeleteConfirmationDialog({
   open,
   onOpenChange,

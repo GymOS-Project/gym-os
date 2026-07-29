@@ -16,49 +16,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { EMPTY_BRANCH_FORM, EMPTY_PAYMENT_FORM, MAX_GYM_PHOTOS, MAX_IMAGE_SIZE_BYTES } from "@/utils/constants";
 import { CreditCard, GitBranch, Globe, ImagePlus, ImageUp, Lock, Plus, Settings, X } from "lucide-react";
 import { toast } from "sonner";
-
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
-const MAX_GYM_PHOTOS = 10;
-
-type BranchForm = {
-  gym_name: string;
-  business_registration_name: string;
-  gym_email: string;
-  website: string;
-  instagram_page: string;
-  address: string;
-  owner_name: string;
-  phone: string;
-  owner_email: string;
-};
-
-type PaymentForm = {
-  card_name: string;
-  card_number: string;
-  expiry: string;
-  cvv: string;
-};
-
-const EMPTY_BRANCH_FORM: BranchForm = {
-  gym_name: "",
-  business_registration_name: "",
-  gym_email: "",
-  website: "",
-  instagram_page: "",
-  address: "",
-  owner_name: "",
-  phone: "",
-  owner_email: "",
-};
-
-const EMPTY_PAYMENT_FORM: PaymentForm = {
-  card_name: "",
-  card_number: "",
-  expiry: "",
-  cvv: "",
-};
 
 export default function SettingsPage() {
   const { admin, role, selectedGym, selectedGymId, refreshAdmin } = useAuth();
@@ -151,7 +111,7 @@ export default function SettingsPage() {
       return;
     }
 
-    if (files.some((file) => file.size > MAX_IMAGE_SIZE)) {
+    if (files.some((file) => file.size > MAX_IMAGE_SIZE_BYTES)) {
       toast.error("Each gym image must be smaller than 10 MB");
       return;
     }

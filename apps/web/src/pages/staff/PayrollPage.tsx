@@ -11,16 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { isDateAfter, todayDateValue } from "@/lib/date";
+import { EMPTY_PAYROLL_RUN_FORM } from "@/utils/constants";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-
-const EMPTY_RUN = {
-  gym_id: "",
-  title: "",
-  period_start: todayDateValue(),
-  period_end: todayDateValue(),
-  notes: "",
-};
 
 export default function PayrollPage() {
   const { gyms, selectedGymId } = useAuth();
@@ -28,7 +21,7 @@ export default function PayrollPage() {
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
   const [staff, setStaff] = useState<StaffAccount[]>([]);
   const [selectedRun, setSelectedRun] = useState<PayrollRun | null>(null);
-  const [runForm, setRunForm] = useState({ ...EMPTY_RUN });
+  const [runForm, setRunForm] = useState({ ...EMPTY_PAYROLL_RUN_FORM });
   const [entryForm, setEntryForm] = useState<PayrollEntry | null>(null);
   const [runDialogOpen, setRunDialogOpen] = useState(false);
   const [entryDialogOpen, setEntryDialogOpen] = useState(false);
@@ -65,7 +58,7 @@ export default function PayrollPage() {
   const staffMap = useMemo(() => new Map(staff.map((item) => [item.id, item])), [staff]);
 
   const openRunDialog = () => {
-    setRunForm({ ...EMPTY_RUN, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
+    setRunForm({ ...EMPTY_PAYROLL_RUN_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
     setRunDialogOpen(true);
   };
 

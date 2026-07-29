@@ -7,30 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { MAX_IMAGE_SIZE_BYTES, MAX_SIGNUP_PHOTOS as MAX_PHOTOS, SIGNUP_STEPS as STEPS } from '@/utils/constants';
 import { Check, Eye, EyeOff, Building2, User, Lock, Upload, X, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
-const STEPS = [
-  { id: 1, title: 'Gym Profile', description: 'Add each gym or branch profile', icon: Building2 },
-  { id: 2, title: 'Owner & Contact', description: 'Capture branch contact details', icon: User },
-  { id: 3, title: 'Account & Media', description: 'Set your admin login and optional photos', icon: Lock },
-];
-
-const MAX_PHOTO_SIZE = 10 * 1024 * 1024;
-const MAX_PHOTOS = 10;
-
-type GymForm = {
-  gym_name: string;
-  business_registration_name: string;
-  gym_email: string;
-  website: string;
-  instagram_page: string;
-  address: string;
-  owner_name: string;
-  phone: string;
-  owner_email: string;
-};
 
 function createGymForm(): GymForm {
   return {
@@ -147,9 +127,9 @@ export default function SignupPage() {
     if (!activeGyms.every((gym, index) => validateGymProfile(gym, index) && validateOwnerContact(gym, index))) { return false; }
     if (password.length < 6) { toast.error('Password must be at least 6 characters'); return false; }
     if (password !== confirmPassword) { toast.error('Passwords do not match'); return false; }
-    if (gymPhotos.length > MAX_PHOTOS) { toast.error(`You can upload a maximum of ${MAX_PHOTOS} gym photographs`); return false; }
+    if (gymPhotos.length > MAX_SIGNUP_PHOTOS) { toast.error(`You can upload a maximum of ${MAX_SIGNUP_PHOTOS} gym photographs`); return false; }
     for (const photo of gymPhotos) {
-      if (photo.size > MAX_PHOTO_SIZE) { toast.error(`"${photo.name}" exceeds 10 MB limit`); return false; }
+      if (photo.size > MAX_IMAGE_SIZE_BYTES) { toast.error(`"${photo.name}" exceeds 10 MB limit`); return false; }
     }
     return true;
   };
@@ -195,17 +175,17 @@ export default function SignupPage() {
     const files = Array.from(e.target.files || []);
     const totalPhotos = gymPhotos.length + files.length;
 
-    if (totalPhotos > MAX_PHOTOS) {
-      toast.error(`You can only upload up to ${MAX_PHOTOS} photos. You already have ${gymPhotos.length}.`);
+    if (totalPhotos > MAX_SIGNUP_PHOTOS) {
+      toast.error(`You can only upload up to ${MAX_SIGNUP_PHOTOS} photos. You already have ${gymPhotos.length}.`);
       return;
     }
 
-    const oversized = files.filter((file) => file.size > MAX_PHOTO_SIZE);
+    const oversized = files.filter((file) => file.size > MAX_IMAGE_SIZE_BYTES);
     if (oversized.length > 0) {
       toast.error(`${oversized.length} file(s) exceed 10 MB limit and were skipped.`);
     }
 
-    setGymPhotos((current) => [...current, ...files.filter((file) => file.size <= MAX_PHOTO_SIZE)]);
+    setGymPhotos((current) => [...current, ...files.filter((file) => file.size <= MAX_IMAGE_SIZE_BYTES)]);
   };
 
   const removePhoto = (index: number) => {

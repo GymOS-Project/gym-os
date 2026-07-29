@@ -10,27 +10,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { EMPTY_INTEGRATION_FORM } from "@/utils/constants";
 import { Fingerprint, Plus } from "lucide-react";
 import { toast } from "sonner";
-
-const EMPTY_FORM = {
-  gym_id: "",
-  device_name: "",
-  serial_number: "",
-  integration_mode: "adms",
-  ip_address: "",
-  port: "4370",
-  server_address: "",
-  server_port: "80",
-  status: "inactive",
-  notes: "",
-};
 
 export default function IntegrationsPage() {
   const { gyms, selectedGymId } = useAuth();
   const [devices, setDevices] = useState<EsslDevice[]>([]);
   const [logs, setLogs] = useState<EsslRawPunchLog[]>([]);
-  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [form, setForm] = useState({ ...EMPTY_INTEGRATION_FORM });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<EsslDevice | null>(null);
 
@@ -57,7 +45,7 @@ export default function IntegrationsPage() {
 
   const openCreate = () => {
     setEditingDevice(null);
-    setForm({ ...EMPTY_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
+    setForm({ ...EMPTY_INTEGRATION_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
     setDialogOpen(true);
   };
 

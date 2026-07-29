@@ -2,31 +2,9 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { api } from "@/lib/api";
 import { getStoredGymFilter, setStoredGymFilter } from "@/lib/gymFilter";
 
-interface AuthUser {
-  id: string;
-  email: string;
-}
-
-interface AuthContextType {
-  user: AuthUser | null;
-  admin: Admin | null;
-  staff: StaffAccount | null;
-  role: SessionRole | null;
-  gyms: Gym[];
-  selectedGymId: string;
-  selectedGym: Gym | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (data: FormData) => Promise<{ error: Error | null; authenticated: boolean }>;
-  signOut: () => Promise<void>;
-  refreshAdmin: () => Promise<void>;
-  setSelectedGymId: (gymId: string) => void;
-  hasSectionAccess: (section: string) => boolean;
-}
-
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [staff, setStaff] = useState<StaffAccount | null>(null);

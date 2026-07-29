@@ -13,19 +13,6 @@ import { cn } from "@/lib/utils";
 
 import { PlanContentPreview } from "./PlanContentPreview";
 
-type Props = {
-  value: PlanEditorValue;
-  onChange: (value: PlanEditorValue) => void;
-  className?: string;
-};
-
-type ToolbarButtonProps = {
-  active?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  children: ReactNode;
-};
-
 function ToolbarButton({ active, disabled, onClick, children }: ToolbarButtonProps) {
   return (
     <Button type="button" size="sm" variant={active ? "default" : "outline"} disabled={disabled} onClick={onClick} className="h-8 px-2">
@@ -34,7 +21,7 @@ function ToolbarButton({ active, disabled, onClick, children }: ToolbarButtonPro
   );
 }
 
-export function PlanContentEditor({ value, onChange, className }: Props) {
+export function PlanContentEditor({ value, onChange, className }: PlanContentEditorProps) {
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
 

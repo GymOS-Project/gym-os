@@ -4,12 +4,11 @@ import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { REPORT_SHIFTS } from "@/utils/constants";
 import { Clock } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-const SHIFTS = ["morning", "afternoon", "evening"];
 
 export default function ShiftReportPage() {
   const { admin, selectedGymId } = useAuth();

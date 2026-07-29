@@ -3,19 +3,7 @@ import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Props = {
-  value: {
-    content_type?: "rich_text" | "pdf" | null;
-    content?: string | null;
-    pdf_url?: string | null;
-    pdf_file_name?: string | null;
-  };
-  pdfPreviewUrl?: string | null;
-  className?: string;
-  emptyMessage?: string;
-};
-
-export function PlanContentPreview({ value, pdfPreviewUrl, className, emptyMessage = "No preview available yet." }: Props) {
+export function PlanContentPreview({ value, pdfPreviewUrl, className, emptyMessage = "No preview available yet." }: PlanContentPreviewProps) {
   const contentType = value.content_type === "pdf" ? "pdf" : "rich_text";
   const pdfUrl = pdfPreviewUrl || value.pdf_url || null;
   const sanitizedHtml = contentType === "rich_text" && value.content

@@ -12,20 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { isDateBefore, todayDateValue } from "@/lib/date";
+import { EMPTY_CLASS_SESSION_FORM } from "@/utils/constants";
 import { CalendarDays, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
-
-const EMPTY_FORM = {
-  gym_id: "",
-  name: "",
-  description: "",
-  trainer_staff_id: "",
-  capacity: "20",
-  session_date: "",
-  start_time: "",
-  end_time: "",
-  recurrence_label: "",
-};
 
 export default function ClassSchedulePage() {
   const today = todayDateValue();
@@ -34,7 +23,7 @@ export default function ClassSchedulePage() {
   const [staff, setStaff] = useState<StaffAccount[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; phone: string; gym_id: string }[]>([]);
   const [bookings, setBookings] = useState<ClassBooking[]>([]);
-  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [form, setForm] = useState({ ...EMPTY_CLASS_SESSION_FORM });
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -73,7 +62,7 @@ export default function ClassSchedulePage() {
 
   const openCreate = () => {
     setEditingSession(null);
-    setForm({ ...EMPTY_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
+    setForm({ ...EMPTY_CLASS_SESSION_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
     setDialogOpen(true);
   };
 

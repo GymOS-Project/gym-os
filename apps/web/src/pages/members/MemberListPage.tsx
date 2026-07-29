@@ -11,18 +11,13 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isDateAfter, todayDateValue } from "@/lib/date";
+import { NO_REFERENCE_MEMBER_OPTION } from "@/utils/constants";
 import { Search, Plus, Trash2, Phone, UserX, UserCheck, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-
-const NO_REFERENCE_MEMBER = "__none__";
-
-interface MemberWithPackage extends Member {
-  member_packages?: { status: string; end_date: string; package_name: string }[];
-}
 
 export default function MemberListPage() {
   const today = todayDateValue();
@@ -54,7 +49,7 @@ export default function MemberListPage() {
     gym_id: "",
     shift: "",
     notes: "",
-    reference_member_id: NO_REFERENCE_MEMBER,
+    reference_member_id: NO_REFERENCE_MEMBER_OPTION,
   });
 
   useEffect(() => {
@@ -145,7 +140,7 @@ export default function MemberListPage() {
         gym_id: member.gym_id || "",
         shift: member.shift || "",
         notes: member.notes || "",
-        reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER,
+        reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER_OPTION,
       });
     } catch (err: any) {
       toast.error(err.message || "Failed to load member");
@@ -187,7 +182,7 @@ export default function MemberListPage() {
         shift: editForm.shift || null,
         notes: editForm.notes || null,
         reference_member_id:
-          editForm.reference_member_id && editForm.reference_member_id !== NO_REFERENCE_MEMBER
+          editForm.reference_member_id && editForm.reference_member_id !== NO_REFERENCE_MEMBER_OPTION
             ? editForm.reference_member_id
             : null,
       });
@@ -388,7 +383,7 @@ export default function MemberListPage() {
                   <Select value={editForm.reference_member_id} onValueChange={(value) => setEdit("reference_member_id", value)}>
                     <SelectTrigger><SelectValue placeholder="Select reference" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NO_REFERENCE_MEMBER}>None</SelectItem>
+                      <SelectItem value={NO_REFERENCE_MEMBER_OPTION}>None</SelectItem>
                       {referenceMembers
                         .filter((member) => !editForm.gym_id || member.gym_id === editForm.gym_id)
                         .filter((member) => member.id !== editMemberId)
