@@ -14,11 +14,11 @@ import { Eye, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 export default function SharedPlanListPage({ planType }: SharedPlanPageProps) {
   const navigate = useNavigate();
-  const [plans, setPlans] = useState<PlanRecord[]>([]);
+  const [plans, setPlans] = useState<SharedPlanRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [previewPlan, setPreviewPlan] = useState<PlanRecord | null>(null);
+  const [previewPlan, setPreviewPlan] = useState<SharedPlanRecord | null>(null);
   const content = SHARED_PLAN_CONTENT_CONFIG[planType];
 
   const fetchPlans = async () => {
@@ -53,7 +53,7 @@ export default function SharedPlanListPage({ planType }: SharedPlanPageProps) {
     }
   };
 
-  const toggleActive = async (plan: PlanRecord) => {
+  const toggleActive = async (plan: SharedPlanRecord) => {
     setSavingId(plan.id);
     try {
       if (planType === 'diet') {

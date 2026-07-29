@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { MAX_IMAGE_SIZE_BYTES, MAX_SIGNUP_PHOTOS as MAX_PHOTOS, SIGNUP_STEPS as STEPS } from '@/utils/constants';
+import { MAX_IMAGE_SIZE_BYTES, MAX_SIGNUP_PHOTOS as MAX_PHOTOS, MAX_SIGNUP_PHOTOS, SIGNUP_STEPS as STEPS } from '@/utils/constants';
 import { Check, Eye, EyeOff, Building2, User, Lock, Upload, X, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';

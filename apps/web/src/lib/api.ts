@@ -101,10 +101,10 @@ export const api = {
     request<{ message: string }>("/auth/password", { method: "POST", body: JSON.stringify({ current_password, new_password }) }),
   updateAdmin: (data: FormData) =>
     request<Admin>("/auth/admin", { method: "PUT", body: data }),
-  upgradeToBranch: (data: Record<string, unknown>) =>
+  upgradeToBranch: (data: BranchForm) =>
     request<Admin>("/auth/admin/upgrade-to-branch", { method: "POST", body: JSON.stringify(data) }),
   getGyms: () => request<Gym[]>("/branches"),
-  createBranch: (data: Record<string, unknown>) =>
+  createBranch: (data: BranchForm) =>
     request<Gym>("/branches", { method: "POST", body: JSON.stringify(data) }),
 
   // Members

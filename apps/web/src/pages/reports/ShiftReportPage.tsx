@@ -27,7 +27,7 @@ export default function ShiftReportPage() {
   };
 
   const filtered = members.filter((m) => shiftFilter === "all" || m.shift === shiftFilter);
-  const shiftCounts = SHIFTS.map((s) => ({ shift: s, count: members.filter((m) => m.shift === s).length }));
+  const shiftCounts = REPORT_SHIFTS.map((s) => ({ shift: s, count: members.filter((m) => m.shift === s).length }));
 
   return (
     <AppLayout title="Report by Shift">
@@ -52,7 +52,7 @@ export default function ShiftReportPage() {
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Filter shift" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Shifts</SelectItem>
-            {SHIFTS.map((s) => <SelectItem key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
+            {REPORT_SHIFTS.map((s) => <SelectItem key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
           </SelectContent>
         </Select>
         <div className="rounded-xl border bg-card overflow-hidden">
