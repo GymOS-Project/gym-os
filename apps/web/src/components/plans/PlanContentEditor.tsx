@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
 import { Bold, Code2, Eye, EyeOff, Heading1, Heading2, Heading3, Italic, List, ListOrdered, Pilcrow, Quote, Redo2, Strikethrough, Underline as UnderlineIcon, Undo2, Upload } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { PlanEditorValue } from "@/lib/planContent";
 import { cn } from "@/lib/utils";
 
 import { PlanContentPreview } from "./PlanContentPreview";
