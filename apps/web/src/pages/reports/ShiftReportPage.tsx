@@ -4,12 +4,11 @@ import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { REPORT_SHIFTS } from "@/utils/constants";
 import { Clock } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-const SHIFTS = ["morning", "afternoon", "evening"];
 
 export default function ShiftReportPage() {
   const { admin, selectedGymId } = useAuth();
@@ -28,7 +27,7 @@ export default function ShiftReportPage() {
   };
 
   const filtered = members.filter((m) => shiftFilter === "all" || m.shift === shiftFilter);
-  const shiftCounts = SHIFTS.map((s) => ({ shift: s, count: members.filter((m) => m.shift === s).length }));
+  const shiftCounts = REPORT_SHIFTS.map((s) => ({ shift: s, count: members.filter((m) => m.shift === s).length }));
 
   return (
     <AppLayout title="Report by Shift">
@@ -53,7 +52,7 @@ export default function ShiftReportPage() {
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Filter shift" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Shifts</SelectItem>
-            {SHIFTS.map((s) => <SelectItem key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
+            {REPORT_SHIFTS.map((s) => <SelectItem key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
           </SelectContent>
         </Select>
         <div className="rounded-xl border bg-card overflow-hidden">

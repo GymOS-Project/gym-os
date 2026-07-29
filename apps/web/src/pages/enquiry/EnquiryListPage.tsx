@@ -17,12 +17,6 @@ import { Search, Plus, Trash2, Phone, UserCheck, PhoneCall } from "lucide-react"
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-interface EnquiryListPageProps {
-  filterStatus?: string;
-  title: string;
-  description: string;
-}
-
 export default function EnquiryListPage({ filterStatus, title, description }: EnquiryListPageProps) {
   const today = todayDateValue();
   const { admin, selectedGymId } = useAuth();

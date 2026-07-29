@@ -1,13 +1,5 @@
 import { cn } from '@/lib/utils';
 
-type BrandLogoTone = 'auto' | 'dark' | 'light';
-
-interface BrandLogoProps {
-  alt?: string;
-  className?: string;
-  tone?: BrandLogoTone;
-}
-
 export function BrandLogo({ alt = 'GymOs', className, tone = 'auto' }: BrandLogoProps) {
   return (
     <span className={cn('inline-flex shrink-0 items-center justify-center', className)}>

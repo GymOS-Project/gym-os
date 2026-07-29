@@ -11,31 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { api } from '@/lib/api';
 import { buildPlanFormData, createPlanEditorValue, type PlanEditorValue } from '@/lib/planContent';
 import { useAuth } from '@/contexts/AuthContext';
+import { SHARED_PLAN_CONTENT_CONFIG } from '@/utils/constants';
 import { toast } from 'sonner';
-
-type PlanType = 'diet' | 'exercise';
-
-type Props = {
-  planType: PlanType;
-};
-
-const planContent = {
-  diet: {
-    title: 'Diet Plan',
-    basePath: '/diet-exercise/diet-plans',
-  },
-  exercise: {
-    title: 'Exercise Plan',
-    basePath: '/diet-exercise/exercise-plans',
-  },
-};
-
-export default function SharedPlanEditorPage({ planType }: Props) {
+export default function SharedPlanEditorPage({ planType }: SharedPlanPageProps) {
   const { gyms, selectedGymId } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
-  const content = planContent[planType];
+  const content = SHARED_PLAN_CONTENT_CONFIG[planType];
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [planContentValue, setPlanContentValue] = useState<PlanEditorValue>(createPlanEditorValue());

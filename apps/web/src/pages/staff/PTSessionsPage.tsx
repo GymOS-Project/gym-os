@@ -12,18 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { isDateTimeBefore, nowDateTimeLocalValue } from "@/lib/date";
+import { EMPTY_PT_SESSION_FORM } from "@/utils/constants";
 import { CalendarClock, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-
-const EMPTY_FORM = {
-  gym_id: "",
-  trainer_staff_id: "",
-  member_id: "",
-  scheduled_at: "",
-  duration_minutes: "60",
-  status: "scheduled",
-  notes: "",
-};
 
 export default function PTSessionsPage() {
   const now = nowDateTimeLocalValue();
@@ -31,7 +22,7 @@ export default function PTSessionsPage() {
   const [sessions, setSessions] = useState<PtSession[]>([]);
   const [staff, setStaff] = useState<StaffAccount[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; phone: string; gym_id: string }[]>([]);
-  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [form, setForm] = useState({ ...EMPTY_PT_SESSION_FORM });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<PtSession | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -67,7 +58,7 @@ export default function PTSessionsPage() {
 
   const openCreate = () => {
     setEditingSession(null);
-    setForm({ ...EMPTY_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
+    setForm({ ...EMPTY_PT_SESSION_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
     setDialogOpen(true);
   };
 

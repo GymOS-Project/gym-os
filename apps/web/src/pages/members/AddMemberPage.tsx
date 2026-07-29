@@ -17,13 +17,12 @@ import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { NO_REFERENCE_MEMBER_OPTION } from "@/utils/constants";
 import { Badge } from "@/components/ui/badge";
 import { buildPlanFormData, createPlanEditorValue, type PlanEditorValue } from "@/lib/planContent";
 import { isDateAfter, todayDateValue } from "@/lib/date";
 import { toast } from "sonner";
 import { addDays, addMonths, format } from "date-fns";
-
-const NO_REFERENCE_MEMBER = "__none__";
 
 const memberSchema = z.object({
   name: z.string().trim().min(1, "Full name is required"),
@@ -49,8 +48,6 @@ const memberSchema = z.object({
   amount_paid: z.string(),
   payment_mode: z.string(),
 });
-
-type MemberFormValues = z.infer<typeof memberSchema>;
 
 export default function AddMemberPage() {
   const today = todayDateValue();
@@ -95,7 +92,7 @@ export default function AddMemberPage() {
     planContent: createPlanEditorValue(),
   });
 
-  const methods = useForm<MemberFormValues>({
+  const methods = useForm<z.infer<typeof memberSchema>>({
     resolver: zodResolver(memberSchema),
     defaultValues: {
       name: "",
@@ -114,7 +111,7 @@ export default function AddMemberPage() {
       marital_status: "",
       external_user_code: "",
       gym_id: "",
-      reference_member_id: NO_REFERENCE_MEMBER,
+      reference_member_id: NO_REFERENCE_MEMBER_OPTION,
       package_type_id: "",
       start_date: format(new Date(), "yyyy-MM-dd"),
       coupon_id: "",
@@ -172,7 +169,7 @@ export default function AddMemberPage() {
           marital_status: member.marital_status || "",
           external_user_code: member.external_user_code || "",
           gym_id: member.gym_id || "",
-          reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER,
+          reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER_OPTION,
           package_type_id: "",
           start_date: format(new Date(), "yyyy-MM-dd"),
           coupon_id: "",
@@ -204,7 +201,7 @@ export default function AddMemberPage() {
     : "";
   const payableAmount = couponValidation?.netAmount ?? (parseFloat(form.amount_paid) || 0);
 
-  const set = (k: keyof MemberFormValues, v: string) => methods.setValue(k, v, { shouldDirty: true, shouldValidate: true });
+  const set = (k: keyof z.infer<typeof memberSchema>, v: string) => methods.setValue(k, v, { shouldDirty: true, shouldValidate: true });
 
   useEffect(() => {
     if (!form.package_type_id || !form.gym_id || !form.coupon_id || !form.amount_paid) {
@@ -248,7 +245,7 @@ export default function AddMemberPage() {
     shift: form.shift || null,
     notes: form.notes || null,
     reference_member_id:
-      form.reference_member_id && form.reference_member_id !== NO_REFERENCE_MEMBER
+      form.reference_member_id && form.reference_member_id !== NO_REFERENCE_MEMBER_OPTION
         ? form.reference_member_id
         : null,
   };
@@ -359,7 +356,7 @@ export default function AddMemberPage() {
     setPendingAssignmentDelete(null);
   };
 
-  const handleSubmit = async (values: MemberFormValues) => {
+  const handleSubmit = async (values: z.infer<typeof memberSchema>) => {
     if (!admin) return;
     setLoading(true);
     try {
@@ -509,7 +506,7 @@ export default function AddMemberPage() {
                 <Select value={form.reference_member_id} onValueChange={(v) => set("reference_member_id", v)}>
                   <SelectTrigger><SelectValue placeholder="Select reference" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_REFERENCE_MEMBER}>None</SelectItem>
+                    <SelectItem value={NO_REFERENCE_MEMBER_OPTION}>None</SelectItem>
                     {members.filter((m) => !form.gym_id || m.gym_id === form.gym_id).map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

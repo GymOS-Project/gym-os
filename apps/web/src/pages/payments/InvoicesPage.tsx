@@ -11,26 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { isDateAfter, isDateBefore, todayDateValue } from "@/lib/date";
+import { EMPTY_INVOICE_FORM } from "@/utils/constants";
 import { FileText, Plus } from "lucide-react";
 import { toast } from "sonner";
-
-const EMPTY_FORM = {
-  gym_id: "",
-  member_id: "",
-  issue_date: todayDateValue(),
-  due_date: "",
-  subtotal: "0",
-  tax_amount: "0",
-  discount_amount: "0",
-  notes: "",
-};
 
 export default function InvoicesPage() {
   const today = todayDateValue();
   const { gyms, selectedGymId } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; phone: string; gym_id: string }[]>([]);
-  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [form, setForm] = useState({ ...EMPTY_INVOICE_FORM });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
@@ -59,7 +49,7 @@ export default function InvoicesPage() {
 
   const openCreate = () => {
     setEditingInvoice(null);
-    setForm({ ...EMPTY_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
+    setForm({ ...EMPTY_INVOICE_FORM, gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "" });
     setDialogOpen(true);
   };
 

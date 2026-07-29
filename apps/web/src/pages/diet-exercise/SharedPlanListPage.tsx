@@ -9,39 +9,17 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { api } from '@/lib/api';
+import { SHARED_PLAN_CONTENT_CONFIG } from '@/utils/constants';
 import { Eye, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-type PlanType = 'diet' | 'exercise';
-type PlanRecord = DietPlan | ExercisePlan;
-
-type Props = {
-  planType: PlanType;
-};
-
-const planContent = {
-  diet: {
-    title: 'Diet Plans',
-    singular: 'Diet Plan',
-    basePath: '/diet-exercise/diet-plans',
-    empty: 'No diet plans created yet.',
-  },
-  exercise: {
-    title: 'Exercise Plans',
-    singular: 'Exercise Plan',
-    basePath: '/diet-exercise/exercise-plans',
-    empty: 'No exercise plans created yet.',
-  },
-};
-
-export default function SharedPlanListPage({ planType }: Props) {
+export default function SharedPlanListPage({ planType }: SharedPlanPageProps) {
   const navigate = useNavigate();
-  const [plans, setPlans] = useState<PlanRecord[]>([]);
+  const [plans, setPlans] = useState<SharedPlanRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [previewPlan, setPreviewPlan] = useState<PlanRecord | null>(null);
-  const content = planContent[planType];
+  const [previewPlan, setPreviewPlan] = useState<SharedPlanRecord | null>(null);
+  const content = SHARED_PLAN_CONTENT_CONFIG[planType];
 
   const fetchPlans = async () => {
     setLoading(true);
@@ -75,7 +53,7 @@ export default function SharedPlanListPage({ planType }: Props) {
     }
   };
 
-  const toggleActive = async (plan: PlanRecord) => {
+  const toggleActive = async (plan: SharedPlanRecord) => {
     setSavingId(plan.id);
     try {
       if (planType === 'diet') {

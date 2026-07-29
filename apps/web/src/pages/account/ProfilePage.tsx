@@ -7,10 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MAX_IMAGE_SIZE_BYTES } from "@/utils/constants";
 import { Camera, UserRound } from "lucide-react";
 import { toast } from "sonner";
-
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
 export default function ProfilePage() {
   const { admin, selectedGym, selectedGymId, refreshAdmin } = useAuth();
@@ -57,7 +56,7 @@ export default function ProfilePage() {
       return;
     }
 
-    if (file.size > MAX_IMAGE_SIZE) {
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
       toast.error("Profile image must be smaller than 10 MB");
       return;
     }

@@ -10,10 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { isDateAfter, todayDateValue } from "@/lib/date";
+import { ANONYMOUS_MEMBER_OPTION } from "@/utils/constants";
 import { Star, Plus } from "lucide-react";
 import { toast } from "sonner";
-
-const ANONYMOUS_MEMBER = "__anonymous__";
 
 export default function ReviewsPage() {
   const today = todayDateValue();
@@ -23,7 +22,7 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: ANONYMOUS_MEMBER, rating: "5", comment: "", review_date: new Date().toISOString().split("T")[0] });
+  const [form, setForm] = useState({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: ANONYMOUS_MEMBER_OPTION, rating: "5", comment: "", review_date: new Date().toISOString().split("T")[0] });
 
   useEffect(() => { if (admin) { fetchReviews(); fetchMembers(); } }, [admin, selectedGymId]);
 
@@ -58,7 +57,7 @@ export default function ReviewsPage() {
     try {
         await api.createReview({
           gym_id: form.gym_id,
-          member_id: form.member_id !== ANONYMOUS_MEMBER ? form.member_id : undefined,
+          member_id: form.member_id !== ANONYMOUS_MEMBER_OPTION ? form.member_id : undefined,
           rating: parseInt(form.rating),
           comment: form.comment || undefined,
           review_date: form.review_date,
@@ -136,7 +135,7 @@ export default function ReviewsPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Gym</Label>
-                <Select value={form.gym_id} onValueChange={(v) => setForm((p) => ({ ...p, gym_id: v, member_id: ANONYMOUS_MEMBER }))}>
+                <Select value={form.gym_id} onValueChange={(v) => setForm((p) => ({ ...p, gym_id: v, member_id: ANONYMOUS_MEMBER_OPTION }))}>
                   <SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger>
                   <SelectContent>
                     {gyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}
@@ -148,7 +147,7 @@ export default function ReviewsPage() {
                 <Select value={form.member_id} onValueChange={(v) => setForm((p) => ({ ...p, member_id: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ANONYMOUS_MEMBER}>Anonymous</SelectItem>
+                    <SelectItem value={ANONYMOUS_MEMBER_OPTION}>Anonymous</SelectItem>
                     {members.filter((m) => !form.gym_id || m.gym_id === form.gym_id).map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

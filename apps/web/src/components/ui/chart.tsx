@@ -3,27 +3,12 @@
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 import type {
-  DefaultLegendContentProps,
   LegendPayload,
-  TooltipContentProps,
   TooltipPayloadEntry,
 } from "recharts";
 
 import { cn } from "@/lib/utils";
-
-// Format: { THEME_NAME: CSS_SELECTOR }
-const THEMES = { light: "", dark: ".dark" } as const;
-
-export type ChartConfig = {
-  [k in string]: {
-    label?: React.ReactNode;
-    icon?: React.ComponentType;
-  } & ({ color?: string; theme?: never } | { color?: never; theme: Record<keyof typeof THEMES, string> });
-};
-
-type ChartContextProps = {
-  config: ChartConfig;
-};
+import { CHART_THEMES } from "@/utils/constants";
 
 const ChartContext = React.createContext<ChartContextProps | null>(null);
 
@@ -76,7 +61,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
+        __html: Object.entries(CHART_THEMES)
           .map(
             ([theme, prefix]) => `
 ${prefix} [data-chart=${id}] {
@@ -96,15 +81,6 @@ ${colorConfig
 };
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
-
-type ChartTooltipContentProps = React.ComponentProps<"div"> &
-  TooltipContentProps & {
-    hideLabel?: boolean;
-    hideIndicator?: boolean;
-    indicator?: "line" | "dot" | "dashed";
-    nameKey?: string;
-    labelKey?: string;
-  };
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
@@ -236,12 +212,6 @@ const ChartTooltipContent = React.forwardRef<
 ChartTooltipContent.displayName = "ChartTooltip";
 
 const ChartLegend = RechartsPrimitive.Legend;
-
-type ChartLegendContentProps = React.ComponentProps<"div"> &
-  Pick<DefaultLegendContentProps, "payload" | "verticalAlign"> & {
-    hideIcon?: boolean;
-    nameKey?: string;
-  };
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,

@@ -12,20 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { isDateAfter, isDateTimeAfter, isDateTimeBefore, isSameCalendarDate, nowDateTimeLocalValue, todayDateValue } from "@/lib/date";
+import { EMPTY_ATTENDANCE_FORM } from "@/utils/constants";
 import { Clock3, LogIn, LogOut, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-
-const EMPTY_FORM = {
-  gym_id: "",
-  entity_type: "member",
-  member_id: "",
-  staff_account_id: "",
-  attendance_date: todayDateValue(),
-  check_in_at: "",
-  check_out_at: "",
-  status: "present",
-  notes: "",
-};
 
 export default function AttendancePage() {
   const today = todayDateValue();
@@ -34,7 +23,7 @@ export default function AttendancePage() {
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; phone: string; gym_id: string }[]>([]);
   const [staff, setStaff] = useState<StaffAccount[]>([]);
-  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [form, setForm] = useState({ ...EMPTY_ATTENDANCE_FORM });
   const [filterEntityType, setFilterEntityType] = useState("all");
   const [filterDate, setFilterDate] = useState(todayDateValue());
   const [editingLog, setEditingLog] = useState<AttendanceLog | null>(null);
@@ -108,7 +97,7 @@ export default function AttendancePage() {
         notes: form.notes || null,
       });
       toast.success("Check-in recorded");
-      setForm({ ...EMPTY_FORM, gym_id: form.gym_id, attendance_date: form.attendance_date });
+      setForm({ ...EMPTY_ATTENDANCE_FORM, gym_id: form.gym_id, attendance_date: form.attendance_date });
       await fetchData();
     } catch (error: any) {
       toast.error(error.message || "Failed to record check-in");

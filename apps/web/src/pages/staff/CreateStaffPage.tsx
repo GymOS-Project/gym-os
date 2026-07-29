@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { StaffForm, createEmptyStaffForm, type StaffFormValue } from "@/components/staff/StaffForm";
+import { StaffForm, createEmptyStaffForm } from "@/components/staff/StaffForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { toast } from "sonner";

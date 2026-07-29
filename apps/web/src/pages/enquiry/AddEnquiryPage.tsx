@@ -15,8 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-const today = todayDateValue();
-
 const enquirySchema = z.object({
   gym_id: z.string().min(1, "Gym is required"),
   name: z.string().trim().min(1, "Full name is required"),
@@ -25,22 +23,21 @@ const enquirySchema = z.object({
   source: z.string(),
   interest: z.string(),
   assigned_to: z.string(),
-  next_followup_date: z.string().refine((value) => !value || !isDateBefore(value, today), "Next follow-up date cannot be in the past"),
+  next_followup_date: z.string().refine((value) => !value || !isDateBefore(value, todayDateValue()), "Next follow-up date cannot be in the past"),
   notes: z.string(),
 });
-
-type EnquiryFormValues = z.infer<typeof enquirySchema>;
 
 function RequiredMark() {
   return <span className="text-destructive">*</span>;
 }
 
 export default function AddEnquiryPage() {
+  const today = todayDateValue();
   const { admin, gyms, selectedGymId } = useAuth();
   const navigate = useNavigate();
   const availableGyms = gyms.length > 0 ? gyms : [];
 
-  const methods = useForm<EnquiryFormValues>({
+  const methods = useForm<z.infer<typeof enquirySchema>>({
     resolver: zodResolver(enquirySchema),
     defaultValues: {
       gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "",
@@ -65,7 +62,7 @@ export default function AddEnquiryPage() {
     }
   }, [gyms, gymId, methods, selectedGymId]);
 
-  const handleSubmit = async (values: EnquiryFormValues) => {
+  const handleSubmit = async (values: z.infer<typeof enquirySchema>) => {
     if (!admin) return;
 
     try {
