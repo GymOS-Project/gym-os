@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { isDateAfter, isDateTimeAfter, isDateTimeBefore, isSameCalendarDate, nowDateTimeLocalValue, todayDateValue } from "@/lib/date";
 import { Clock3, LogIn, LogOut, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,7 +20,7 @@ const EMPTY_FORM = {
   entity_type: "member",
   member_id: "",
   staff_account_id: "",
-  attendance_date: new Date().toISOString().slice(0, 10),
+  attendance_date: todayDateValue(),
   check_in_at: "",
   check_out_at: "",
   status: "present",
@@ -27,13 +28,15 @@ const EMPTY_FORM = {
 };
 
 export default function AttendancePage() {
+  const today = todayDateValue();
+  const now = nowDateTimeLocalValue();
   const { gyms, selectedGymId } = useAuth();
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; phone: string; gym_id: string }[]>([]);
   const [staff, setStaff] = useState<StaffAccount[]>([]);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [filterEntityType, setFilterEntityType] = useState("all");
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 10));
+  const [filterDate, setFilterDate] = useState(todayDateValue());
   const [editingLog, setEditingLog] = useState<AttendanceLog | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -80,6 +83,18 @@ export default function AttendancePage() {
       toast.error("Select a staff member");
       return;
     }
+    if (isDateAfter(form.attendance_date, today)) {
+      toast.error("Attendance date cannot be in the future");
+      return;
+    }
+    if (form.check_in_at && isDateTimeAfter(form.check_in_at, now)) {
+      toast.error("Check-in time cannot be in the future");
+      return;
+    }
+    if (form.check_in_at && !isSameCalendarDate(form.attendance_date, form.check_in_at)) {
+      toast.error("Check-in time must match the attendance date");
+      return;
+    }
 
     try {
       await api.checkInAttendance({
@@ -118,6 +133,30 @@ export default function AttendancePage() {
 
   const handleUpdate = async () => {
     if (!editingLog) return;
+    if (isDateAfter(form.attendance_date, today)) {
+      toast.error("Attendance date cannot be in the future");
+      return;
+    }
+    if (form.check_in_at && isDateTimeAfter(form.check_in_at, now)) {
+      toast.error("Check-in time cannot be in the future");
+      return;
+    }
+    if (form.check_out_at && isDateTimeAfter(form.check_out_at, now)) {
+      toast.error("Check-out time cannot be in the future");
+      return;
+    }
+    if (form.check_in_at && !isSameCalendarDate(form.attendance_date, form.check_in_at)) {
+      toast.error("Check-in time must match the attendance date");
+      return;
+    }
+    if (form.check_out_at && !isSameCalendarDate(form.attendance_date, form.check_out_at)) {
+      toast.error("Check-out time must match the attendance date");
+      return;
+    }
+    if (form.check_in_at && form.check_out_at && isDateTimeBefore(form.check_out_at, form.check_in_at)) {
+      toast.error("Check-out time must be after check-in time");
+      return;
+    }
     try {
       await api.updateAttendanceLog(editingLog.id, {
         attendance_date: form.attendance_date,
@@ -204,11 +243,11 @@ export default function AttendancePage() {
             )}
             <div className="space-y-1.5">
               <Label>Attendance Date</Label>
-              <Input type="date" value={form.attendance_date} onChange={(e) => setForm((current) => ({ ...current, attendance_date: e.target.value }))} />
+              <Input type="date" max={today} value={form.attendance_date} onChange={(e) => setForm((current) => ({ ...current, attendance_date: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label>Check-In Time</Label>
-              <Input type="datetime-local" value={form.check_in_at} onChange={(e) => setForm((current) => ({ ...current, check_in_at: e.target.value }))} />
+              <Input type="datetime-local" max={now} value={form.check_in_at} onChange={(e) => setForm((current) => ({ ...current, check_in_at: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
@@ -243,7 +282,7 @@ export default function AttendancePage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Filter Date</Label>
-                <Input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-[180px]" />
+                <Input type="date" max={today} value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-[180px]" />
               </div>
             </div>
 
@@ -292,9 +331,9 @@ export default function AttendancePage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>Update Attendance</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5"><Label>Attendance Date</Label><Input type="date" value={form.attendance_date} onChange={(e) => setForm((current) => ({ ...current, attendance_date: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>Check-In</Label><Input type="datetime-local" value={form.check_in_at} onChange={(e) => setForm((current) => ({ ...current, check_in_at: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>Check-Out</Label><Input type="datetime-local" value={form.check_out_at} onChange={(e) => setForm((current) => ({ ...current, check_out_at: e.target.value }))} /></div>
+            <div className="space-y-1.5"><Label>Attendance Date</Label><Input type="date" max={today} value={form.attendance_date} onChange={(e) => setForm((current) => ({ ...current, attendance_date: e.target.value }))} /></div>
+            <div className="space-y-1.5"><Label>Check-In</Label><Input type="datetime-local" max={now} value={form.check_in_at} onChange={(e) => setForm((current) => ({ ...current, check_in_at: e.target.value }))} /></div>
+            <div className="space-y-1.5"><Label>Check-Out</Label><Input type="datetime-local" min={form.check_in_at || undefined} max={now} value={form.check_out_at} onChange={(e) => setForm((current) => ({ ...current, check_out_at: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Status</Label><Input value={form.status} onChange={(e) => setForm((current) => ({ ...current, status: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></div>
           </div>

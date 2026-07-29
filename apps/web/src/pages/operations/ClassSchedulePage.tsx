@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { isDateBefore, todayDateValue } from "@/lib/date";
 import { CalendarDays, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ const EMPTY_FORM = {
 };
 
 export default function ClassSchedulePage() {
+  const today = todayDateValue();
   const { gyms, selectedGymId } = useAuth();
   const [sessions, setSessions] = useState<ClassSession[]>([]);
   const [staff, setStaff] = useState<StaffAccount[]>([]);
@@ -94,6 +96,14 @@ export default function ClassSchedulePage() {
   const handleSave = async () => {
     if (!form.gym_id || !form.name || !form.session_date) {
       toast.error("Gym, class name, and date are required");
+      return;
+    }
+    if (isDateBefore(form.session_date, today)) {
+      toast.error("Session date cannot be in the past");
+      return;
+    }
+    if (form.start_time && form.end_time && form.end_time <= form.start_time) {
+      toast.error("End time must be after start time");
       return;
     }
 
@@ -239,7 +249,7 @@ export default function ClassSchedulePage() {
             </div>
             <div className="space-y-1.5">
               <Label>Session Date</Label>
-              <Input type="date" value={form.session_date} onChange={(e) => setForm((current) => ({ ...current, session_date: e.target.value }))} />
+              <Input type="date" min={today} value={form.session_date} onChange={(e) => setForm((current) => ({ ...current, session_date: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label>Capacity</Label>

@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { isDateTimeBefore, nowDateTimeLocalValue } from "@/lib/date";
 import { CalendarClock, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,6 +26,7 @@ const EMPTY_FORM = {
 };
 
 export default function PTSessionsPage() {
+  const now = nowDateTimeLocalValue();
   const { gyms, selectedGymId } = useAuth();
   const [sessions, setSessions] = useState<PtSession[]>([]);
   const [staff, setStaff] = useState<StaffAccount[]>([]);
@@ -86,6 +88,10 @@ export default function PTSessionsPage() {
   const handleSave = async () => {
     if (!form.gym_id || !form.trainer_staff_id || !form.member_id || !form.scheduled_at) {
       toast.error("Gym, trainer, member, and schedule are required");
+      return;
+    }
+    if (form.status === "scheduled" && isDateTimeBefore(form.scheduled_at, now)) {
+      toast.error("Scheduled PT sessions cannot be set in the past");
       return;
     }
 
@@ -201,7 +207,7 @@ export default function PTSessionsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Schedule</Label>
-              <Input type="datetime-local" value={form.scheduled_at} onChange={(e) => setForm((current) => ({ ...current, scheduled_at: e.target.value }))} />
+              <Input type="datetime-local" min={form.status === "scheduled" ? now : undefined} value={form.scheduled_at} onChange={(e) => setForm((current) => ({ ...current, scheduled_at: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label>Duration (minutes)</Label>

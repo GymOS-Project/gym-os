@@ -13,10 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { downloadCsv } from "@/lib/csv";
+import { isDateAfter, isDateBefore, todayDateValue } from "@/lib/date";
 import { Pencil, Plus, Receipt, RotateCcw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PaymentsCollectionsPage() {
+  const today = todayDateValue();
   const { admin, selectedGymId } = useAuth();
   const [collections, setCollections] = useState<(Transaction & { members?: { id: string; name: string; phone: string; email?: string | null; shift?: string | null } | null })[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; phone: string }[]>([]);
@@ -77,6 +79,10 @@ export default function PaymentsCollectionsPage() {
       toast.error("Amount and payment mode are required");
       return;
     }
+    if (form.transaction_date && isDateAfter(form.transaction_date, today)) {
+      toast.error("Transaction date cannot be in the future");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -127,6 +133,10 @@ export default function PaymentsCollectionsPage() {
       toast.error("Amount and payment mode are required");
       return;
     }
+    if (form.transaction_date && isDateAfter(form.transaction_date, today)) {
+      toast.error("Transaction date cannot be in the future");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -152,6 +162,14 @@ export default function PaymentsCollectionsPage() {
   const handleRefund = async () => {
     if (!selectedTransaction || !refundForm.amount) {
       toast.error("Refund amount is required");
+      return;
+    }
+    if (refundForm.transaction_date && isDateAfter(refundForm.transaction_date, today)) {
+      toast.error("Refund date cannot be in the future");
+      return;
+    }
+    if (refundForm.transaction_date && selectedTransaction.transaction_date && isDateBefore(refundForm.transaction_date, selectedTransaction.transaction_date.slice(0, 10))) {
+      toast.error("Refund date cannot be before the original transaction date");
       return;
     }
 
@@ -232,8 +250,8 @@ export default function PaymentsCollectionsPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search member or note" className="pl-9" />
           </div>
-          <DatePicker value={filters.date_from} onChange={(value) => setFilters((current) => ({ ...current, date_from: value }))} placeholder="From date" />
-          <DatePicker value={filters.date_to} onChange={(value) => setFilters((current) => ({ ...current, date_to: value }))} placeholder="To date" />
+          <DatePicker value={filters.date_from} onChange={(value) => setFilters((current) => ({ ...current, date_from: value }))} placeholder="From date" maxDate={filters.date_to || today} />
+          <DatePicker value={filters.date_to} onChange={(value) => setFilters((current) => ({ ...current, date_to: value }))} placeholder="To date" minDate={filters.date_from || undefined} maxDate={today} />
           <Select value={filters.type} onValueChange={(value) => setFilters((current) => ({ ...current, type: value }))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -358,7 +376,7 @@ export default function PaymentsCollectionsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Transaction Date</Label>
-                  <DatePicker value={form.transaction_date} onChange={(value) => setForm((current) => ({ ...current, transaction_date: value }))} placeholder="Select date" />
+                  <DatePicker value={form.transaction_date} onChange={(value) => setForm((current) => ({ ...current, transaction_date: value }))} placeholder="Select date" maxDate={today} />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -420,7 +438,7 @@ export default function PaymentsCollectionsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Transaction Date</Label>
-                  <DatePicker value={form.transaction_date} onChange={(value) => setForm((current) => ({ ...current, transaction_date: value }))} placeholder="Select date" />
+                  <DatePicker value={form.transaction_date} onChange={(value) => setForm((current) => ({ ...current, transaction_date: value }))} placeholder="Select date" maxDate={today} />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -445,7 +463,7 @@ export default function PaymentsCollectionsPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Refund Date</Label>
-                <DatePicker value={refundForm.transaction_date} onChange={(value) => setRefundForm((current) => ({ ...current, transaction_date: value }))} placeholder="Select refund date" />
+                <DatePicker value={refundForm.transaction_date} onChange={(value) => setRefundForm((current) => ({ ...current, transaction_date: value }))} placeholder="Select refund date" minDate={selectedTransaction?.transaction_date?.slice(0, 10) || undefined} maxDate={today} />
               </div>
               <div className="space-y-1.5">
                 <Label>Description</Label>

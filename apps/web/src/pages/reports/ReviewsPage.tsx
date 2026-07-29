@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { isDateAfter, todayDateValue } from "@/lib/date";
 import { Star, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const ANONYMOUS_MEMBER = "__anonymous__";
 
 export default function ReviewsPage() {
+  const today = todayDateValue();
   const { admin, gyms, selectedGymId } = useAuth();
   const [reviews, setReviews] = useState<(Review & { members?: { name: string; phone: string } })[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; gym_id: string }[]>([]);
@@ -47,6 +49,10 @@ export default function ReviewsPage() {
 
   const handleSave = async () => {
     if (!admin) return;
+    if (isDateAfter(form.review_date, today)) {
+      toast.error("Review date cannot be in the future");
+      return;
+    }
     setSaving(true);
     try {
         await api.createReview({
@@ -155,7 +161,7 @@ export default function ReviewsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Review Date</Label>
-              <DatePicker value={form.review_date} onChange={(value) => setForm((p) => ({ ...p, review_date: value }))} placeholder="Select review date" allowClear={false} />
+              <DatePicker value={form.review_date} onChange={(value) => setForm((p) => ({ ...p, review_date: value }))} placeholder="Select review date" allowClear={false} maxDate={today} />
             </div>
             <div className="space-y-1.5">
               <Label>Comment</Label>

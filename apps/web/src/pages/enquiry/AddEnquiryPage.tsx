@@ -8,9 +8,11 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { isDateBefore, todayDateValue } from "@/lib/date";
 import { toast } from "sonner";
 
 export default function AddEnquiryPage() {
+  const today = todayDateValue();
   const { admin, gyms, selectedGymId } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -36,6 +38,10 @@ export default function AddEnquiryPage() {
     if (!admin) return;
     if (!form.gym_id) { toast.error("Gym is required"); return; }
     if (!form.name || !form.phone) { toast.error("Name and phone are required"); return; }
+    if (form.next_followup_date && isDateBefore(form.next_followup_date, today)) {
+      toast.error("Next follow-up date cannot be in the past");
+      return;
+    }
     setLoading(true);
     try {
       await api.createEnquiry({
@@ -112,7 +118,7 @@ export default function AddEnquiryPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Next Follow-up Date</Label>
-              <DatePicker value={form.next_followup_date} onChange={(value) => set("next_followup_date", value)} placeholder="Select next follow-up" />
+              <DatePicker value={form.next_followup_date} onChange={(value) => set("next_followup_date", value)} placeholder="Select next follow-up" minDate={today} />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Notes</Label>

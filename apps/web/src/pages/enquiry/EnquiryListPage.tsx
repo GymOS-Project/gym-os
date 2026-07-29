@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { isDateBefore, todayDateValue } from "@/lib/date";
 import { Search, Plus, Trash2, Phone, UserCheck, PhoneCall } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +23,7 @@ interface EnquiryListPageProps {
 }
 
 export default function EnquiryListPage({ filterStatus, title, description }: EnquiryListPageProps) {
+  const today = todayDateValue();
   const { admin, selectedGymId } = useAuth();
   const navigate = useNavigate();
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
@@ -68,6 +70,10 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
 
   const handleFollowup = async () => {
     if (!followupDialog || !admin) return;
+    if (fuForm.next_followup_date && isDateBefore(fuForm.next_followup_date, today)) {
+      toast.error("Next follow-up date cannot be in the past");
+      return;
+    }
     setSaving(true);
     try {
       await api.addEnquiryFollowup(followupDialog.id, {
@@ -173,7 +179,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Next Follow-up Date</Label>
-              <DatePicker value={fuForm.next_followup_date} onChange={(value) => setFuForm((p) => ({ ...p, next_followup_date: value }))} placeholder="Select next follow-up" />
+              <DatePicker value={fuForm.next_followup_date} onChange={(value) => setFuForm((p) => ({ ...p, next_followup_date: value }))} placeholder="Select next follow-up" minDate={today} />
             </div>
             <div className="space-y-1.5">
               <Label>Notes</Label>
