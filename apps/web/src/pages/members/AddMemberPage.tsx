@@ -15,12 +15,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { buildPlanFormData, createPlanEditorValue, type PlanEditorValue } from "@/lib/planContent";
+import { isDateAfter, todayDateValue } from "@/lib/date";
 import { toast } from "sonner";
 import { addDays, addMonths, format } from "date-fns";
 
 const NO_REFERENCE_MEMBER = "__none__";
 
 export default function AddMemberPage() {
+  const today = todayDateValue();
   const { admin, gyms, selectedGymId, hasSectionAccess } = useAuth();
   const navigate = useNavigate();
   const { id: memberId } = useParams();
@@ -313,6 +315,10 @@ export default function AddMemberPage() {
     if (!admin) return;
     if (!form.name || !form.phone) { toast.error("Name and phone are required"); return; }
     if (!form.gym_id) { toast.error("Gym selection is required"); return; }
+    if (form.date_of_birth && isDateAfter(form.date_of_birth, today)) {
+      toast.error("Date of birth cannot be in the future");
+      return;
+    }
     setLoading(true);
     try {
       if (isEditing && memberId) {
@@ -409,7 +415,7 @@ export default function AddMemberPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Date of Birth</Label>
-                <DatePicker value={form.date_of_birth} onChange={(value) => set("date_of_birth", value)} placeholder="Select date of birth" />
+                <DatePicker value={form.date_of_birth} onChange={(value) => set("date_of_birth", value)} placeholder="Select date of birth" maxDate={today} />
               </div>
               <div className="space-y-1.5">
                 <Label>Shift</Label>

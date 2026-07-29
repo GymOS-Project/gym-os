@@ -8,12 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 import { downloadCsv } from "@/lib/csv";
+import { todayDateValue } from "@/lib/date";
 import { useAuth } from "@/contexts/AuthContext";
 import { Download, Package, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 export default function PaymentsSalesPage() {
+  const today = todayDateValue();
   const { admin, selectedGymId } = useAuth();
   const [sales, setSales] = useState<(MemberPackage & { members?: { id: string; name: string; phone: string; email?: string | null; shift?: string | null } | null })[]>([]);
   const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
@@ -99,8 +101,8 @@ export default function PaymentsSalesPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search member or package" className="pl-9" />
           </div>
-          <DatePicker value={filters.date_from} onChange={(value) => setFilters((current) => ({ ...current, date_from: value }))} placeholder="From date" />
-          <DatePicker value={filters.date_to} onChange={(value) => setFilters((current) => ({ ...current, date_to: value }))} placeholder="To date" />
+          <DatePicker value={filters.date_from} onChange={(value) => setFilters((current) => ({ ...current, date_from: value }))} placeholder="From date" maxDate={filters.date_to || today} />
+          <DatePicker value={filters.date_to} onChange={(value) => setFilters((current) => ({ ...current, date_to: value }))} placeholder="To date" minDate={filters.date_from || undefined} maxDate={today} />
           <Select value={filters.status} onValueChange={(value) => setFilters((current) => ({ ...current, status: value }))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
