@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => ({
     react()
   ].filter(Boolean),
   resolve: {
+    dedupe: ["react", "react-dom"],
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
