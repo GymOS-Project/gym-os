@@ -82,12 +82,6 @@ export const EMPTY_INTEGRATION_FORM = {
   gym_id: "",
   device_name: "",
   serial_number: "",
-  integration_mode: "adms",
-  ip_address: "",
-  port: "4370",
-  server_address: "",
-  server_port: "80",
-  status: "inactive",
   notes: "",
 };
 

@@ -55,33 +55,27 @@ export default function IntegrationsPage() {
       gym_id: device.gym_id,
       device_name: device.device_name,
       serial_number: device.serial_number || "",
-      integration_mode: device.integration_mode,
-      ip_address: device.ip_address || "",
-      port: String(device.port || 4370),
-      server_address: device.server_address || "",
-      server_port: String(device.server_port || 80),
-      status: device.status,
       notes: device.notes || "",
     });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.gym_id || !form.device_name) {
-      toast.error("Gym and device name are required");
+    if (!form.gym_id || !form.device_name || !form.serial_number) {
+      toast.error("Gym, device name, and serial number are required");
       return;
     }
 
     const payload = {
       gym_id: form.gym_id,
       device_name: form.device_name,
-      serial_number: form.serial_number || null,
-      integration_mode: form.integration_mode,
-      ip_address: form.ip_address || null,
-      port: Number(form.port || 4370),
-      server_address: form.server_address || null,
-      server_port: Number(form.server_port || 80),
-      status: form.status,
+      serial_number: form.serial_number,
+      integration_mode: editingDevice?.integration_mode || "adms",
+      ip_address: editingDevice?.ip_address || null,
+      port: editingDevice?.port || 4370,
+      server_address: editingDevice?.server_address || null,
+      server_port: editingDevice?.server_port || 80,
+      status: editingDevice?.status || "inactive",
       notes: form.notes || null,
     };
 
@@ -176,18 +170,12 @@ export default function IntegrationsPage() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>{editingDevice ? "Edit eSSL Device" : "Add eSSL Device"}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2"><Label>Gym *</Label><Select value={form.gym_id} onValueChange={(value) => setForm((current) => ({ ...current, gym_id: value }))}><SelectTrigger><SelectValue placeholder="Select gym" /></SelectTrigger><SelectContent>{gyms.map((gym) => <SelectItem key={gym.id} value={gym.id}>{gym.gym_name}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-1.5"><Label>Device Name *</Label><Input value={form.device_name} onChange={(e) => setForm((current) => ({ ...current, device_name: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Serial Number *</Label><Input value={form.serial_number} onChange={(e) => setForm((current) => ({ ...current, serial_number: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>Mode</Label><Select value={form.integration_mode} onValueChange={(value) => setForm((current) => ({ ...current, integration_mode: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="adms">ADMS Push</SelectItem><SelectItem value="middleware">Middleware</SelectItem><SelectItem value="sdk">Direct SDK</SelectItem></SelectContent></Select></div>
-            <div className="space-y-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(value) => setForm((current) => ({ ...current, status: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="online">Online</SelectItem><SelectItem value="offline">Offline</SelectItem></SelectContent></Select></div>
-            <div className="space-y-1.5"><Label>IP Address</Label><Input value={form.ip_address} onChange={(e) => setForm((current) => ({ ...current, ip_address: e.target.value }))} placeholder="192.168.1.201" /></div>
-            <div className="space-y-1.5"><Label>Port</Label><Input value={form.port} onChange={(e) => setForm((current) => ({ ...current, port: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>Server Address</Label><Input value={form.server_address} onChange={(e) => setForm((current) => ({ ...current, server_address: e.target.value }))} placeholder="ngrok or local endpoint" /></div>
-            <div className="space-y-1.5"><Label>Server Port</Label><Input value={form.server_port} onChange={(e) => setForm((current) => ({ ...current, server_port: e.target.value }))} /></div>
             <div className="space-y-1.5 sm:col-span-2"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></div>
           </div>
           <DialogFooter>
