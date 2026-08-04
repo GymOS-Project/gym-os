@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LayoutDashboard, Users, List, Package, PhoneCall, MessageSquare, CreditCard, RefreshCw, UserSearch, Bell, Circle as XCircle, ChartBar as BarChart2, Receipt, Star, Share2, Clock, TriangleAlert as AlertTriangle, Dumbbell, ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X, BadgePercent, CalendarDays, CalendarClock, Fingerprint, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
-function getNavItems(role: string | null, hasSectionAccess: (section: string) => boolean): NavItem[] {
+function getNavItems(role: string | null, hasSectionAccess: (section: string) => boolean, hasFeatureAccess: (feature: BillingFeatureKey) => boolean): NavItem[] {
   const items: NavItem[] = [{ label: 'Dashboard', href: '/', icon: LayoutDashboard }];
 
   if (hasSectionAccess('members')) {
@@ -51,8 +51,8 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
       children: [
         { label: 'Collections', href: '/payments/collections', icon: Receipt },
         { label: 'Sales', href: '/payments/sales', icon: Package },
-        { label: 'Analytics', href: '/payments/analytics', icon: BarChart2 },
-        { label: 'Coupons', href: '/payments/coupons', icon: BadgePercent },
+        ...(hasFeatureAccess('payment_analytics') ? [{ label: 'Analytics', href: '/payments/analytics', icon: BarChart2 }] : []),
+        ...(hasFeatureAccess('coupons') ? [{ label: 'Coupons', href: '/payments/coupons', icon: BadgePercent }] : []),
         { label: 'Invoices', href: '/payments/invoices', icon: Receipt },
       ],
     });
@@ -102,7 +102,7 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
         { label: 'Reference Members', href: '/reports/references', icon: Share2 },
         { label: 'Report by Shift', href: '/reports/shift', icon: Clock },
         { label: 'Near to Expire', href: '/reports/expiring', icon: AlertTriangle },
-        ...(role === 'admin' ? [{ label: 'Activity Logs', href: '/reports/activity-logs', icon: List }] : []),
+        ...(role === 'admin' && hasFeatureAccess('activity_logs') ? [{ label: 'Activity Logs', href: '/reports/activity-logs', icon: List }] : []),
       ],
     });
   }
@@ -114,8 +114,8 @@ function getNavItems(role: string | null, hasSectionAccess: (section: string) =>
       children: [
         { label: 'Create Staff', href: '/staff/create', icon: UserPlus },
         { label: 'Staff List', href: '/staff/list', icon: Users },
-        { label: 'Payroll', href: '/staff/payroll', icon: Receipt },
-        { label: 'Integrations', href: '/settings/integrations', icon: Fingerprint },
+        ...(hasFeatureAccess('payroll') ? [{ label: 'Payroll', href: '/staff/payroll', icon: Receipt }] : []),
+        ...(hasFeatureAccess('essl_integrations') ? [{ label: 'Integrations', href: '/settings/integrations', icon: Fingerprint }] : []),
       ],
     });
   }
@@ -210,11 +210,11 @@ function NavItemComponent({
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {
-  const { admin, staff, role, gyms, selectedGymId, selectedGym, setSelectedGymId, signOut, hasSectionAccess } = useAuth();
+  const { admin, staff, role, gyms, selectedGymId, selectedGym, setSelectedGymId, signOut, hasSectionAccess, hasFeatureAccess } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
-  const navItems = getNavItems(role, hasSectionAccess);
+  const navItems = getNavItems(role, hasSectionAccess, hasFeatureAccess);
 
   const handleSignOut = async () => {
     await signOut();

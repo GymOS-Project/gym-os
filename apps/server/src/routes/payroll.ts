@@ -1,11 +1,12 @@
 import { Router } from "express";
 
 import { createPayrollRun, deletePayrollRun, listPayrollEntries, listPayrollRuns, updatePayrollEntry } from "../controllers/payroll";
+import { requirePlanFeature } from "../middleware/billing.middleware";
 import { requireAdmin, requireAuthenticatedSession } from "../middleware/sessionAuth.middleware";
 
 const router = Router();
 
-router.use(requireAuthenticatedSession, requireAdmin);
+router.use(requireAuthenticatedSession, requireAdmin, requirePlanFeature("payroll"));
 
 router.get("/runs", listPayrollRuns);
 router.post("/runs", createPayrollRun);

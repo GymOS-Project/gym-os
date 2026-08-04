@@ -15,6 +15,7 @@ import {
   updateCoupon,
   validateCoupon,
 } from "../controllers/payments";
+import { requirePlanFeature } from "../middleware/billing.middleware";
 import { requireAdmin, requireAuthenticatedSession } from "../middleware/sessionAuth.middleware";
 
 const router = Router();
@@ -27,12 +28,12 @@ router.put("/collections/:id", updateCollection);
 router.delete("/collections/:id", deleteCollection);
 router.post("/collections/:id/refund", refundCollection);
 router.get("/sales", listSales);
-router.get("/analytics", getPaymentAnalytics);
-router.get("/coupons", listCoupons);
-router.post("/coupons", createCoupon);
-router.put("/coupons/:id", updateCoupon);
-router.delete("/coupons/:id", deactivateCoupon);
-router.post("/coupons/validate", validateCoupon);
+router.get("/analytics", requirePlanFeature("payment_analytics"), getPaymentAnalytics);
+router.get("/coupons", requirePlanFeature("coupons"), listCoupons);
+router.post("/coupons", requirePlanFeature("coupons"), createCoupon);
+router.put("/coupons/:id", requirePlanFeature("coupons"), updateCoupon);
+router.delete("/coupons/:id", requirePlanFeature("coupons"), deactivateCoupon);
+router.post("/coupons/validate", requirePlanFeature("coupons"), validateCoupon);
 router.post("/member-sales", createMemberSale);
 
 export default router;

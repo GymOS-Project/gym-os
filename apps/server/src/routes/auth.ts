@@ -11,6 +11,7 @@ import {
   updateAdmin,
   upgradeSingleGymToBranch,
 } from "../controllers/auth";
+import { requirePlanFeature } from "../middleware/billing.middleware";
 import { createRateLimit } from "../middleware/rateLimit.middleware";
 import { requireAuthenticatedAdmin, requireAuthenticatedSession } from "../middleware/sessionAuth.middleware";
 
@@ -60,6 +61,7 @@ router.post(
   authWriteLimiter,
   adminAuthLimiter,
   requireAuthenticatedAdmin,
+  requirePlanFeature("multi_branch"),
   upgradeSingleGymToBranch
 );
 

@@ -15,7 +15,10 @@ function parseDateTime(value: unknown) {
     return null;
   }
 
-  const parsed = new Date(normalized);
+  const candidate = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)
+    ? normalized.replace(" ", "T")
+    : normalized;
+  const parsed = new Date(candidate);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
@@ -25,6 +28,47 @@ export function normalizeEsslPayload(payload: Record<string, unknown>) {
   const punchAt = parseDateTime(payload.DateTime) || parseDateTime(payload.datetime) || parseDateTime(payload.punch_at) || new Date().toISOString();
 
   return { serialNumber, userCode, punchAt };
+}
+
+export function parseAdmsAttendanceBody(body: string) {
+  return body
+    .split(/\r\n|\r|\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [userCodeRaw, punchAtRaw, status, verifyMode, workCode] = line.split("\t");
+      return {
+        userCode: normalizeString(userCodeRaw),
+        punchAt: parseDateTime(punchAtRaw) || new Date().toISOString(),
+        status: normalizeString(status),
+        verifyMode: normalizeString(verifyMode),
+        workCode: normalizeString(workCode),
+        rawLine: line,
+      };
+    })
+    .filter((entry) => entry.userCode);
+}
+
+export function buildAdmsHandshakeResponse(serialNumber: string | null) {
+  const now = Math.floor(Date.now() / 1000);
+  const lines = [
+    `GET OPTION FROM: ${serialNumber || "UNKNOWN"}`,
+    "Stamp=9999",
+    `OpStamp=${now}`,
+    "ErrorDelay=60",
+    "Delay=30",
+    "ResLogDay=18250",
+    "ResLogDelCount=10000",
+    "ResLogCount=50000",
+    "TransTimes=00:00;14:05",
+    "TransInterval=1",
+    "TransFlag=1111000000",
+    "Realtime=1",
+    "Encrypt=0",
+    "TimeZone=330",
+  ];
+
+  return `${lines.join("\r\n")}\r\n`;
 }
 
 export async function resolveEsslIdentity(params: {
@@ -136,4 +180,73 @@ export async function createAttendanceFromEsslPunch(params: {
   }
 
   return insert.data;
+}
+
+export async function ingestEsslPunch(payload: Record<string, unknown>) {
+  const normalized = normalizeEsslPayload(payload);
+
+  const deviceLookup = normalized.serialNumber
+    ? await supabase.from("essl_devices").select("*").eq("serial_number", normalized.serialNumber).maybeSingle()
+    : { data: null, error: null as any };
+
+  if (deviceLookup.error) {
+    throw new Error(deviceLookup.error.message);
+  }
+
+  const device = deviceLookup.data;
+  const resolvedIdentity = await resolveEsslIdentity({
+    adminId: device?.admin_id ? String(device.admin_id) : null,
+    gymId: device?.gym_id ? String(device.gym_id) : null,
+    userCode: normalized.userCode,
+  });
+
+  const insert = await supabase
+    .from("essl_raw_punch_logs")
+    .insert({
+      admin_id: device?.admin_id || null,
+      gym_id: device?.gym_id || null,
+      essl_device_id: device?.id || null,
+      serial_number: normalized.serialNumber,
+      user_code: normalized.userCode,
+      punch_at: normalized.punchAt,
+      payload,
+      processing_status: resolvedIdentity.memberId || resolvedIdentity.staffId ? "mapped" : "received",
+      resolved_member_id: resolvedIdentity.memberId,
+      resolved_staff_id: resolvedIdentity.staffId,
+    })
+    .select("*")
+    .single();
+
+  if (insert.error) {
+    throw new Error(insert.error.message);
+  }
+
+  if (device?.id) {
+    await supabase
+      .from("essl_devices")
+      .update({
+        last_synced_at: new Date().toISOString(),
+        status: "online",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", device.id);
+  }
+
+  if (device?.admin_id && device?.gym_id) {
+    await createAttendanceFromEsslPunch({
+      adminId: String(device.admin_id),
+      gymId: String(device.gym_id),
+      memberId: resolvedIdentity.memberId,
+      staffId: resolvedIdentity.staffId,
+      punchAt: normalized.punchAt,
+      externalPunchId: insert.data.id,
+    });
+  }
+
+  return {
+    normalized,
+    device,
+    resolvedIdentity,
+    rawLog: insert.data,
+  };
 }

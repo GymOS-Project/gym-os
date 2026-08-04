@@ -2,7 +2,7 @@ import type { Response } from "express";
 
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { logActivity } from "../services/activityLog.service";
-import { createAttendanceFromEsslPunch, normalizeEsslPayload, resolveEsslIdentity } from "../services/essl.service";
+import { ingestEsslPunch } from "../services/essl.service";
 import { resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { supabase } from "../supabase";
 
@@ -140,59 +140,11 @@ export async function receiveEsslWebhook(req: AuthenticatedRequest, res: Respons
     ...(req.query || {}),
     ...((req.body && typeof req.body === "object") ? req.body : {}),
   } as Record<string, unknown>;
-  const normalized = normalizeEsslPayload(payload);
-
-  const deviceLookup = normalized.serialNumber
-    ? await supabase.from("essl_devices").select("*").eq("serial_number", normalized.serialNumber).maybeSingle()
-    : { data: null, error: null as any };
-
-  if (deviceLookup.error) {
+  try {
+    await ingestEsslPunch(payload);
+  } catch (error) {
+    console.error("Failed to ingest eSSL webhook", error);
     return res.status(500).send("ERROR");
-  }
-
-  const device = deviceLookup.data;
-  const resolvedIdentity = await resolveEsslIdentity({
-    adminId: device?.admin_id ? String(device.admin_id) : null,
-    gymId: device?.gym_id ? String(device.gym_id) : null,
-    userCode: normalized.userCode,
-  });
-
-  const insert = await supabase
-    .from("essl_raw_punch_logs")
-    .insert({
-      admin_id: device?.admin_id || null,
-      gym_id: device?.gym_id || null,
-      essl_device_id: device?.id || null,
-      serial_number: normalized.serialNumber,
-      user_code: normalized.userCode,
-      punch_at: normalized.punchAt,
-      payload,
-      processing_status: resolvedIdentity.memberId || resolvedIdentity.staffId ? "mapped" : "received",
-      resolved_member_id: resolvedIdentity.memberId,
-      resolved_staff_id: resolvedIdentity.staffId,
-    })
-    .select("*")
-    .single();
-
-  if (insert.error) {
-    return res.status(500).send("ERROR");
-  }
-
-  if (device?.id) {
-    await supabase.from("essl_devices").update({ last_synced_at: new Date().toISOString(), status: "online", updated_at: new Date().toISOString() }).eq("id", device.id);
-  }
-
-  if (device?.admin_id && device?.gym_id) {
-    await createAttendanceFromEsslPunch({
-      adminId: String(device.admin_id),
-      gymId: String(device.gym_id),
-      memberId: resolvedIdentity.memberId,
-      staffId: resolvedIdentity.staffId,
-      punchAt: normalized.punchAt,
-      externalPunchId: insert.data.id,
-    }).catch((error) => {
-      console.error("Failed to create attendance from eSSL punch", error);
-    });
   }
 
   return res.send("OK");

@@ -1,0 +1,39 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const posts = (await getCollection("blog")).sort(
+  (a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime(),
+);
+---
+
+<BaseLayout title="Blog | GymOS" description="Articles about gym operations, software rollout, and process improvement with GymOS.">
+  <div class="page-wrap">
+    <div class="container page-stack">
+      <section class="page-hero">
+        <span class="eyebrow">Blog</span>
+        <h1>Notes on gym operations, rollout discipline, and growth.</h1>
+        <p>
+          Short reads for owners and operators improving process across members,
+          collections, reporting, and team execution.
+        </p>
+      </section>
+
+      <section class="section-shell">
+        <div class="list-grid">
+          {posts.map((post) => (
+            <article class="list-card">
+              <span class="card-tag">{post.data.category}</span>
+              <h3><a href={`/blog/${post.slug}`}>{post.data.title}</a></h3>
+              <p>{post.data.description}</p>
+              <div class="meta-row">
+                <span>{post.data.readingTime}</span>
+                <span>{post.data.publishedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  </div>
+</BaseLayout>

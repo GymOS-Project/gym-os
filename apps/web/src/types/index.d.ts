@@ -2,8 +2,29 @@ type Json = string | number | boolean | null | { [key: string]: Json | undefined
 
 type SessionRole = 'admin' | 'staff';
 type PlanContentType = 'rich_text' | 'pdf';
+type BillingPlanCode = 'starter' | 'growth' | 'scale';
+type BillingCycle = 'monthly' | 'yearly';
+type BillingFeatureKey = 'classes' | 'pt_sessions' | 'coupons' | 'payment_analytics' | 'multi_branch' | 'essl_integrations' | 'payroll' | 'activity_logs';
+type BillingLimitKey = 'max_gyms' | 'max_staff_accounts' | 'max_active_members';
 
-type RouteType = { path: string, element: JSX.Element, protected?: boolean, section?: string, allowedRoles?: SessionRole[], guestOnly?: boolean }
+type RouteType = { path: string, element: JSX.Element, protected?: boolean, section?: string, allowedRoles?: SessionRole[], guestOnly?: boolean, feature?: BillingFeatureKey }
+
+interface BillingSubscription {
+  plan_code: BillingPlanCode;
+  plan_name: string;
+  status: 'trialing' | 'active' | 'pending_payment' | 'past_due' | 'expired' | 'cancelled';
+  billing_cycle: BillingCycle;
+  monthly_price: number;
+  yearly_price: number;
+  description: string;
+  features: BillingFeatureKey[];
+  limits: Record<BillingLimitKey, number>;
+  trial_ends_at: string | null;
+  current_period_ends_at: string | null;
+  is_trial: boolean;
+  entitled: boolean;
+  source: 'subscription' | 'legacy';
+}
 
 interface Gym {
   id: string;
@@ -42,6 +63,7 @@ interface Admin {
   gym_photo_url: string | null;
   gym_photo_urls: string[];
   logo_url: string | null;
+  subscription: BillingSubscription;
   created_at: string;
   updated_at: string;
   gyms: Gym[];

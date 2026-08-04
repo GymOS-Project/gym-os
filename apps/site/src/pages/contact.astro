@@ -1,0 +1,164 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Contact | GymOS" description="Contact GymOS for free trials, pricing, onboarding, and migration support.">
+  <div class="page-wrap">
+    <div class="container page-stack">
+      <section class="page-hero">
+        <span class="eyebrow"><i data-lucide="mail" style="width: 12px; height: 12px; margin-right: 4px; vertical-align: middle;"></i> Contact</span>
+        <h1>Tell us how your gym runs today.</h1>
+        <p>
+          Fill out the form below to get started with your 14-day free trial, discuss pricing, or schedule a custom data migration review.
+        </p>
+      </section>
+
+      <section class="contact-layout">
+        <!-- Left Column: Info Panel -->
+        <div class="contact-info-panel">
+
+          <div class="contact-info-block">
+            <span class="contact-info-label">Support hours</span>
+            <p class="contact-info-text">Monday to Saturday, 10:00 AM – 7:00 PM IST</p>
+          </div>
+
+          <div class="contact-info-block">
+            <span class="contact-info-label">What we help with</span>
+            <ul class="contact-help-list">
+              <li><i data-lucide="check" style="width: 12px; height: 12px; color: var(--accent); flex-shrink: 0;"></i> Trial setup & onboarding</li>
+              <li><i data-lucide="check" style="width: 12px; height: 12px; color: var(--accent); flex-shrink: 0;"></i> Member record migration</li>
+              <li><i data-lucide="check" style="width: 12px; height: 12px; color: var(--accent); flex-shrink: 0;"></i> Pricing & plan guidance</li>
+              <li><i data-lucide="check" style="width: 12px; height: 12px; color: var(--accent); flex-shrink: 0;"></i> Branch & staff configuration</li>
+              <li><i data-lucide="check" style="width: 12px; height: 12px; color: var(--accent); flex-shrink: 0;"></i> Billing & invoicing setup</li>
+            </ul>
+          </div>
+
+        <!-- Right Column: Form -->
+        <article class="contact-form-card" id="form-container">
+          <form class="contact-form" id="contact-form">
+            <div class="form-row">
+              <label class="form-field">
+                <span>Name</span>
+                <input type="text" name="name" autocomplete="name" required />
+              </label>
+
+              <label class="form-field">
+                <span>Work email</span>
+                <input type="email" name="email" autocomplete="email" required />
+              </label>
+            </div>
+
+            <div class="form-row">
+              <label class="form-field">
+                <span>Gym name</span>
+                <input type="text" name="gym" autocomplete="organization" required />
+              </label>
+
+              <label class="form-field">
+                <span>Phone</span>
+                <input type="tel" name="phone" autocomplete="tel" />
+              </label>
+            </div>
+
+            <div class="form-row">
+              <label class="form-field">
+                <span>Locations</span>
+                <select name="locations">
+                  <option>1 location</option>
+                  <option>2-5 locations</option>
+                  <option>6+ locations</option>
+                </select>
+              </label>
+
+              <label class="form-field">
+                <span>What do you need?</span>
+                <select name="topic">
+                  <option>Product trial setup</option>
+                  <option>Pricing</option>
+                  <option>Migration planning</option>
+                  <option>General enquiry</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="form-field">
+              <span>Message</span>
+              <textarea
+                name="message"
+                rows="6"
+                placeholder="Tell us about your current setup, team size, or the processes you want to improve."
+                required
+              ></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button class="button" type="submit" id="submit-btn">Send message</button>
+              <p class="form-note" id="submit-note">Submitting routes your enquiry securely to our support team.</p>
+            </div>
+          </form>
+        </article>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  const contactForm = document.getElementById("contact-form");
+  const formContainer = document.getElementById("form-container");
+  const submitBtn = document.getElementById("submit-btn");
+  const submitNote = document.getElementById("submit-note");
+
+  if (contactForm instanceof HTMLFormElement && formContainer) {
+    contactForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Sending...";
+      }
+      if (submitNote) {
+        submitNote.textContent = "Processing your submission. Please wait.";
+      }
+
+      const formData = new FormData(contactForm);
+      const data = Object.fromEntries(formData.entries());
+
+      fetch("https://formsubmit.co/ajax/nishumurmu017@gmail.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(data)
+      })
+      .then(response => {
+        if (!response.ok) throw new Error("Network response was not ok");
+        return response.json();
+      })
+      .then(() => {
+        formContainer.innerHTML = `
+          <div style="text-align: center; padding: 3rem 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; animation: revealIn 0.5s ease-out forwards;">
+            <div style="width: 4.5rem; height: 4.5rem; border-radius: 999px; background: rgba(198, 248, 49, 0.15); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: 2rem; box-shadow: 0 0 20px rgba(198,248,49,0.35);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 2.25rem; height: 2.25rem;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <h3 style="font-size: 1.5rem; font-weight: 800; margin: 0 0 0.75rem 0; color: var(--text);">Enquiry Received</h3>
+            <p style="color: var(--muted); font-size: 0.95rem; max-width: 24rem; margin: 0 auto 2rem auto; line-height: 1.6;">
+              Thank you for reaching out. We'll get back to you within 24 business hours.
+            </p>
+            <a href="/" class="button button-ghost">Return Home</a>
+          </div>
+        `;
+      })
+      .catch(() => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Send message";
+        }
+        if (submitNote) {
+          submitNote.textContent = "Something went wrong. Please check your connection and try again.";
+          submitNote.style.color = "#ef4444";
+        }
+      });
+    });
+  }
+</script>

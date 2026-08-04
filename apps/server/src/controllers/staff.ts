@@ -2,6 +2,7 @@ import type { Response } from "express";
 
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { logActivity } from "../services/activityLog.service";
+import { countAdminUsage, getAdminSubscriptionSummary, getBillingLimit } from "../services/billing.service";
 import { ensureGymBelongsToAdmin, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { sendStaffAccountCreatedEmail } from "../services/email.service";
 import { supabase } from "../supabase";
@@ -99,6 +100,16 @@ export async function createStaff(req: AuthenticatedRequest, res: Response) {
 
   if (!fullName || !email || !password) {
     return res.status(400).json({ message: "full_name, email, and password are required" });
+  }
+
+  try {
+    const subscription = await getAdminSubscriptionSummary(adminId);
+    const currentStaffCount = await countAdminUsage(adminId, "staff_accounts");
+    if (currentStaffCount >= getBillingLimit(subscription, "max_staff_accounts")) {
+      return res.status(403).json({ message: `Your current plan allows up to ${getBillingLimit(subscription, "max_staff_accounts")} staff accounts. Upgrade to add more.` });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to validate staff limit" });
   }
 
   const { data: gymRecord, error: gymError } = await supabase

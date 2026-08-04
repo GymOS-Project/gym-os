@@ -1,0 +1,12 @@
+---
+interface Props {
+  variant?: "slant" | "beam" | "grid";
+}
+
+const { variant = "slant" } = Astro.props;
+---
+
+<div class={`section-divider section-divider-${variant}`} aria-hidden="true">
+  <span></span>
+  <span></span>
+</div>
