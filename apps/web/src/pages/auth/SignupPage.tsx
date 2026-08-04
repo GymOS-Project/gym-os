@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { api } from '@/lib/api';
+import { BILLING_PLANS, BILLING_TRIAL_DAYS } from '@/lib/billing';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { MAX_IMAGE_SIZE_BYTES, MAX_SIGNUP_PHOTOS as MAX_PHOTOS, MAX_SIGNUP_PHOTOS, SIGNUP_STEPS as STEPS } from '@/utils/constants';
-import { Check, Eye, EyeOff, Building2, User, Lock, Upload, X, ImagePlus } from 'lucide-react';
+import { Check, Eye, EyeOff, Building2, User, Lock, Upload, X, ImagePlus, CreditCard, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -43,7 +45,7 @@ export default function SignupPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [activeBranchIndex, setActiveBranchIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<'trial' | 'purchase' | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [gymType, setGymType] = useState<'single' | 'branch'>('single');
   const [branchCount, setBranchCount] = useState(2);
@@ -52,11 +54,16 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [gymPhotos, setGymPhotos] = useState<File[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<BillingPlanCode>('starter');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
 
   const gymCount = gymType === 'branch' ? branchCount : 1;
   const activeGyms = gyms.slice(0, gymCount);
   const currentGym = activeGyms[activeBranchIndex] || activeGyms[0];
   const currentBranchLabel = gymType === 'branch' ? `Branch ${activeBranchIndex + 1} of ${gymCount}` : 'Primary Gym';
+  const loading = loadingAction !== null;
+  const selectedPlanDetails = BILLING_PLANS[selectedPlan];
+  const selectedPlanPrice = billingCycle === 'yearly' ? selectedPlanDetails.yearlyPrice : selectedPlanDetails.monthlyPrice;
 
   const updateGymType = (value: 'single' | 'branch') => {
     setGymType(value);
@@ -64,6 +71,7 @@ export default function SignupPage() {
     setBranchCount(nextCount === 1 ? 2 : nextCount);
     setGyms((current) => resizeGyms(current, value === 'branch' ? nextCount : 1));
     setActiveBranchIndex(0);
+    setSelectedPlan((current) => value === 'branch' && current !== 'scale' ? 'scale' : current);
   };
 
   const updateBranchCount = (value: string) => {
@@ -123,14 +131,23 @@ export default function SignupPage() {
       return validateOwnerContact(currentGym, activeBranchIndex);
     }
 
-    if (!accountEmail.trim()) { toast.error('Admin login email is required'); return false; }
-    if (!activeGyms.every((gym, index) => validateGymProfile(gym, index) && validateOwnerContact(gym, index))) { return false; }
-    if (password.length < 6) { toast.error('Password must be at least 6 characters'); return false; }
-    if (password !== confirmPassword) { toast.error('Passwords do not match'); return false; }
-    if (gymPhotos.length > MAX_SIGNUP_PHOTOS) { toast.error(`You can upload a maximum of ${MAX_SIGNUP_PHOTOS} gym photographs`); return false; }
-    for (const photo of gymPhotos) {
-      if (photo.size > MAX_IMAGE_SIZE_BYTES) { toast.error(`"${photo.name}" exceeds 10 MB limit`); return false; }
+    if (step === 3) {
+      if (!accountEmail.trim()) { toast.error('Admin login email is required'); return false; }
+      if (!activeGyms.every((gym, index) => validateGymProfile(gym, index) && validateOwnerContact(gym, index))) { return false; }
+      if (password.length < 6) { toast.error('Password must be at least 6 characters'); return false; }
+      if (password !== confirmPassword) { toast.error('Passwords do not match'); return false; }
+      if (gymPhotos.length > MAX_SIGNUP_PHOTOS) { toast.error(`You can upload a maximum of ${MAX_SIGNUP_PHOTOS} gym photographs`); return false; }
+      for (const photo of gymPhotos) {
+        if (photo.size > MAX_IMAGE_SIZE_BYTES) { toast.error(`"${photo.name}" exceeds 10 MB limit`); return false; }
+      }
+      return true;
     }
+
+    if (gymType === 'branch' && selectedPlan !== 'scale') {
+      toast.error('Branch onboarding is available on the Scale plan only');
+      return false;
+    }
+
     return true;
   };
 
@@ -142,7 +159,7 @@ export default function SignupPage() {
       return;
     }
 
-    if (step < 3) {
+    if (step < 4) {
       setStep((current) => current + 1);
       setActiveBranchIndex(0);
     }
@@ -164,6 +181,11 @@ export default function SignupPage() {
 
       setStep(1);
       setActiveBranchIndex(gymType === 'branch' ? gymCount - 1 : 0);
+      return;
+    }
+
+    if (step === 4) {
+      setStep(3);
       return;
     }
 
@@ -192,15 +214,15 @@ export default function SignupPage() {
     setGymPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const createSignupPayload = () => {
     if (!validateStep()) return;
 
-    setLoading(true);
     const payload = new FormData();
     const [primaryGym] = activeGyms;
 
     payload.append('gym_type', gymType);
+    payload.append('plan_code', selectedPlan);
+    payload.append('billing_cycle', billingCycle);
     payload.append('email', accountEmail);
     payload.append('account_email', accountEmail);
     payload.append('password', password);
@@ -219,8 +241,18 @@ export default function SignupPage() {
       payload.append(`gym_photos[${index}]`, photo);
     });
 
+    return payload;
+  };
+
+  const handleTrialStart = async () => {
+    const payload = createSignupPayload();
+    if (!payload) return;
+
+    payload.append('start_trial', 'true');
+    setLoadingAction('trial');
+
     const { error, authenticated } = await signUp(payload);
-    setLoading(false);
+    setLoadingAction(null);
 
     if (error) {
       toast.error(error.message || 'Sign up failed');
@@ -229,10 +261,25 @@ export default function SignupPage() {
 
     toast.success(
       authenticated
-        ? 'Account created! Welcome to GymOs.'
+        ? `Your ${BILLING_TRIAL_DAYS}-day free trial has started.`
         : 'Account created! Please sign in to continue.'
     );
     navigate(authenticated ? '/' : '/login');
+  };
+
+  const handlePurchase = async () => {
+    const payload = createSignupPayload();
+    if (!payload) return;
+
+    setLoadingAction('purchase');
+
+    try {
+      const result = await api.createSignupCheckout(payload);
+      window.location.assign(result.link_url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to start checkout');
+      setLoadingAction(null);
+    }
   };
 
   return (
@@ -320,12 +367,15 @@ export default function SignupPage() {
           </div>
 
           <div className="mb-8">
-            <p className="text-sm font-medium uppercase tracking-wide text-primary">Step {step} of 3</p>
+            <p className="text-sm font-medium uppercase tracking-wide text-primary">Step {step} of 4</p>
             <h2 className="text-3xl font-bold text-foreground mt-1">{STEPS[step - 1].title}</h2>
             <p className="text-muted-foreground mt-1">{STEPS[step - 1].description}</p>
           </div>
 
-          <form onSubmit={step === 3 ? handleSubmit : (e) => { e.preventDefault(); nextStep(); }}>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (step < 4) nextStep();
+          }}>
             {step === 1 && (
               <div className="space-y-5">
                 <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px]">
@@ -530,20 +580,122 @@ export default function SignupPage() {
               </div>
             )}
 
-            <div className="flex gap-3 mt-8">
-              {step > 1 && (
-                <Button type="button" variant="outline" onClick={prevStep} className="flex-1 h-11">
-                  Back
-                </Button>
-              )}
-              <Button type="submit" variant="gradient" className="flex-1 h-11" disabled={loading}>
-                {step === 3
-                  ? (loading ? 'Creating account...' : 'Create Account')
-                  : gymType === 'branch' && activeBranchIndex < gymCount - 1
+            {step === 4 && (
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-primary">14-day free trial on every plan</p>
+                    <p className="mt-1 text-sm text-muted-foreground">No card required for the trial. Choose a plan now and decide whether to start free or purchase immediately.</p>
+                  </div>
+                  <div className="inline-flex rounded-full border bg-background p-1">
+                    <button type="button" onClick={() => setBillingCycle('monthly')} className={cn('rounded-full px-4 py-2 text-sm transition-colors', billingCycle === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>
+                      Monthly
+                    </button>
+                    <button type="button" onClick={() => setBillingCycle('yearly')} className={cn('rounded-full px-4 py-2 text-sm transition-colors', billingCycle === 'yearly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>
+                      Yearly
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4 rounded-2xl border bg-card/70 p-5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pricing_plan">Plan *</Label>
+                    <Select value={selectedPlan} onValueChange={(value) => setSelectedPlan(value as BillingPlanCode)}>
+                      <SelectTrigger id="pricing_plan">
+                        <SelectValue placeholder="Select a plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="starter" disabled={gymType === 'branch'}>Starter</SelectItem>
+                        <SelectItem value="growth" disabled={gymType === 'branch'}>Growth</SelectItem>
+                        <SelectItem value="scale">Scale</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {gymType === 'branch' ? <p className="text-xs text-muted-foreground">Branch onboarding requires the Scale plan.</p> : null}
+                  </div>
+
+                  <div className="rounded-2xl border bg-muted/20 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-lg font-semibold text-foreground">{selectedPlanDetails.name}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{selectedPlanDetails.tagline}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-bold text-foreground">₹{selectedPlanPrice.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">per {billingCycle === 'yearly' ? 'year' : 'month'}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 space-y-2">
+                      {selectedPlanDetails.featuredBullets.map((item) => (
+                        <div key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <Check className="mt-0.5 h-4 w-4 text-primary" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl border bg-background/80 p-3 text-sm text-muted-foreground">
+                        <p className="text-xs uppercase tracking-wide">Staff</p>
+                        <p className="mt-1 font-medium text-foreground">Up to {selectedPlanDetails.limits.max_staff_accounts}</p>
+                      </div>
+                      <div className="rounded-xl border bg-background/80 p-3 text-sm text-muted-foreground">
+                        <p className="text-xs uppercase tracking-wide">Members</p>
+                        <p className="mt-1 font-medium text-foreground">Up to {selectedPlanDetails.limits.max_active_members.toLocaleString()}</p>
+                      </div>
+                      <div className="rounded-xl border bg-background/80 p-3 text-sm text-muted-foreground">
+                        <p className="text-xs uppercase tracking-wide">Gyms</p>
+                        <p className="mt-1 font-medium text-foreground">{selectedPlanDetails.limits.max_gyms} {selectedPlanDetails.limits.max_gyms === 1 ? 'gym' : 'gyms'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="mt-0.5 h-4 w-4 text-primary" />
+                    <p>
+                      All plans include members, packages, shifts, manual attendance, diet plans, exercise plans, invoices, collections,
+                      enquiries, followups, and the core dashboard. Growth adds classes, PT, coupons, and analytics. Scale unlocks branch gyms,
+                      eSSL, payroll, and activity logs.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {step < 4 ? (
+              <div className="flex gap-3 mt-8">
+                {step > 1 && (
+                  <Button type="button" variant="outline" onClick={prevStep} className="flex-1 h-11">
+                    Back
+                  </Button>
+                )}
+                <Button type="submit" variant="gradient" className="flex-1 h-11" disabled={loading}>
+                  {gymType === 'branch' && activeBranchIndex < gymCount - 1
                     ? `Save & Next ${step === 1 ? 'Branch Profile' : 'Branch Contact'}`
                     : 'Continue'}
-              </Button>
-            </div>
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-8 space-y-3">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Button type="button" variant="outline" onClick={prevStep} className="h-11">
+                    Back
+                  </Button>
+                  <Button type="button" variant="accent" className="h-11" disabled={loading} onClick={handleTrialStart}>
+                    {loadingAction === 'trial' ? 'Starting trial...' : `Start ${BILLING_TRIAL_DAYS}-Day Trial`}
+                  </Button>
+                  <Button type="button" variant="gradient" className="h-11 gap-2" disabled={loading} onClick={handlePurchase}>
+                    <CreditCard className="h-4 w-4" />
+                    {loadingAction === 'purchase' ? 'Redirecting...' : 'Purchase Now'}
+                  </Button>
+                </div>
+                <p className="text-center text-xs text-muted-foreground">
+                  Selected plan: <span className="font-medium text-foreground">{selectedPlanDetails.name}</span> · ₹{selectedPlanPrice.toLocaleString()} / {billingCycle === 'yearly' ? 'year' : 'month'}
+                </p>
+              </div>
+            )}
           </form>
 
           <p className="text-center mt-6 text-muted-foreground text-sm">

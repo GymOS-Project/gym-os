@@ -23,6 +23,8 @@ declare global {
     refreshAdmin: () => Promise<void>;
     setSelectedGymId: (gymId: string) => void;
     hasSectionAccess: (section: string) => boolean;
+    hasFeatureAccess: (feature: BillingFeatureKey) => boolean;
+    getPlanLimit: (limit: BillingLimitKey) => number;
   }
 
   interface AuthProviderProps {

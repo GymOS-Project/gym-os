@@ -37,7 +37,7 @@ function withGymHeader(path: string, incomingHeaders: RequestInit["headers"], is
     headers.set("Content-Type", "application/json");
   }
 
-  if (path.startsWith("/auth") || path.startsWith("/branches")) {
+  if (path.startsWith("/auth") || path.startsWith("/branches") || path.startsWith("/billing/public")) {
     return headers;
   }
 
@@ -85,12 +85,36 @@ export interface CreatedPayrollRun {
   entries: PayrollEntry[];
 }
 
+export interface SignupCheckoutResult {
+  draft_id: string;
+  link_url: string;
+}
+
+export interface SignupCheckoutStatus {
+  draft_id: string;
+  status: string;
+  plan_code: BillingPlanCode;
+  billing_cycle: BillingCycle;
+  admin_id: string | null;
+  payment: {
+    status: string;
+    amount: number;
+    cashfree_link_id: string | null;
+    cashfree_transaction_id: string | null;
+    updated_at: string;
+  } | null;
+}
+
 export const api = {
   // Auth
   login: (email: string, password: string) =>
     request<LoginResult>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   signup: (data: FormData) =>
     request<LoginResult>("/auth/signup", { method: "POST", body: data }),
+  createSignupCheckout: (data: FormData) =>
+    request<SignupCheckoutResult>("/billing/public/signup-checkout", { method: "POST", body: data }),
+  getSignupCheckoutStatus: (draftId: string) =>
+    request<SignupCheckoutStatus>(`/billing/public/signup-checkout/${draftId}`),
   forgotPassword: (email: string) =>
     request<{ message: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
   resetPassword: (access_token: string, new_password: string) =>

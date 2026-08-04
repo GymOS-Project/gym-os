@@ -1,4 +1,4 @@
-import { Building2, Lock, User } from "lucide-react";
+import { Building2, CreditCard, Lock, User } from "lucide-react";
 
 import { todayDateValue } from "@/lib/date";
 
@@ -28,6 +28,7 @@ export const SIGNUP_STEPS = [
   { id: 1, title: "Gym Profile", description: "Add each gym or branch profile", icon: Building2 },
   { id: 2, title: "Owner & Contact", description: "Capture branch contact details", icon: User },
   { id: 3, title: "Account & Media", description: "Set your admin login and optional photos", icon: Lock },
+  { id: 4, title: "Plan & Billing", description: "Choose your GymOS tier and start your trial or purchase", icon: CreditCard },
 ] as const;
 
 export const STAT_CARD_VARIANT_STYLES: StatCardVariantStyles = {

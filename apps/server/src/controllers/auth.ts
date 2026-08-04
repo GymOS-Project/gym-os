@@ -10,6 +10,7 @@ import {
 } from "../services/authSession.service";
 import { sendGymOnboardingWelcomeEmail } from "../services/email.service";
 import { ensureGymBelongsToAdmin } from "../services/gymScope.service";
+import { countAdminUsage, createAdminSubscription, getAdminSubscriptionSummary, getBillingLimit, requiresScalePlan } from "../services/billing.service";
 import { createSupabaseAuthClient, supabase } from "../supabase";
 
 const SESSION_COOKIE_NAME = "sessionToken";
@@ -225,6 +226,9 @@ export async function signup(req: Request, res: Response) {
     account_email,
     password,
     gym_type,
+    plan_code,
+    billing_cycle,
+    start_trial,
   } = req.body;
   let gyms: SignupGymPayload[];
 
@@ -246,6 +250,10 @@ export async function signup(req: Request, res: Response) {
 
   if (gym_type !== "single" && gym_type !== "branch") {
     return res.status(400).json({ message: "gym_type must be either single or branch" });
+  }
+
+  if (requiresScalePlan(gym_type, typeof plan_code === "string" ? plan_code : null)) {
+    return res.status(400).json({ message: "Branch onboarding is available on the Scale plan" });
   }
 
   const signupClient = createSupabaseAuthClient();
@@ -294,13 +302,22 @@ export async function signup(req: Request, res: Response) {
         })),
       );
 
-      if (gymError) {
-        await cleanupAdminRecord(admin.id);
-        await cleanupAuthUser(data.user.id);
-        return res.status(500).json({ message: gymError.message });
-      }
+       if (gymError) {
+         await cleanupAdminRecord(admin.id);
+         await cleanupAuthUser(data.user.id);
+         return res.status(500).json({ message: gymError.message });
+       }
 
-      const recipientEmail = data.user.email || authEmail;
+       if (typeof plan_code === "string" && plan_code) {
+         await createAdminSubscription({
+           adminId: admin.id,
+           planCode: plan_code as any,
+           billingCycle: billing_cycle === "yearly" ? "yearly" : "monthly",
+           status: start_trial === true || start_trial === "true" ? "trialing" : "active",
+         });
+       }
+
+       const recipientEmail = data.user.email || authEmail;
       if (recipientEmail) {
         void sendGymOnboardingWelcomeEmail({
           to: recipientEmail,
@@ -557,6 +574,13 @@ export async function upgradeSingleGymToBranch(req: AuthenticatedRequest, res: R
 
     if (currentGyms.length !== 1) {
       return res.status(400).json({ message: "This account is no longer eligible for branch upgrade setup" });
+    }
+
+    const subscription = await getAdminSubscriptionSummary(adminId);
+    const gymLimit = getBillingLimit(subscription, "max_gyms");
+    const currentGymCount = await countAdminUsage(adminId, "gyms");
+    if (currentGymCount >= gymLimit) {
+      return res.status(403).json({ message: `Your current plan allows up to ${gymLimit} gyms. Upgrade to add more branches.` });
     }
 
     const upgradeTimestamp = new Date().toISOString();

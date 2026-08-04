@@ -1,4 +1,5 @@
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/toaster"
+
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import PostHogTracker from "@/components/analytics/PostHogTracker";
@@ -9,6 +10,7 @@ import { GuestRoute, ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
+import SignupCheckoutStatusPage from "@/pages/auth/SignupCheckoutStatusPage";
 import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 import DashboardPage from "@/pages/DashboardPage";
@@ -51,13 +53,14 @@ import ActivityLogPage from "@/pages/reports/ActivityLogPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
-const protectedElement = (element: React.ReactNode, options?: { section?: string; allowedRoles?: SessionRole[] }) => (
-  <ProtectedRoute section={options?.section} allowedRoles={options?.allowedRoles}>{element}</ProtectedRoute>
+const protectedElement = (element: React.ReactNode, options?: { section?: string; allowedRoles?: SessionRole[]; feature?: BillingFeatureKey }) => (
+  <ProtectedRoute section={options?.section} allowedRoles={options?.allowedRoles} feature={options?.feature}>{element}</ProtectedRoute>
 );
 const guestElement = (element: React.ReactNode) => <GuestRoute>{element}</GuestRoute>;
 const routes: RouteType[] = [
   { path: "/login", element: <LoginPage />, guestOnly: true },
   { path: "/signup", element: <SignupPage />, guestOnly: true },
+  { path: "/signup/checkout-status", element: <SignupCheckoutStatusPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
   { path: "/", element: <DashboardPage />, protected: true },
@@ -66,12 +69,12 @@ const routes: RouteType[] = [
   { path: "/members/:id/edit", element: <AddMemberPage />, protected: true, section: "members" },
   { path: "/packages-shift/packages", element: <PackageTypesPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
   { path: "/packages-shift/shifts", element: <ShiftsPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
-  { path: "/operations/classes", element: <ClassSchedulePage />, protected: true, section: "classes" },
+  { path: "/operations/classes", element: <ClassSchedulePage />, protected: true, section: "classes", feature: "classes" },
   { path: "/operations/attendance", element: <AttendancePage />, protected: true, section: "attendance" },
   { path: "/payments/collections", element: <PaymentsCollectionsPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/payments/sales", element: <PaymentsSalesPage />, protected: true, allowedRoles: ["admin"] },
-  { path: "/payments/analytics", element: <PaymentsAnalyticsPage />, protected: true, allowedRoles: ["admin"] },
-  { path: "/payments/coupons", element: <CouponsPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/payments/analytics", element: <PaymentsAnalyticsPage />, protected: true, allowedRoles: ["admin"], feature: "payment_analytics" },
+  { path: "/payments/coupons", element: <CouponsPage />, protected: true, allowedRoles: ["admin"], feature: "coupons" },
   { path: "/payments/invoices", element: <InvoicesPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/members/packages", element: <PackageTypesPage />, protected: true, section: "packages", allowedRoles: ["admin"] },
   { path: "/diet-exercise/diet-plans", element: <DietPlansPage />, protected: true, section: "diet_plans" },
@@ -83,8 +86,8 @@ const routes: RouteType[] = [
   { path: "/staff/create", element: <CreateStaffPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/staff/list", element: <StaffListPage />, protected: true, allowedRoles: ["admin"] },
   { path: "/staff/trainers", element: <StaffListPage />, protected: true, allowedRoles: ["admin"] },
-  { path: "/staff/pt-sessions", element: <PTSessionsPage />, protected: true, section: "pt" },
-  { path: "/staff/payroll", element: <PayrollPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/staff/pt-sessions", element: <PTSessionsPage />, protected: true, section: "pt", feature: "pt_sessions" },
+  { path: "/staff/payroll", element: <PayrollPage />, protected: true, allowedRoles: ["admin"], feature: "payroll" },
   {
     path: "/followups/common",
     element: (
@@ -167,10 +170,10 @@ const routes: RouteType[] = [
   },
   { path: "/reports/shift", element: <ShiftReportPage />, protected: true, section: "reports" },
   { path: "/reports/expiring", element: <NearToExpirePage />, protected: true, section: "reports" },
-  { path: "/reports/activity-logs", element: <ActivityLogPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/reports/activity-logs", element: <ActivityLogPage />, protected: true, allowedRoles: ["admin"], feature: "activity_logs" },
   { path: "/profile", element: <ProfilePage />, protected: true },
   { path: "/settings", element: <SettingsPage />, protected: true },
-  { path: "/settings/integrations", element: <IntegrationsPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/settings/integrations", element: <IntegrationsPage />, protected: true, allowedRoles: ["admin"], feature: "essl_integrations" },
   { path: "*", element: <NotFound /> },
 ];
 
@@ -183,11 +186,11 @@ const App = () => (
         <AuthProvider>
           <PostHogTracker />
           <Routes>
-            {routes.map(({ path, element, protected: isProtected, guestOnly, section, allowedRoles }) => (
+            {routes.map(({ path, element, protected: isProtected, guestOnly, section, allowedRoles, feature }) => (
               <Route
                 key={path}
                 path={path}
-                element={isProtected ? protectedElement(element, { section, allowedRoles }) : guestOnly ? guestElement(element) : element}
+                element={isProtected ? protectedElement(element, { section, allowedRoles, feature }) : guestOnly ? guestElement(element) : element}
               />
             ))}
           </Routes>
@@ -198,3 +201,4 @@ const App = () => (
 );
 
 export default App;
+

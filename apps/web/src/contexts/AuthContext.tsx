@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { api } from "@/lib/api";
+import { getPlanLimit as getSubscriptionLimit, getSectionFeature, hasPlanFeature } from "@/lib/billing";
 import { getStoredGymFilter, setStoredGymFilter } from "@/lib/gymFilter";
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -42,12 +43,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const hasSectionAccess = (section: string) => {
+    const requiredFeature = getSectionFeature(section);
+    if (requiredFeature && !hasPlanFeature(admin?.subscription, requiredFeature)) {
+      return false;
+    }
+
     if (role === 'admin') {
       return true;
     }
 
     return Boolean(staff?.section_permissions.includes(section));
   };
+
+  const hasFeatureAccess = (feature: BillingFeatureKey) => hasPlanFeature(admin?.subscription, feature);
+  const getPlanLimit = (limit: BillingLimitKey) => getSubscriptionLimit(admin?.subscription, limit);
 
   useEffect(() => {
     api.me()
@@ -132,7 +141,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, admin, staff, role, gyms, selectedGymId, selectedGym, loading, signIn, signUp, signOut, refreshAdmin, setSelectedGymId, hasSectionAccess }}>
+    <AuthContext.Provider value={{ user, admin, staff, role, gyms, selectedGymId, selectedGym, loading, signIn, signUp, signOut, refreshAdmin, setSelectedGymId, hasSectionAccess, hasFeatureAccess, getPlanLimit }}>
       {children}
     </AuthContext.Provider>
   );

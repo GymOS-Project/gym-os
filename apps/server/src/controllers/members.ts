@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { logActivity } from "../services/activityLog.service";
+import { countAdminUsage, getAdminSubscriptionSummary, getBillingLimit } from "../services/billing.service";
 import { sendMemberWelcomeEmail } from "../services/email.service";
 import { attachMemberPackages } from "../services/memberPackages.service";
 import { hasOwn, hasPlanContentInput, normalizeOptionalString, resolvePlanContentFields, type PlanTable } from "../services/planContent.service";
@@ -553,6 +554,16 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
 
   if (!name || !phone) {
     return res.status(400).json({ message: "name and phone are required" });
+  }
+
+  try {
+    const subscription = await getAdminSubscriptionSummary(adminId);
+    const currentMemberCount = await countAdminUsage(adminId, "members");
+    if (currentMemberCount >= getBillingLimit(subscription, "max_active_members")) {
+      return res.status(403).json({ message: `Your current plan allows up to ${getBillingLimit(subscription, "max_active_members")} members. Upgrade to add more.` });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to validate member limit" });
   }
 
   const { data: gymRecord, error: gymError } = await supabase

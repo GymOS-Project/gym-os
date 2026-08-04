@@ -1,0 +1,23 @@
+---
+const links = [
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
+];
+---
+
+<header class="site-header">
+  <div class="container nav-shell">
+    <a class="brand-mark" href="/">
+      <img src="/assets/white-logo.svg" alt="GymOS Logo" style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle;" />
+      <span>GymOS</span>
+    </a>
+
+    <nav class="site-nav" aria-label="Primary navigation">
+      {links.map((link) => (
+        <a href={link.href}>{link.label}</a>
+      ))}
+    </nav>
+
+    <a class="button button-small" href="https://gym-os.pages.dev/" target="_blank" rel="noopener noreferrer">Start 14 days free trial</a>
+  </div>
+</header>

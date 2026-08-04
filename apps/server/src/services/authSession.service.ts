@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypt
 import type { CookieOptions, Request, Response } from "express";
 
 import { createSupabaseAuthClient, supabase } from "../supabase";
+import { getAdminSubscriptionSummary } from "./billing.service";
 
 export const SESSION_COOKIE_NAME = "sessionToken";
 export const REFRESH_COOKIE_NAME = "refreshToken";
@@ -209,7 +210,8 @@ async function getAdminContext(adminId: string, gymIds?: string[]) {
   }
 
   const primaryGym = gyms?.[0] || null;
-  return mergeAdminWithGym(admin, primaryGym, gyms || []);
+  const subscription = await getAdminSubscriptionSummary(admin.id);
+  return mergeAdminWithGym({ ...admin, subscription }, primaryGym, gyms || []);
 }
 
 export async function getAdminByAuthId(authId: string) {

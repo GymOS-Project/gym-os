@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { getAdminByAuthId } from "../services/authSession.service";
+import { countAdminUsage, getAdminSubscriptionSummary, getBillingLimit } from "../services/billing.service";
 import { supabase } from "../supabase";
 
 function normalizeOptionalString(value: unknown) {
@@ -77,6 +78,17 @@ export async function createBranch(req: AuthenticatedRequest, res: Response) {
 
   if (!admin || admin.gym_type !== "branch" || !Array.isArray(admin.gyms) || admin.gyms.length < 2) {
     return res.status(400).json({ message: "Upgrade this account to branch mode before adding more gyms" });
+  }
+
+  try {
+    const subscription = await getAdminSubscriptionSummary(adminId);
+    const gymLimit = getBillingLimit(subscription, "max_gyms");
+    const currentGymCount = await countAdminUsage(adminId, "gyms");
+    if (currentGymCount >= gymLimit) {
+      return res.status(403).json({ message: `Your current plan allows up to ${gymLimit} gyms. Upgrade to add more branches.` });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to validate branch limit" });
   }
 
   const { data, error } = await supabase

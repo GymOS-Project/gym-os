@@ -94,7 +94,19 @@ export default function IntegrationsPage() {
     }
   };
 
-  const webhookUrl = `${(((import.meta as any).env.VITE_API_BASE_URL || `${window.location.origin}/api`) as string).replace(/\/$/, "")}/essl/webhook`;
+  const configuredBaseUrl = (((import.meta as any).env.VITE_API_BASE_URL || window.location.origin) as string).replace(/\/$/, "");
+  const admsBaseUrl = configuredBaseUrl.replace(/\/api$/, "");
+  const admsEndpoint = `${admsBaseUrl}/iclock/cdata`;
+  let serverAddress = admsBaseUrl;
+  let serverPort = "443";
+
+  try {
+    const parsed = new URL(admsBaseUrl);
+    serverAddress = parsed.hostname;
+    serverPort = parsed.port || (parsed.protocol === "https:" ? "443" : "80");
+  } catch {
+    serverAddress = admsBaseUrl;
+  }
 
   return (
     <AppLayout title="Integrations">
@@ -108,9 +120,19 @@ export default function IntegrationsPage() {
         </div>
 
         <div className="rounded-xl border bg-card p-5">
-          <div className="mb-3 flex items-center gap-2"><Fingerprint className="h-4 w-4 text-primary" /><p className="font-medium">ADMS Push Target</p></div>
-          <p className="text-sm text-muted-foreground">Use this endpoint when the device supports cloud push or webhook mode.</p>
-          <div className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-sm font-mono break-all">{webhookUrl}</div>
+          <div className="mb-3 flex items-center gap-2"><Fingerprint className="h-4 w-4 text-primary" /><p className="font-medium">ADMS Device Target</p></div>
+          <p className="text-sm text-muted-foreground">For ADMS devices, enter the server host and port below. The device will call the built-in ADMS route automatically.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-sm">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Server Address</p>
+              <p className="mt-1 font-mono break-all">{serverAddress}</p>
+            </div>
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-sm">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Server Port</p>
+              <p className="mt-1 font-mono">{serverPort}</p>
+            </div>
+          </div>
+          <div className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-sm font-mono break-all">{admsEndpoint}</div>
         </div>
 
         <div className="overflow-hidden rounded-xl border bg-card">

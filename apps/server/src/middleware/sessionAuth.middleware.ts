@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { resolveAuthenticatedSession, type SessionRole, type StaffSessionProfile } from "../services/authSession.service";
+import { hasBillingFeature, type BillingFeatureKey } from "../services/billing.service";
 
 export interface AuthenticatedRequest extends Request {
   authUser?: {
@@ -12,13 +13,24 @@ export interface AuthenticatedRequest extends Request {
     auth_id: string;
     gym_id?: string | null;
     gym_type?: "single" | "branch" | null;
+    subscription?: any;
     [key: string]: unknown;
   };
   staff?: StaffSessionProfile | null;
   sessionRole?: SessionRole;
 }
 
+const SECTION_FEATURE_MAP: Partial<Record<string, BillingFeatureKey>> = {
+  classes: "classes",
+  pt: "pt_sessions",
+};
+
 function hasSectionAccess(req: AuthenticatedRequest, section: string) {
+  const requiredFeature = SECTION_FEATURE_MAP[section];
+  if (requiredFeature && !hasBillingFeature(req.admin?.subscription, requiredFeature)) {
+    return false;
+  }
+
   if (req.sessionRole === "admin") {
     return true;
   }

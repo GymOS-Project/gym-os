@@ -21,7 +21,7 @@ import { CreditCard, GitBranch, Globe, ImagePlus, ImageUp, Lock, Plus, Settings,
 import { toast } from "sonner";
 
 export default function SettingsPage() {
-  const { admin, role, selectedGym, selectedGymId, refreshAdmin } = useAuth();
+  const { admin, role, selectedGym, selectedGymId, refreshAdmin, hasFeatureAccess } = useAuth();
   const gymCount = admin?.gyms?.length ?? 0;
   const [saving, setSaving] = useState(false);
   const [branchSaving, setBranchSaving] = useState(false);
@@ -218,7 +218,11 @@ export default function SettingsPage() {
   };
 
   const openUpgradeFlow = () => {
-    resetUpgradeForms();
+    if (hasFeatureAccess('multi_branch')) {
+      openAddBranchDialog();
+      return;
+    }
+
     setPaymentOpen(true);
   };
 
@@ -320,7 +324,7 @@ export default function SettingsPage() {
                   {isSingleGymAccount ? (
                     <Button onClick={openUpgradeFlow} variant="gradient" className="gap-2">
                       <CreditCard className="h-4 w-4" />
-                      Upgrade To Branch Gym
+                      {hasFeatureAccess('multi_branch') ? 'Add Second Gym' : 'Upgrade To Scale'}
                     </Button>
                   ) : (
                     <Button onClick={openAddBranchDialog} variant="gradient" className="gap-2">
@@ -329,7 +333,7 @@ export default function SettingsPage() {
                     </Button>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {isSingleGymAccount ? "Demo payment only. No real charge is processed in this flow." : "Every new branch becomes immediately available in forms and the global gym filter."}
+                    {isSingleGymAccount ? "Branch gyms are unlocked through the Scale plan." : "Every new branch becomes immediately available in forms and the global gym filter."}
                   </p>
                 </div>
               </div>
@@ -507,40 +511,24 @@ export default function SettingsPage() {
             <DialogHeader>
               <DialogTitle>Upgrade Plan</DialogTitle>
               <DialogDescription>
-                Demo payment to unlock branch mode. After this step, you will add the details for your second gym.
+                Branch management now lives on the Scale plan. Upgrade the account billing tier before adding a second gym.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleDemoPayment} className="space-y-4">
+            <div className="space-y-4">
               <div className="rounded-xl border bg-muted/20 p-4">
-                <p className="font-medium text-foreground">Branch Gym Upgrade</p>
-                <p className="mt-1 text-sm text-muted-foreground">Demo amount: ₹4,999</p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="card_name">Cardholder Name</Label>
-                <Input id="card_name" value={paymentForm.card_name} onChange={(event) => updatePaymentField("card_name", event.target.value)} placeholder="Owner name" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="card_number">Card Number</Label>
-                <Input id="card_number" value={paymentForm.card_number} onChange={(event) => updatePaymentField("card_number", event.target.value)} placeholder="4111 1111 1111 1111" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="expiry">Expiry</Label>
-                  <Input id="expiry" value={paymentForm.expiry} onChange={(event) => updatePaymentField("expiry", event.target.value)} placeholder="12/30" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="cvv">CVV</Label>
-                  <Input id="cvv" value={paymentForm.cvv} onChange={(event) => updatePaymentField("cvv", event.target.value)} placeholder="123" />
-                </div>
+                <p className="font-medium text-foreground">Scale unlocks</p>
+                <p className="mt-1 text-sm text-muted-foreground">Multi-branch gyms, eSSL integrations, payroll, activity logs, and higher staff/member limits.</p>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setPaymentOpen(false)}>Cancel</Button>
-                <Button type="submit" variant="gradient" className="gap-2">
+                <Button asChild variant="gradient" className="gap-2">
+                  <a href="mailto:support@gymos.app?subject=Upgrade%20to%20Scale">
                   <CreditCard className="h-4 w-4" />
-                  Pay & Continue
+                  Contact For Upgrade
+                  </a>
                 </Button>
               </DialogFooter>
-            </form>
+            </div>
           </DialogContent>
         </Dialog>
 

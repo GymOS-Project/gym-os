@@ -23,6 +23,8 @@ import activityLogsRouter from "./routes/activityLogs";
 import invoicesRouter from "./routes/invoices";
 import payrollRouter from "./routes/payroll";
 import esslRouter from "./routes/essl";
+import billingRouter from "./routes/billing";
+import admsRouter from "./routes/adms";
 import { createRateLimit } from "./middleware/rateLimit.middleware";
 import { startSubscriptionWorker, scheduleSubscriptionReminder } from "./jobs/subscriptionNotifier";
 
@@ -55,9 +57,21 @@ app.use(
   })
 );
 app.use(apiRateLimiter);
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ limit: "10mb", extended: true }));
+app.use(express.json({
+  limit: "10mb",
+  verify: (req, _res, buf) => {
+    (req as Request & { rawBody?: string }).rawBody = buf.toString("utf8");
+  },
+}));
+app.use(express.urlencoded({
+  limit: "10mb",
+  extended: true,
+  verify: (req, _res, buf) => {
+    (req as Request & { rawBody?: string }).rawBody = buf.toString("utf8");
+  },
+}));
 app.use(cookieParser());
+app.use("/iclock", admsRouter);
 
 const apiRouter = express.Router();
 
@@ -85,6 +99,7 @@ apiRouter.use("/activity-logs", activityLogsRouter);
 apiRouter.use("/invoices", invoicesRouter);
 apiRouter.use("/payroll", payrollRouter);
 apiRouter.use("/essl", esslRouter);
+apiRouter.use("/billing", billingRouter);
 
 apiRouter.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", message: "GymOS API running!" });
