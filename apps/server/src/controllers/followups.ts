@@ -1,5 +1,6 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
+import { logActivity } from "../services/activityLog.service";
 import { attachMembersByMemberId } from "../services/relatedRecords.service";
 import { ensureMemberBelongsToGym, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { supabase } from "../supabase";
@@ -102,6 +103,7 @@ export async function createFollowup(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ message: error.message });
   }
 
+  await logActivity(req, { action: "create", entityType: "followup", entityId: data.id, gymId, after: data });
   return res.status(201).json(data);
 }
 
@@ -117,6 +119,14 @@ export async function updateFollowup(req: AuthenticatedRequest, res: Response) {
   }
 
   const { member_id, followup_date, next_followup_date, notes, status } = req.body;
+
+  let existingQuery = supabase.from("followups").select("*").eq("id", req.params.id).eq("admin_id", adminId);
+  if (gymScope.selectedGymId) {
+    existingQuery = existingQuery.eq("gym_id", gymScope.selectedGymId);
+  }
+  const existing = await existingQuery.maybeSingle();
+  if (existing.error) return res.status(500).json({ message: existing.error.message });
+  if (!existing.data) return res.status(404).json({ message: "Follow-up not found" });
 
   if (member_id && gymScope.selectedGymId) {
     const validMember = await ensureMemberBelongsToGym(member_id, adminId, gymScope.selectedGymId).catch((error) => {
@@ -155,5 +165,49 @@ export async function updateFollowup(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ message: error.message });
   }
 
+  await logActivity(req, { action: "update", entityType: "followup", entityId: data.id, gymId: data.gym_id, before: existing.data, after: data });
   return res.json(data);
+}
+
+export async function deleteFollowup(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) {
+    return;
+  }
+
+  let existingQuery = supabase
+    .from("followups")
+    .select("*")
+    .eq("id", req.params.id)
+    .eq("admin_id", adminId);
+
+  if (gymScope.selectedGymId) {
+    existingQuery = existingQuery.eq("gym_id", gymScope.selectedGymId);
+  }
+
+  const existing = await existingQuery.maybeSingle();
+  if (existing.error) {
+    return res.status(500).json({ message: existing.error.message });
+  }
+  if (!existing.data) {
+    return res.status(404).json({ message: "Follow-up not found" });
+  }
+
+  const { error } = await supabase
+    .from("followups")
+    .delete()
+    .eq("id", req.params.id)
+    .eq("admin_id", adminId);
+
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+
+  await logActivity(req, { action: "delete", entityType: "followup", entityId: String(req.params.id), gymId: existing.data.gym_id, before: existing.data });
+  return res.status(204).send();
 }

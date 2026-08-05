@@ -26,6 +26,36 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function downloadFile(path: string, filename: string) {
+  const res = await fetch(`${API_BASE_URL}/api${path}`, {
+    credentials: "include",
+    headers: withGymHeader(path, undefined, false),
+  });
+
+  if (!res.ok) {
+    let message = `Request failed with status ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body?.message) message = body.message;
+    } catch {}
+    throw new Error(message);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function uploadCsv<T>(path: string, csv: string): Promise<T> {
+  return request<T>(path, { method: "POST", headers: { "Content-Type": "text/csv" }, body: csv });
+}
+
 function withBody(data: FormData | Record<string, unknown>) {
   return data instanceof FormData ? data : JSON.stringify(data);
 }
@@ -185,6 +215,7 @@ export const api = {
     request<StaffAccount>("/staff", { method: "POST", body: JSON.stringify(data) }),
   updateStaff: (id: string, data: Partial<StaffAccount>) =>
     request<StaffAccount>(`/staff/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteStaff: (id: string) => request<void>(`/staff/${id}`, { method: "DELETE" }),
 
   // Classes
   getClassSessions: () => request<ClassSession[]>("/classes"),
@@ -230,6 +261,9 @@ export const api = {
     request<Invoice>(`/invoices/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   markInvoicePaid: (id: string) =>
     request<Invoice>(`/invoices/${id}/mark-paid`, { method: "POST", body: JSON.stringify({}) }),
+  downloadInvoiceReceipt: (id: string, filename: string) => downloadFile(`/invoices/${id}/receipt`, filename),
+  emailInvoiceReceipt: (id: string, email?: string) =>
+    request<{ message: string; recipient: string }>(`/invoices/${id}/email`, { method: "POST", body: JSON.stringify({ email }) }),
 
   // Payroll
   getPayrollRuns: () => request<PayrollRun[]>("/payroll/runs"),
@@ -298,11 +332,25 @@ export const api = {
   getMemberPackages: () => request<(MemberPackage & { members?: { name: string; phone: string } })[]>("/reports/packages"),
   createMemberPackage: (data: Partial<MemberPackage>) =>
     request<MemberPackage>("/reports/packages", { method: "POST", body: JSON.stringify(data) }),
+  updateMemberPackage: (id: string, data: Partial<MemberPackage>) =>
+    request<MemberPackage>(`/reports/packages/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteMemberPackage: (id: string) => request<void>(`/reports/packages/${id}`, { method: "DELETE" }),
+  pauseMemberPackage: (id: string, notes?: string) =>
+    request<MemberPackage>(`/reports/packages/${id}/pause`, { method: "POST", body: JSON.stringify({ notes }) }),
+  resumeMemberPackage: (id: string, notes?: string) =>
+    request<MemberPackage>(`/reports/packages/${id}/resume`, { method: "POST", body: JSON.stringify({ notes }) }),
+  cancelMemberPackage: (id: string, notes?: string) =>
+    request<MemberPackage>(`/reports/packages/${id}/cancel`, { method: "POST", body: JSON.stringify({ notes }) }),
+  renewMemberPackage: (id: string, data: Partial<MemberPackage>) =>
+    request<MemberPackage>(`/reports/packages/${id}/renew`, { method: "POST", body: JSON.stringify(data) }),
 
   // Transactions
   getTransactions: () => request<(Transaction & { members?: { name: string; phone: string } })[]>("/reports/transactions"),
   createTransaction: (data: Partial<Transaction>) =>
     request<Transaction>("/reports/transactions", { method: "POST", body: JSON.stringify(data) }),
+  updateTransaction: (id: string, data: Partial<Transaction>) =>
+    request<Transaction>(`/reports/transactions/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteTransaction: (id: string) => request<void>(`/reports/transactions/${id}`, { method: "DELETE" }),
 
   // Followups
   getFollowups: (type?: string) =>
@@ -311,6 +359,7 @@ export const api = {
     request<Followup>("/followups", { method: "POST", body: JSON.stringify(data) }),
   updateFollowup: (id: string, data: Partial<Followup>) =>
     request<Followup>(`/followups/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteFollowup: (id: string) => request<void>(`/followups/${id}`, { method: "DELETE" }),
 
   // Enquiries
   getEnquiries: (status?: string) =>
@@ -333,8 +382,22 @@ export const api = {
     request<(Review & { members?: { name: string; phone: string } })[]>("/reports/reviews"),
   createReview: (data: Partial<Review>) =>
     request<Review>("/reports/reviews", { method: "POST", body: JSON.stringify(data) }),
+  updateReview: (id: string, data: Partial<Review>) =>
+    request<Review>(`/reports/reviews/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteReview: (id: string) => request<void>(`/reports/reviews/${id}`, { method: "DELETE" }),
   getReferenceMembers: () =>
     request<{ ref: { id: string; name: string; phone: string }; referrals: { id: string; name: string; phone: string }[] }[]>("/reports/reference-members"),
   getShiftReport: () =>
     request<(Member & { member_packages?: { status: string; end_date: string; package_name: string }[] })[]>("/reports/shift-report"),
+
+  // Data transfer
+  exportCsv: (resource: "members" | "enquiries" | "payments" | "attendance") =>
+    downloadFile(`/data-transfer/${resource}/export`, `${resource}.csv`),
+  exportBackup: () => downloadFile("/data-transfer/backup/export", `gymos-backup-${new Date().toISOString().slice(0, 10)}.json`),
+  inspectBackup: (backup: unknown) =>
+    request<{ summary: Record<string, number> }>("/data-transfer/backup/inspect", { method: "POST", body: JSON.stringify(backup) }),
+  restoreBackup: (backup: unknown, confirm = false) =>
+    request<{ restored: Record<string, number> }>("/data-transfer/backup/restore", { method: "POST", body: JSON.stringify({ ...(backup as Record<string, unknown>), confirm }) }),
+  importCsv: (resource: "members" | "enquiries" | "payments" | "attendance", csv: string) =>
+    uploadCsv<{ imported: number }>(`/data-transfer/${resource}/import`, csv),
 };

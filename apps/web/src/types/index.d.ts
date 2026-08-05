@@ -212,7 +212,12 @@ interface MemberPackage {
   discount_amount?: number | null;
   net_amount?: number | null;
   payment_mode: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'other';
-  status: 'active' | 'expired' | 'cancelled';
+  status: 'active' | 'expired' | 'cancelled' | 'paused';
+  paused_at?: string | null;
+  resumed_at?: string | null;
+  paused_days_total?: number;
+  lifecycle_notes?: string | null;
+  renewed_from_package_id?: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

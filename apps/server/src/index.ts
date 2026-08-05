@@ -57,6 +57,13 @@ app.use(
   })
 );
 app.use(apiRateLimiter);
+app.use(express.text({
+  type: ["text/csv", "application/csv"],
+  limit: "10mb",
+  verify: (req, _res, buf) => {
+    (req as Request & { rawBody?: string }).rawBody = buf.toString("utf8");
+  },
+}));
 app.use(express.json({
   limit: "10mb",
   verify: (req, _res, buf) => {

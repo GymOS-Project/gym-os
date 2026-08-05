@@ -40,3 +40,16 @@ export async function attachMemberPackages<T extends MemberLike>(members: T[], a
     member_packages: packageMap.get(member.id) || [],
   }));
 }
+
+export function addDays(dateValue: string, days: number) {
+  const date = new Date(`${dateValue}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function calculatePausedDays(pausedAt: string, resumedAt = new Date().toISOString()) {
+  const start = new Date(pausedAt).getTime();
+  const end = new Date(resumedAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  return Math.max(1, Math.ceil((end - start) / 86400000));
+}

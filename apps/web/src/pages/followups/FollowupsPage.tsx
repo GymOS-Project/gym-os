@@ -9,10 +9,11 @@ import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { isDateAfter, isDateBefore, todayDateValue } from "@/lib/date";
 import { NO_MEMBER_OPTION } from "@/utils/constants";
-import { Plus, CreditCard as Edit, Check, Phone } from "lucide-react";
+import { Plus, CreditCard as Edit, Check, Phone, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -24,7 +25,9 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editFu, setEditFu] = useState<Followup | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: NO_MEMBER_OPTION, followup_date: todayDateValue(), next_followup_date: "", notes: "", status: "pending" });
 
   useEffect(() => { if (admin) { fetchFollowups(); fetchMembers(); } }, [admin, selectedGymId, type]);
@@ -78,6 +81,18 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
   const markDone = async (id: string) => {
     try { await api.updateFollowup(id, { status: "done" }); toast.success("Marked as done"); fetchFollowups(); }
     catch { toast.error("Failed to update"); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      await api.deleteFollowup(deleteId);
+      toast.success("Follow-up deleted");
+      setDeleteId(null);
+      fetchFollowups();
+    } catch { toast.error("Failed to delete"); }
+    setDeleting(false);
   };
 
   const statusBadge = (s: string) => {
@@ -144,6 +159,9 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(fu)}>
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteId(fu.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -208,6 +226,14 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DeleteConfirmationDialog
+        open={Boolean(deleteId)}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Delete follow-up?"
+        description="This follow-up will be permanently deleted. This action cannot be undone."
+        onConfirm={handleDelete}
+        confirmDisabled={deleting}
+      />
     </AppLayout>
   );
 }

@@ -1,3 +1,5 @@
+import { supabase } from "../supabase";
+
 export const ADMIN_SECTIONS = [
   'members', 'packages', 'enquiries', 'followups',
   'transactions', 'reviews', 'reports', 'settings',
@@ -11,8 +13,18 @@ export function isAdminSectionKey(key: string): key is AdminSectionKey {
 }
 
 export async function canEmployeeEditSection(
-  _employeeId: string,
-  _section: AdminSectionKey
+  employeeId: string,
+  section: AdminSectionKey
 ): Promise<boolean> {
-  return false;
+  const { data, error } = await supabase
+    .from("staff_accounts")
+    .select("section_permissions, is_active")
+    .or(`id.eq.${employeeId},auth_user_id.eq.${employeeId}`)
+    .maybeSingle();
+
+  if (error || !data || data.is_active === false) {
+    return false;
+  }
+
+  return Array.isArray(data.section_permissions) && data.section_permissions.includes(section);
 }

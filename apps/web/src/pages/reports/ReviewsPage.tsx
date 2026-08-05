@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { isDateAfter, todayDateValue } from "@/lib/date";
 import { ANONYMOUS_MEMBER_OPTION } from "@/utils/constants";
-import { Star, Plus } from "lucide-react";
+import { Pencil, Star, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ReviewsPage() {
@@ -21,7 +22,10 @@ export default function ReviewsPage() {
   const [members, setMembers] = useState<{ id: string; name: string; gym_id: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingReview, setEditingReview] = useState<Review | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: ANONYMOUS_MEMBER_OPTION, rating: "5", comment: "", review_date: new Date().toISOString().split("T")[0] });
 
   useEffect(() => { if (admin) { fetchReviews(); fetchMembers(); } }, [admin, selectedGymId]);
@@ -47,6 +51,18 @@ export default function ReviewsPage() {
     catch {}
   };
 
+  const openAdd = () => {
+    setEditingReview(null);
+    setForm({ gym_id: selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || "", member_id: ANONYMOUS_MEMBER_OPTION, rating: "5", comment: "", review_date: today });
+    setDialogOpen(true);
+  };
+
+  const openEdit = (review: Review) => {
+    setEditingReview(review);
+    setForm({ gym_id: review.gym_id, member_id: review.member_id || ANONYMOUS_MEMBER_OPTION, rating: String(review.rating || 5), comment: review.comment || "", review_date: review.review_date });
+    setDialogOpen(true);
+  };
+
   const handleSave = async () => {
     if (!admin) return;
     if (isDateAfter(form.review_date, today)) {
@@ -55,18 +71,32 @@ export default function ReviewsPage() {
     }
     setSaving(true);
     try {
-        await api.createReview({
-          gym_id: form.gym_id,
-          member_id: form.member_id !== ANONYMOUS_MEMBER_OPTION ? form.member_id : undefined,
-          rating: parseInt(form.rating),
-          comment: form.comment || undefined,
-          review_date: form.review_date,
-      });
-      toast.success("Review added");
+      const payload = {
+        gym_id: form.gym_id,
+        member_id: form.member_id !== ANONYMOUS_MEMBER_OPTION ? form.member_id : undefined,
+        rating: parseInt(form.rating),
+        comment: form.comment || undefined,
+        review_date: form.review_date,
+      };
+      if (editingReview) await api.updateReview(editingReview.id, payload);
+      else await api.createReview(payload);
+      toast.success(editingReview ? "Review updated" : "Review added");
       setDialogOpen(false);
       fetchReviews();
     } catch { toast.error("Failed to save review"); }
     setSaving(false);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      await api.deleteReview(deleteId);
+      toast.success("Review deleted");
+      setDeleteId(null);
+      fetchReviews();
+    } catch { toast.error("Failed to delete review"); }
+    setDeleting(false);
   };
 
   const avgRating = reviews.length ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length : 0;
@@ -87,7 +117,7 @@ export default function ReviewsPage() {
             <h1 className="text-2xl font-bold">Member Reviews</h1>
             <p className="text-muted-foreground mt-1">Feedback and ratings from your members</p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} variant="gradient" className="gap-2">
+          <Button onClick={openAdd} variant="gradient" className="gap-2">
             <Plus className="h-4 w-4" /> Add Review
           </Button>
         </div>
@@ -121,7 +151,15 @@ export default function ReviewsPage() {
                     <p className="font-medium">{r.members?.name || "Anonymous"}</p>
                     <p className="text-xs text-muted-foreground">{new Date(r.review_date).toLocaleDateString()}</p>
                   </div>
-                  <StarRating rating={r.rating || 0} />
+                  <div className="flex items-center gap-1">
+                    <StarRating rating={r.rating || 0} />
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(r)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteId(r.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 {r.comment && <p className="text-sm text-muted-foreground">{r.comment}</p>}
               </div>
@@ -131,7 +169,7 @@ export default function ReviewsPage() {
       </div>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Add Member Review</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingReview ? "Edit Member Review" : "Add Member Review"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Gym</Label>
@@ -170,10 +208,18 @@ export default function ReviewsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} variant="gradient" disabled={saving}>{saving ? "Saving..." : "Add Review"}</Button>
+            <Button onClick={handleSave} variant="gradient" disabled={saving}>{saving ? "Saving..." : editingReview ? "Update Review" : "Add Review"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DeleteConfirmationDialog
+        open={Boolean(deleteId)}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Delete review?"
+        description="This review will be permanently deleted. This action cannot be undone."
+        onConfirm={handleDelete}
+        confirmDisabled={deleting}
+      />
     </AppLayout>
   );
 }

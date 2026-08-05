@@ -76,6 +76,9 @@ export const EMPTY_INVOICE_FORM = {
   subtotal: "0",
   tax_amount: "0",
   discount_amount: "0",
+  gstin: "",
+  place_of_supply: "",
+  hsn_sac: "9997",
   notes: "",
 };
 

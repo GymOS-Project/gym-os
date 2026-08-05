@@ -14,6 +14,14 @@ import { Check, Eye, EyeOff, Building2, User, Lock, Upload, X, ImagePlus, Credit
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+const decorationCircles = Array.from({ length: 20 }, (_, index) => ({
+  width: 60 + ((index * 37) % 180),
+  height: 60 + ((index * 53) % 180),
+  top: (index * 17) % 100,
+  left: (index * 29) % 100,
+  opacity: 0.12 + ((index % 5) * 0.08),
+}));
+
 function createGymForm(): GymForm {
   return {
     gym_name: '',
@@ -290,16 +298,16 @@ export default function SignupPage() {
 
       <div className="gradient-accent relative hidden overflow-hidden p-12 lg:flex lg:w-2/5 lg:flex-col lg:items-center lg:justify-center">
         <div className="absolute inset-0 opacity-10">
-          {Array.from({ length: 15 }).map((_, i) => (
+          {decorationCircles.map((circle, i) => (
             <div
               key={i}
               className="absolute rounded-full border border-primary/60"
               style={{
-                width: `${Math.random() * 200 + 50}px`,
-                height: `${Math.random() * 200 + 50}px`,
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                opacity: Math.random() * 0.5,
+                width: `${circle.width}px`,
+                height: `${circle.height}px`,
+                top: `${circle.top}%`,
+                left: `${circle.left}%`,
+                opacity: circle.opacity,
               }}
             />
           ))}
@@ -351,7 +359,7 @@ export default function SignupPage() {
       </div>
 
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-3xl rounded-3xl border border-border/70 bg-card/85 p-8 shadow-elevated backdrop-blur-xl">
+        <div className="w-full max-w-3xl p-8">
           <div className="flex items-center gap-3 mb-2 lg:hidden">
             <BrandLogo className="h-10 w-10" />
             <h1 className="text-2xl font-bold">GymOs</h1>
@@ -378,8 +386,8 @@ export default function SignupPage() {
           }}>
             {step === 1 && (
               <div className="space-y-5">
-                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px]">
-                  <div className="space-y-1.5">
+                <div className="grid gap-4 sm:grid-cols-[220px_minmax(0,1fr)]">
+                  <div className="space-y-1.5 sm:max-w-[220px]">
                     <Label htmlFor="gym_type">Gym Type *</Label>
                     <Select value={gymType} onValueChange={updateGymType}>
                       <SelectTrigger id="gym_type">
@@ -406,7 +414,7 @@ export default function SignupPage() {
                   )}
                 </div>
 
-                <div className="rounded-2xl border bg-muted/20 p-5 space-y-4">
+                <div className="space-y-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h3 className="font-semibold text-foreground">{gymType === 'branch' ? currentBranchLabel : 'Gym Details'}</h3>
@@ -447,7 +455,7 @@ export default function SignupPage() {
 
             {step === 2 && (
               <div className="space-y-5">
-                <div className="rounded-2xl border bg-muted/20 p-5 space-y-4">
+                <div className="space-y-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h3 className="font-semibold text-foreground">{gymType === 'branch' ? currentBranchLabel : 'Owner & Contact'}</h3>
