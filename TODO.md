@@ -25,7 +25,8 @@
 - Renewal reminder worker with email delivery, delivery logging, duplicate suppression, retry attempts, exponential backoff metadata, and permanent-failure status.
 - General CSV import/export for members, enquiries, payments, and attendance.
 - JSON backup export, inspect, and restore endpoints.
-- Automated server tests for invoices, CSV parsing/export, payment normalization, membership lifecycle helpers, backup validation, and notification retry policy.
+- Automated server tests for auth/session middleware, billing gates, member creation, payment collection, attendance check-in, invoice creation, invoices, CSV parsing/export, payment normalization, membership lifecycle helpers, backup validation, and notification retry policy.
+- Automated frontend tests for billing helpers, date helpers, gym filter storage, and plan content form-data logic.
 - Initial Supabase migration files for membership lifecycle metadata, notification deliveries, and invoice sequencing.
 - `/reports/sales` and `/reports/transactions` now route to the dedicated report pages.
 
@@ -46,13 +47,13 @@
 - Payroll exists, but payout approval, payslip generation, attendance-linked salary, and trainer revenue-share automation are limited.
 - Advanced membership lifecycle is still pending: expiry job, proration, payment automation, and lifecycle reports.
 - Activity logs exist, but coverage should be audited across all older/legacy routes.
-- Route/integration tests for auth, member creation, sales/payment, attendance, invoices, and billing gates are still pending.
+- Deeper live route/integration tests against a disposable database are still pending.
 - Admin UI for backup restore and table-level restore previews is still pending.
 
 ## Recommended Priority Order
 
 1. Apply/verify migrations in Supabase and capture a full baseline database schema.
-2. Add route/integration tests for auth, member creation, sales/payment, attendance, invoices, and billing gates.
+2. Add deeper live route/integration tests against a disposable database for critical end-to-end flows.
 3. Add WhatsApp/SMS/push providers, retries, backoff, and dead-letter handling for notifications.
 4. Finish advanced membership lifecycle: expiry job, proration, payment automation, and lifecycle reports.
 5. Make activity logs comprehensive across all legacy routes.
