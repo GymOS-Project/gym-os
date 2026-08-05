@@ -13,7 +13,7 @@
     "@supabase/supabase-js": "^2.56.0",
     "axios": "^1.19.0",
     "bcryptjs": "^3.0.3",
-    "bullmq": "^5.79.2",
+    "bullmq": "^6.0.5",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
