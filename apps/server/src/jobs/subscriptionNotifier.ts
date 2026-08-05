@@ -159,11 +159,11 @@ export async function scheduleSubscriptionReminder() {
   await subscriptionQueue.add(
     "check-expiring",
     {},
-    {
+    ({
       repeat: { pattern: "0 9 * * *" },
       removeOnComplete: true,
       removeOnFail: 50,
-    } as any
+    } as any)
   );
   console.log("[subscriptionQueue] Daily reminder job scheduled (09:00)");
 }
