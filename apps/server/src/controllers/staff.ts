@@ -249,3 +249,43 @@ export async function updateStaff(req: AuthenticatedRequest, res: Response) {
 
   return res.json(data);
 }
+
+export async function deleteStaff(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) {
+    return;
+  }
+
+  const existing = await supabase
+    .from("staff_accounts")
+    .select("*")
+    .eq("id", req.params.id)
+    .eq("admin_id", adminId)
+    .maybeSingle();
+
+  if (existing.error) {
+    return res.status(500).json({ message: existing.error.message });
+  }
+
+  if (!existing.data) {
+    return res.status(404).json({ message: "Staff member not found" });
+  }
+
+  const { error } = await supabase
+    .from("staff_accounts")
+    .delete()
+    .eq("id", req.params.id)
+    .eq("admin_id", adminId);
+
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+
+  if (existing.data.auth_user_id) {
+    await supabase.auth.admin.deleteUser(existing.data.auth_user_id).catch(() => {});
+  }
+
+  await logActivity(req, { action: "delete", entityType: "staff_account", entityId: String(req.params.id), gymId: existing.data.gym_id, before: existing.data });
+
+  return res.status(204).send();
+}

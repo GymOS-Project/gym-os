@@ -38,6 +38,8 @@ import EnquiryListPage from "@/pages/enquiry/EnquiryListPage";
 import EnquiryFollowupListPage from "@/pages/enquiry/EnquiryFollowupListPage";
 
 import ReviewsPage from "@/pages/reports/ReviewsPage";
+import SalesHistoryPage from "@/pages/reports/SalesHistoryPage";
+import TransactionsPage from "@/pages/reports/TransactionsPage";
 import ReferenceMembersPage from "@/pages/reports/ReferenceMembersPage";
 import ShiftReportPage from "@/pages/reports/ShiftReportPage";
 import NearToExpirePage from "@/pages/reports/NearToExpirePage";
@@ -154,10 +156,10 @@ const routes: RouteType[] = [
     protected: true,
     section: "enquiries",
   },
-  { path: "/reports/sales", element: <PaymentsSalesPage />, protected: true, allowedRoles: ["admin"] },
+  { path: "/reports/sales", element: <SalesHistoryPage />, protected: true, allowedRoles: ["admin"] },
   {
     path: "/reports/transactions",
-    element: <PaymentsCollectionsPage />,
+    element: <TransactionsPage />,
     protected: true,
     allowedRoles: ["admin"],
   },
@@ -201,4 +203,3 @@ const App = () => (
 );
 
 export default App;
-

@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { StaffForm, createEmptyStaffForm } from "@/components/staff/StaffForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
-import { Pencil, Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 
@@ -23,6 +24,8 @@ export default function StaffListPage() {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [editingStaff, setEditingStaff] = useState<StaffAccount | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState<StaffFormValue>(createEmptyStaffForm());
 
   const fetchStaff = async () => {
@@ -103,6 +106,21 @@ export default function StaffListPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      await api.deleteStaff(deleteId);
+      toast.success("Staff member deleted");
+      setDeleteId(null);
+      await fetchStaff();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete staff member");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <AppLayout title="Staff List">
       <div className="space-y-5">
@@ -158,9 +176,12 @@ export default function StaffListPage() {
                     <TableCell>{gym?.gym_name || "-"}</TableCell>
                     <TableCell>{staff.is_active ? "Active" : "Inactive"}</TableCell>
                     <TableCell>
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-1">
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(staff)}>
                           <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteId(staff.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </TableCell>
@@ -187,6 +208,14 @@ export default function StaffListPage() {
             />
           </DialogContent>
         </Dialog>
+        <DeleteConfirmationDialog
+          open={Boolean(deleteId)}
+          onOpenChange={(open) => !open && setDeleteId(null)}
+          title="Delete staff member?"
+          description="This removes the staff profile and disables their linked auth account. This action cannot be undone."
+          onConfirm={handleDelete}
+          confirmDisabled={deleting}
+        />
       </div>
     </AppLayout>
   );

@@ -31,6 +31,10 @@ A Comprehensive Gym Management Software designed to help gym owners and their te
 - Shift management tools
 - Multi-gym support under a unified account
 
+## Development Docs
+
+- [Database migration guide](docs/MIGRATIONS.md)
+
 ---
 
 ## License

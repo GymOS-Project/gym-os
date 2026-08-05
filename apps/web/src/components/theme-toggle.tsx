@@ -2,18 +2,11 @@ import { MoonStar, SunMedium } from "lucide-react";
 import { useTheme } from "next-themes";
 import { DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
 
 
 function ToggleComponent({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted && resolvedTheme === "dark";
+  const isDark = resolvedTheme === "dark";
 
   return (
 

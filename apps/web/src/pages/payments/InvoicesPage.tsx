@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { isDateAfter, isDateBefore, todayDateValue } from "@/lib/date";
 import { EMPTY_INVOICE_FORM } from "@/utils/constants";
-import { FileText, Plus } from "lucide-react";
+import { Download, FileText, Mail, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 export default function InvoicesPage() {
@@ -63,6 +63,9 @@ export default function InvoicesPage() {
       subtotal: String(invoice.subtotal || 0),
       tax_amount: String(invoice.tax_amount || 0),
       discount_amount: String(invoice.discount_amount || 0),
+      gstin: String((invoice.line_items?.[0] as any)?.gstin || ""),
+      place_of_supply: String((invoice.line_items?.[0] as any)?.place_of_supply || ""),
+      hsn_sac: String((invoice.line_items?.[0] as any)?.hsn_sac || "9997"),
       notes: invoice.notes || "",
     });
     setDialogOpen(true);
@@ -91,7 +94,7 @@ export default function InvoicesPage() {
       tax_amount: Number(form.tax_amount || 0),
       discount_amount: Number(form.discount_amount || 0),
       notes: form.notes || null,
-      line_items: [{ label: "Gym service", amount: Number(form.subtotal || 0) }],
+      line_items: [{ label: "Gym service", amount: Number(form.subtotal || 0), gstin: form.gstin || null, place_of_supply: form.place_of_supply || null, hsn_sac: form.hsn_sac || null }],
     };
 
     try {
@@ -116,6 +119,28 @@ export default function InvoicesPage() {
       await fetchData();
     } catch (error: any) {
       toast.error(error.message || "Failed to mark invoice paid");
+    }
+  };
+
+  const handleDownloadReceipt = async (invoice: Invoice) => {
+    try {
+      await api.downloadInvoiceReceipt(invoice.id, `${invoice.receipt_number || invoice.invoice_number}.pdf`);
+      toast.success("PDF downloaded");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to download receipt");
+    }
+  };
+
+  const handleEmailReceipt = async (invoice: Invoice) => {
+    const member = members.find((item) => item.id === invoice.member_id);
+    const email = window.prompt("Send receipt to email address", "");
+    if (email === null) return;
+
+    try {
+      await api.emailInvoiceReceipt(invoice.id, email.trim() || undefined);
+      toast.success(`Receipt emailed${member ? ` for ${member.name}` : ""}`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to email receipt");
     }
   };
 
@@ -158,6 +183,8 @@ export default function InvoicesPage() {
                     <div className="flex justify-end gap-2">
                       <Button size="sm" variant="outline" onClick={() => openEdit(invoice)}>Edit</Button>
                       {invoice.status !== "paid" && <Button size="sm" onClick={() => handleMarkPaid(invoice.id)}><FileText className="mr-1 h-3.5 w-3.5" /> Mark Paid</Button>}
+                      <Button size="sm" variant="outline" onClick={() => handleDownloadReceipt(invoice)}><Download className="mr-1 h-3.5 w-3.5" /> Download</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleEmailReceipt(invoice)}><Mail className="mr-1 h-3.5 w-3.5" /> Email</Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -194,6 +221,9 @@ export default function InvoicesPage() {
             <div className="space-y-1.5"><Label>Tax</Label><Input type="number" value={form.tax_amount} onChange={(e) => setForm((current) => ({ ...current, tax_amount: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Discount</Label><Input type="number" value={form.discount_amount} onChange={(e) => setForm((current) => ({ ...current, discount_amount: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Total</Label><Input value={`₹${totalAmount.toLocaleString()}`} disabled className="bg-muted" /></div>
+            <div className="space-y-1.5"><Label>GSTIN</Label><Input value={form.gstin} onChange={(e) => setForm((current) => ({ ...current, gstin: e.target.value }))} placeholder="Customer GSTIN" /></div>
+            <div className="space-y-1.5"><Label>Place of Supply</Label><Input value={form.place_of_supply} onChange={(e) => setForm((current) => ({ ...current, place_of_supply: e.target.value }))} placeholder="State" /></div>
+            <div className="space-y-1.5 sm:col-span-2"><Label>HSN/SAC</Label><Input value={form.hsn_sac} onChange={(e) => setForm((current) => ({ ...current, hsn_sac: e.target.value }))} /></div>
             <div className="space-y-1.5 sm:col-span-2"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></div>
           </div>
           <DialogFooter>

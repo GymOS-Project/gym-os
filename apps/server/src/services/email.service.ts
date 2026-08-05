@@ -27,6 +27,20 @@ type MemberWelcomeEmailInput = {
   gymName: string;
 };
 
+type InvoiceReceiptEmailInput = {
+  to: string;
+  subject: string;
+  html: string;
+};
+
+type MembershipReminderEmailInput = {
+  to: string;
+  memberName: string;
+  gymName: string;
+  packageName: string;
+  endDate: string;
+};
+
 function normalizeOptionalString(value: unknown) {
   if (typeof value !== "string") {
     return value == null ? null : String(value);
@@ -226,6 +240,27 @@ export async function sendMemberWelcomeEmail(input: MemberWelcomeEmailInput) {
       secondaryText: "If the button above does not work, open the mobile app here:",
       secondaryUrl: mobileAppUrl,
       note: `If you were not expecting a membership profile for ${input.gymName}, please contact the gym team directly.`,
+    }),
+  });
+}
+
+export async function sendInvoiceReceiptEmail(input: InvoiceReceiptEmailInput) {
+  return sendEmail(input);
+}
+
+export async function sendMembershipReminderEmail(input: MembershipReminderEmailInput) {
+  return sendEmail({
+    to: input.to,
+    subject: `Membership renewal reminder - ${input.gymName}`,
+    html: renderEmailTemplate({
+      eyebrow: "Membership Reminder",
+      title: "Your membership is expiring soon",
+      intro: `${input.memberName}, your ${input.packageName} membership at ${input.gymName} ends on ${input.endDate}. Please contact the front desk to renew and avoid interruption.`,
+      ctaLabel: "Open GymOS",
+      ctaUrl: mobileAppUrl,
+      secondaryText: "If the button above does not work, open GymOS here:",
+      secondaryUrl: mobileAppUrl,
+      note: `If you have already renewed your membership, please ignore this reminder.`,
     }),
   });
 }

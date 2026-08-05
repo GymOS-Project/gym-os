@@ -2,8 +2,9 @@ import type { Response } from "express";
 
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { logActivity } from "../services/activityLog.service";
+import { sendInvoiceReceiptEmail } from "../services/email.service";
 import { ensureMemberBelongsToGym, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
-import { calculateInvoiceTotal, generateInvoiceNumber, generateReceiptNumber, roundCurrency } from "../services/invoice.service";
+import { calculateInvoiceTotal, generateInvoiceNumber, generateReceiptNumber, renderInvoiceReceiptHtml, renderInvoiceReceiptPdf, roundCurrency } from "../services/invoice.service";
 import { supabase } from "../supabase";
 
 function getAdminId(req: AuthenticatedRequest, res: Response) {
@@ -24,6 +25,45 @@ function normalizeOptionalString(value: unknown) {
 function normalizeOptionalNumber(value: unknown) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? roundCurrency(numeric) : null;
+}
+
+async function loadInvoiceDocument(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) return null;
+
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) return null;
+
+  let invoiceQuery = supabase.from("invoices").select("*").eq("id", req.params.id).eq("admin_id", adminId);
+  if (gymScope.selectedGymId) invoiceQuery = invoiceQuery.eq("gym_id", gymScope.selectedGymId);
+
+  const invoice = await invoiceQuery.maybeSingle();
+  if (invoice.error) {
+    res.status(500).json({ message: invoice.error.message });
+    return null;
+  }
+  if (!invoice.data) {
+    res.status(404).json({ message: "Invoice not found" });
+    return null;
+  }
+
+  const [member, gym] = await Promise.all([
+    invoice.data.member_id
+      ? supabase.from("members").select("id, name, phone, email").eq("id", invoice.data.member_id).eq("admin_id", adminId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    supabase.from("gyms").select("id, gym_name, phone, email, address").eq("id", invoice.data.gym_id).eq("admin_id", adminId).maybeSingle(),
+  ]);
+
+  if (member.error) {
+    res.status(500).json({ message: member.error.message });
+    return null;
+  }
+  if (gym.error) {
+    res.status(500).json({ message: gym.error.message });
+    return null;
+  }
+
+  return { adminId, invoice: invoice.data, member: member.data, gym: gym.data };
 }
 
 export async function listInvoices(req: AuthenticatedRequest, res: Response) {
@@ -156,4 +196,40 @@ export async function markInvoicePaid(req: AuthenticatedRequest, res: Response) 
   if (update.error) return res.status(500).json({ message: update.error.message });
   await logActivity(req, { action: "mark_paid", entityType: "invoice", entityId: update.data.id, gymId: update.data.gym_id, before: existing.data, after: update.data });
   return res.json(update.data);
+}
+
+export async function downloadInvoiceReceipt(req: AuthenticatedRequest, res: Response) {
+  const document = await loadInvoiceDocument(req, res);
+  if (!document) return;
+
+  const pdf = renderInvoiceReceiptPdf(document);
+  const filename = `${document.invoice.receipt_number || document.invoice.invoice_number}.pdf`;
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  return res.status(200).send(pdf);
+}
+
+export async function emailInvoiceReceipt(req: AuthenticatedRequest, res: Response) {
+  const document = await loadInvoiceDocument(req, res);
+  if (!document) return;
+
+  const recipient = normalizeOptionalString(req.body.email) || document.member?.email || document.gym?.email;
+  if (!recipient) {
+    return res.status(400).json({ message: "Recipient email is required" });
+  }
+
+  const html = renderInvoiceReceiptHtml(document);
+  const label = document.invoice.status === "paid" ? "Receipt" : "Invoice";
+  const sent = await sendInvoiceReceiptEmail({
+    to: recipient,
+    subject: `${label} ${document.invoice.receipt_number || document.invoice.invoice_number}`,
+    html,
+  });
+
+  if (!sent) {
+    return res.status(500).json({ message: "Email provider is not configured" });
+  }
+
+  await logActivity(req, { action: "email", entityType: "invoice", entityId: document.invoice.id, gymId: document.invoice.gym_id, metadata: { recipient } });
+  return res.json({ message: `${label} emailed`, recipient });
 }

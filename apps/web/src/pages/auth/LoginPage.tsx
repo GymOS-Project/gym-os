@@ -9,6 +9,14 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
+const decorationCircles = Array.from({ length: 20 }, (_, index) => ({
+  width: 60 + ((index * 37) % 180),
+  height: 60 + ((index * 53) % 180),
+  top: (index * 17) % 100,
+  left: (index * 29) % 100,
+  opacity: 0.12 + ((index % 5) * 0.08),
+}));
+
 export default function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -36,18 +44,18 @@ export default function LoginPage() {
       </div>
 
       {/* Left Panel */}
-      <div className="gradient-accent relative hidden overflow-hidden p-12 lg:flex lg:w-1/2 lg:flex-col lg:items-center lg:justify-center">
+      <div className="gradient-accent relative hidden overflow-hidden p-12 lg:flex lg:w-2/5 lg:flex-col lg:items-center lg:justify-center">
         <div className="absolute inset-0 opacity-10">
-          {Array.from({ length: 20 }).map((_, i) => (
+          {decorationCircles.map((circle, i) => (
             <div
               key={i}
               className="absolute rounded-full border border-primary/60"
               style={{
-                width: `${Math.random() * 200 + 50}px`,
-                height: `${Math.random() * 200 + 50}px`,
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                opacity: Math.random() * 0.5,
+                width: `${circle.width}px`,
+                height: `${circle.height}px`,
+                top: `${circle.top}%`,
+                left: `${circle.left}%`,
+                opacity: circle.opacity,
               }}
             />
           ))}
@@ -75,7 +83,7 @@ export default function LoginPage() {
 
       {/* Right Panel */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card/85 p-8 shadow-elevated backdrop-blur-xl">
+        <div className="w-full max-w-3xl p-8">
           <div className="flex items-center gap-3 mb-8 lg:hidden">
             <BrandLogo className="h-10 w-10" />
             <h1 className="text-2xl font-bold">GymOs</h1>
