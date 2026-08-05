@@ -97,6 +97,7 @@ export default function IntegrationsPage() {
   const configuredBaseUrl = (((import.meta as any).env.VITE_API_BASE_URL || window.location.origin) as string).replace(/\/$/, "");
   const admsBaseUrl = configuredBaseUrl.replace(/\/api$/, "");
   const admsEndpoint = `${admsBaseUrl}/iclock/cdata`;
+  const publicDebugUrl = `${configuredBaseUrl}/essl/public-debug`;
   let serverAddress = admsBaseUrl;
   let serverPort = "443";
 
@@ -133,6 +134,10 @@ export default function IntegrationsPage() {
             </div>
           </div>
           <div className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-sm font-mono break-all">{admsEndpoint}</div>
+          <div className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-sm">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Public Debug API</p>
+            <p className="mt-1 font-mono break-all">{publicDebugUrl}</p>
+          </div>
         </div>
 
         <div className="overflow-hidden rounded-xl border bg-card">

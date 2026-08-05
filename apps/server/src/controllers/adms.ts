@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 
+import { appendEsslDebugLog } from "../services/esslDebugLog.service";
 import {
   buildAdmsHandshakeResponse,
   ingestEsslPunch,
@@ -77,6 +78,15 @@ export async function admsHandshake(req: Request, res: Response) {
   const payload = collectPayload(req);
   const serialNumber = getSerialNumber(payload);
   await markDeviceOnlineBySerial(serialNumber);
+  await appendEsslDebugLog({
+    source: "adms_handshake",
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    serial_number: serialNumber,
+    query: (req.query || {}) as Record<string, unknown>,
+    payload,
+  });
 
   return res.type("text/plain").send(buildAdmsHandshakeResponse(serialNumber));
 }
@@ -91,6 +101,18 @@ export async function admsReceiveAttendance(req: Request, res: Response) {
 
   try {
     if (table === "ATTLOG" && rawBody.trim()) {
+      await appendEsslDebugLog({
+        source: "adms_cdata_raw",
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+        serial_number: serialNumber,
+        table,
+        query: (req.query || {}) as Record<string, unknown>,
+        payload,
+        raw_body: rawBody,
+      });
+
       const rows = parseAdmsAttendanceBody(rawBody);
       let processed = 0;
 
@@ -108,17 +130,59 @@ export async function admsReceiveAttendance(req: Request, res: Response) {
         processed += 1;
       }
 
+      await appendEsslDebugLog({
+        source: "adms_cdata_result",
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+        serial_number: serialNumber,
+        table,
+        result: `OK: ${processed}`,
+      });
+
       return res.type("text/plain").send(`OK: ${processed}`);
     }
 
     if (serialNumber && (payload.PIN || payload.pin || payload.user_id || payload.userid)) {
+      await appendEsslDebugLog({
+        source: "adms_single_punch_raw",
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+        serial_number: serialNumber,
+        table,
+        query: (req.query || {}) as Record<string, unknown>,
+        payload,
+        raw_body: rawBody || null,
+      });
       await ingestEsslPunch(payload);
+      await appendEsslDebugLog({
+        source: "adms_single_punch_result",
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+        serial_number: serialNumber,
+        table,
+        result: "OK: 1",
+      });
       return res.type("text/plain").send("OK: 1");
     }
 
     return res.type("text/plain").send("OK: 0");
   } catch (error) {
     console.error("Failed to ingest ADMS attendance payload", error);
+    await appendEsslDebugLog({
+      source: "adms_error",
+      method: req.method,
+      path: req.path,
+      ip: req.ip,
+      serial_number: serialNumber,
+      table,
+      query: (req.query || {}) as Record<string, unknown>,
+      payload,
+      raw_body: rawBody || null,
+      error: error instanceof Error ? error.message : "Unknown ADMS error",
+    });
     return res.status(500).type("text/plain").send("ERROR: 0");
   }
 }
@@ -129,12 +193,35 @@ export async function admsGetTime(_req: Request, res: Response) {
 
 export async function admsAcknowledge(req: Request, res: Response) {
   const payload = collectPayload(req);
-  await markDeviceOnlineBySerial(getSerialNumber(payload));
+  const serialNumber = getSerialNumber(payload);
+  await markDeviceOnlineBySerial(serialNumber);
+  await appendEsslDebugLog({
+    source: "adms_ack",
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    serial_number: serialNumber,
+    query: (req.query || {}) as Record<string, unknown>,
+    payload,
+    raw_body: getRawBody(req) || null,
+    result: "OK",
+  });
   return res.type("text/plain").send("OK");
 }
 
 export async function admsStatus(req: Request, res: Response) {
   const payload = collectPayload(req);
-  await markDeviceOnlineBySerial(getSerialNumber(payload));
+  const serialNumber = getSerialNumber(payload);
+  await markDeviceOnlineBySerial(serialNumber);
+  await appendEsslDebugLog({
+    source: "adms_status",
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    serial_number: serialNumber,
+    query: (req.query || {}) as Record<string, unknown>,
+    payload,
+    result: "OK",
+  });
   return res.type("text/plain").send("OK");
 }
