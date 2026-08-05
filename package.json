@@ -22,5 +22,8 @@
   "devDependencies": {
     "husky": "^9.1.7",
     "turbo": "^2.10.8"
+  },
+  "dependencies": {
+    "ioredis": "^6.0.0"
   }
 }

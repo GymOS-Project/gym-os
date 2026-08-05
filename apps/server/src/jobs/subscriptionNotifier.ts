@@ -163,7 +163,7 @@ export async function scheduleSubscriptionReminder() {
       repeat: { pattern: "0 9 * * *" },
       removeOnComplete: true,
       removeOnFail: 50,
-    }
+    } as any
   );
   console.log("[subscriptionQueue] Daily reminder job scheduled (09:00)");
 }

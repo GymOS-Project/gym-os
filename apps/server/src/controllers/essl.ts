@@ -2,6 +2,7 @@ import type { Response } from "express";
 
 import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware";
 import { logActivity } from "../services/activityLog.service";
+import { appendEsslDebugLog, getEsslDebugLogFilePath, readRecentEsslDebugLogs } from "../services/esslDebugLog.service";
 import { ingestEsslPunch } from "../services/essl.service";
 import { resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { supabase } from "../supabase";
@@ -135,17 +136,64 @@ export async function listEsslRawLogs(req: AuthenticatedRequest, res: Response) 
   return res.json(data || []);
 }
 
+export async function listPublicEsslDebugLogs(req: AuthenticatedRequest, res: Response) {
+  const requestedLimit = Number(req.query.limit);
+  const limit = Number.isFinite(requestedLimit) ? requestedLimit : 25;
+
+  try {
+    const entries = await readRecentEsslDebugLogs(limit);
+    return res.json({
+      ok: true,
+      log_file: getEsslDebugLogFilePath(),
+      count: entries.length,
+      entries,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to read eSSL debug logs" });
+  }
+}
+
 export async function receiveEsslWebhook(req: AuthenticatedRequest, res: Response) {
   const payload = {
     ...(req.query || {}),
     ...((req.body && typeof req.body === "object") ? req.body : {}),
   } as Record<string, unknown>;
+
+  await appendEsslDebugLog({
+    source: "essl_webhook",
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    query: (req.query || {}) as Record<string, unknown>,
+    payload,
+    raw_body: typeof (req as any).rawBody === "string" ? (req as any).rawBody : null,
+    serial_number: typeof payload.SN === "string" ? payload.SN : typeof payload.sn === "string" ? payload.sn : null,
+  });
+
   try {
     await ingestEsslPunch(payload);
   } catch (error) {
     console.error("Failed to ingest eSSL webhook", error);
+    await appendEsslDebugLog({
+      source: "essl_webhook_error",
+      method: req.method,
+      path: req.path,
+      ip: req.ip,
+      payload,
+      raw_body: typeof (req as any).rawBody === "string" ? (req as any).rawBody : null,
+      error: error instanceof Error ? error.message : "Unknown ingestion error",
+    });
     return res.status(500).send("ERROR");
   }
+
+  await appendEsslDebugLog({
+    source: "essl_webhook_result",
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    payload,
+    result: "OK",
+  });
 
   return res.send("OK");
 }
