@@ -22,7 +22,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
     "nodemailer": "9.0.5",
-    "resend": "^6.18.1"
+    "resend": "^6.19.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
