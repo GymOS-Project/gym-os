@@ -6,6 +6,11 @@ import {
   ingestEsslPunch,
   parseAdmsAttendanceBody,
 } from "../services/essl.service";
+import {
+  acknowledgeEsslDeviceCommand,
+  listQueuedEsslDeviceCommands,
+  markEsslDeviceCommandsSent,
+} from "../services/esslDeviceCommands.service";
 import { supabase } from "../supabase";
 
 function normalizeString(value: unknown) {
@@ -223,5 +228,89 @@ export async function admsStatus(req: Request, res: Response) {
     payload,
     result: "OK",
   });
+  return res.type("text/plain").send("OK");
+}
+
+export async function admsGetRequest(req: Request, res: Response) {
+  const payload = collectPayload(req);
+  const serialNumber = getSerialNumber(payload);
+  await markDeviceOnlineBySerial(serialNumber);
+
+  let commands = [] as Array<{ id: string; cmd_id: string | number; command: string }>;
+  let errorMessage: string | null = null;
+
+  try {
+    const queued = await listQueuedEsslDeviceCommands({ serialNumber, limit: 5 });
+    commands = queued.map((entry) => ({ id: entry.id, cmd_id: entry.cmd_id, command: entry.command }));
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : "Failed to load queued commands";
+  }
+
+  await appendEsslDebugLog({
+    source: "adms_getrequest",
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    serial_number: serialNumber,
+    query: (req.query || {}) as Record<string, unknown>,
+    payload,
+    result: errorMessage ? `ERROR: ${errorMessage}` : `OK: ${commands.length}`,
+  });
+
+  const lines: string[] = [`GET REQUEST FROM: ${serialNumber || "UNKNOWN"}`];
+
+  if (commands.length > 0) {
+    for (const cmd of commands) {
+      const safeCommand = String(cmd.command || "").replace(/\r?\n/g, " ").trim();
+      lines.push(`C:${cmd.cmd_id}:${safeCommand}`);
+    }
+    lines.push("OK");
+
+    try {
+      await markEsslDeviceCommandsSent({ serialNumber, commandIds: commands.map((c) => c.id) });
+    } catch (error) {
+      await appendEsslDebugLog({
+        source: "adms_getrequest_mark_sent_error",
+        serial_number: serialNumber,
+        error: error instanceof Error ? error.message : "Failed to mark commands as sent",
+      });
+    }
+  } else {
+    lines.push("OK");
+  }
+
+  return res.type("text/plain").send(`${lines.join("\r\n")}\r\n`);
+}
+
+export async function admsDeviceCmd(req: Request, res: Response) {
+  const payload = collectPayload(req);
+  const serialNumber = getSerialNumber(payload);
+  await markDeviceOnlineBySerial(serialNumber);
+
+  const cmdId = normalizeString(payload.ID) || normalizeString(payload.id) || normalizeString(payload.CmdId) || normalizeString(payload.cmd_id);
+  const deviceResult = normalizeString(payload.Return) || normalizeString(payload.return) || normalizeString(payload.result);
+
+  await appendEsslDebugLog({
+    source: "adms_devicecmd",
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    serial_number: serialNumber,
+    query: (req.query || {}) as Record<string, unknown>,
+    payload,
+    raw_body: getRawBody(req) || null,
+  });
+
+  try {
+    await acknowledgeEsslDeviceCommand({ serialNumber, cmdId, deviceResult });
+  } catch (error) {
+    await appendEsslDebugLog({
+      source: "adms_devicecmd_error",
+      serial_number: serialNumber,
+      payload,
+      error: error instanceof Error ? error.message : "Failed to acknowledge device command",
+    });
+  }
+
   return res.type("text/plain").send("OK");
 }

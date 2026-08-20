@@ -423,6 +423,7 @@ export async function forgotPassword(req: Request, res: Response) {
 
 export async function resetPassword(req: Request, res: Response) {
   const accessToken = normalizeOptionalString(req.body?.access_token);
+  const refreshToken = normalizeOptionalString(req.body?.refresh_token);
   const newPassword = normalizeOptionalString(req.body?.new_password);
 
   if (!accessToken || !newPassword) {
@@ -434,7 +435,9 @@ export async function resetPassword(req: Request, res: Response) {
   }
 
   const authClient = createSupabaseAuthClient();
-  const { data: userResult, error: userError } = await authClient.auth.getUser(accessToken);
+  const { data: userResult, error: userError } = refreshToken
+    ? await authClient.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+    : await authClient.auth.getUser(accessToken);
 
   if (userError || !userResult.user?.id || !userResult.user.email) {
     return res.status(400).json({ message: "Invalid or expired reset link" });

@@ -9,13 +9,18 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
-function getResetToken() {
+function getResetTokens() {
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  return hash.get('access_token') || new URLSearchParams(window.location.search).get('access_token') || '';
+  const search = new URLSearchParams(window.location.search);
+
+  return {
+    accessToken: hash.get('access_token') || search.get('access_token') || '',
+    refreshToken: hash.get('refresh_token') || search.get('refresh_token') || '',
+  };
 }
 
 export default function ResetPasswordPage() {
-  const accessToken = useMemo(() => getResetToken(), []);
+  const { accessToken, refreshToken } = useMemo(() => getResetTokens(), []);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -39,7 +44,7 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      await api.resetPassword(accessToken, password);
+      await api.resetPassword(accessToken, password, refreshToken);
       toast.success('Password reset successful');
       window.location.assign('/');
     } catch (error: any) {

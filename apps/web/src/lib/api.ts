@@ -147,8 +147,11 @@ export const api = {
     request<SignupCheckoutStatus>(`/billing/public/signup-checkout/${draftId}`),
   forgotPassword: (email: string) =>
     request<{ message: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
-  resetPassword: (access_token: string, new_password: string) =>
-    request<LoginResult>("/auth/reset-password", { method: "POST", body: JSON.stringify({ access_token, new_password }) }),
+  resetPassword: (access_token: string, new_password: string, refresh_token?: string) =>
+    request<LoginResult>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ access_token, new_password, refresh_token }),
+    }),
   signout: () => request<{ message: string }>("/auth/signout", { method: "POST" }),
   me: () => request<LoginResult>("/auth/me"),
   updatePassword: (current_password: string, new_password: string) =>
