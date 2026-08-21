@@ -115,9 +115,6 @@ app.use("/iclock", admsRouter);
 
 const apiRouter = express.Router();
 
-apiRouter.get("/healthcheck", (_req: Request, res: Response) => {
-  res.status(200).json({ status: "ok" });
-});
 
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/members", membersRouter);
@@ -146,6 +143,10 @@ apiRouter.get("/", (_req: Request, res: Response) => {
 });
 
 app.use("/api", apiRouter);
+
+app.get("/healthcheck", (_req: Request, res: Response) => {
+  res.status(200).json({ status: "ok" });
+});
 
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", message: "GymOS backend is working fine!" });
