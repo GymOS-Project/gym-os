@@ -26,7 +26,7 @@ import esslRouter from "./routes/essl";
 import billingRouter from "./routes/billing";
 import admsRouter from "./routes/adms";
 import { createRateLimit } from "./middleware/rateLimit.middleware";
-import { startSubscriptionWorker, scheduleSubscriptionReminder } from "./jobs/subscriptionNotifier";
+import { isSupabaseConfigured } from "./supabase";
 
 dotenv.config();
 
@@ -157,7 +157,17 @@ app.listen(port, host, () => {
   console.log(`[server]: Server is running at http://${host}:${port}`);
 });
 
-startSubscriptionWorker();
-scheduleSubscriptionReminder().catch(console.error);
+if (isSupabaseConfigured && process.env.REDIS_URL) {
+  import("./jobs/subscriptionNotifier")
+    .then(({ startSubscriptionWorker, scheduleSubscriptionReminder }) => {
+      startSubscriptionWorker();
+      scheduleSubscriptionReminder().catch(console.error);
+    })
+    .catch((error) => {
+      console.error("[jobs] Failed to start subscription jobs:", error);
+    });
+} else {
+  console.warn("[jobs] Skipping subscription jobs: missing SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY or REDIS_URL.");
+}
 
 export default app;

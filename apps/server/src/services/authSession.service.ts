@@ -12,16 +12,20 @@ const COOKIE_SAME_SITE = (process.env.SESSION_COOKIE_SAME_SITE || (IS_PRODUCTION
 const COOKIE_SECURE = process.env.SESSION_COOKIE_SECURE
   ? process.env.SESSION_COOKIE_SECURE === "true"
   : IS_PRODUCTION;
-const COOKIE_ENCRYPTION_SECRET =
-  process.env.SESSION_COOKIE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!COOKIE_ENCRYPTION_SECRET) {
-  throw new Error("SESSION_COOKIE_SECRET or SUPABASE_SERVICE_ROLE_KEY must be set.");
+let cachedCookieEncryptionKey: Buffer | null = null;
+
+function getCookieEncryptionKey() {
+  if (cachedCookieEncryptionKey) return cachedCookieEncryptionKey;
+
+  const secret = process.env.SESSION_COOKIE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) {
+    throw new Error("SESSION_COOKIE_SECRET or SUPABASE_SERVICE_ROLE_KEY must be set.");
+  }
+
+  cachedCookieEncryptionKey = createHash("sha256").update(secret).digest();
+  return cachedCookieEncryptionKey;
 }
-
-const COOKIE_ENCRYPTION_KEY = createHash("sha256")
-  .update(COOKIE_ENCRYPTION_SECRET)
-  .digest();
 
 type SessionPayload = {
   access_token: string;
@@ -126,8 +130,9 @@ export function getCookieOptions(maxAge?: number): CookieOptions {
 }
 
 function encryptCookieValue(value: string) {
+  const key = getCookieEncryptionKey();
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", COOKIE_ENCRYPTION_KEY, iv);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
   const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
 
@@ -140,6 +145,7 @@ export function decryptCookieValue(value?: string) {
   }
 
   try {
+    const key = getCookieEncryptionKey();
     const payload = Buffer.from(value, "base64url");
     if (payload.length <= 28) {
       return null;
@@ -148,7 +154,7 @@ export function decryptCookieValue(value?: string) {
     const iv = payload.subarray(0, 12);
     const tag = payload.subarray(12, 28);
     const encrypted = payload.subarray(28);
-    const decipher = createDecipheriv("aes-256-gcm", COOKIE_ENCRYPTION_KEY, iv);
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
 
     decipher.setAuthTag(tag);
 

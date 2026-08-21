@@ -26,7 +26,7 @@ Example:
 ```env
 PORT=3001
 NODE_ENV=development
-FRONTEND_URL=http://localhost:8080
+FRONTEND_URL=http://localhost:8089
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 RESEND_API_KEY=re_xxxxx

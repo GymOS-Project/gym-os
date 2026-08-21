@@ -1,20 +1,21 @@
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
 
 dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Supabase URL or Service Role Key is not set in the environment variables.');
-}
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseServiceKey);
 
-const resolvedSupabaseUrl = supabaseUrl;
-const resolvedSupabaseServiceKey = supabaseServiceKey;
+let cachedClient: SupabaseClient | null = null;
 
 function createSupabaseServerClient() {
-  return createClient(resolvedSupabaseUrl, resolvedSupabaseServiceKey, {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error("Supabase URL or Service Role Key is not set in the environment variables.");
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -23,8 +24,24 @@ function createSupabaseServerClient() {
   });
 }
 
-export const supabase = createSupabaseServerClient();
+function getSupabaseClient() {
+  if (cachedClient) return cachedClient;
+  cachedClient = createSupabaseServerClient();
+  return cachedClient;
+}
+
+export const supabase: SupabaseClient = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      const client = getSupabaseClient();
+      const value = (client as any)[prop as any];
+      if (typeof value === "function") return value.bind(client);
+      return value;
+    },
+  }
+) as unknown as SupabaseClient;
 
 export function createSupabaseAuthClient() {
-  return createSupabaseServerClient();
+  return getSupabaseClient();
 }

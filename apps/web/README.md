@@ -56,7 +56,7 @@ Or from this folder:
 npm run dev
 ```
 
-The web app runs on `http://localhost:8080` by default.
+The web app runs on `http://localhost:8089` by default.
 
 ## Auth Notes
 
