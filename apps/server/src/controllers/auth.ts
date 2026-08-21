@@ -18,7 +18,6 @@ const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";
 const ADMIN_LOGO_BUCKET = process.env.SUPABASE_ADMIN_LOGO_BUCKET || GYM_PHOTO_BUCKET;
 const MAX_GYM_PHOTOS = 10;
 const PASSWORD_RESET_REDIRECT_URL = process.env.PASSWORD_RESET_REDIRECT_URL
-  || (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, "")}/reset-password` : null);
 
 type AuthUser = {
   id: string;
@@ -38,6 +37,30 @@ type SignupGymPayload = {
 };
 
 type GymDetailsPayload = SignupGymPayload;
+
+function isSupabaseConnectivityErrorMessage(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("unable to connect") ||
+    normalized.includes("fetch failed") ||
+    normalized.includes("econnrefused") ||
+    normalized.includes("enotfound") ||
+    normalized.includes("etimedout") ||
+    normalized.includes("network") ||
+    normalized.includes("getaddrinfo")
+  );
+}
+
+function respondSupabaseAuthError(res: Response, error: { message?: string } | null, fallbackStatus = 400) {
+  if (!error) return null;
+
+  const message = error.message || "Unknown authentication error";
+  if (isSupabaseConnectivityErrorMessage(message)) {
+    return res.status(503).json({ message: "Auth service is unavailable. Please try again later." });
+  }
+
+  return res.status(fallbackStatus).json({ message });
+}
 
 
 async function uploadAdminImage(file: Express.Multer.File, userId: string, bucket: string, folder: string) {
@@ -376,7 +399,7 @@ export async function login(req: Request, res: Response) {
   const authClient = createSupabaseAuthClient();
   const { data, error } = await authClient.auth.signInWithPassword({ email, password });
   if (error) {
-    return res.status(401).json({ message: error.message });
+    return respondSupabaseAuthError(res, error, 401);
   }
 
   if (!data.session || !data.user) {
@@ -407,15 +430,13 @@ export async function forgotPassword(req: Request, res: Response) {
   if (!PASSWORD_RESET_REDIRECT_URL) {
     return res.status(500).json({ message: "Password reset redirect URL is not configured" });
   }
-  console.log(email)
-
   const authClient = createSupabaseAuthClient();
   const { error } = await authClient.auth.resetPasswordForEmail(email, {
     redirectTo: PASSWORD_RESET_REDIRECT_URL,
   });
 
   if (error) {
-    return res.status(400).json({ message: error.message });
+    return respondSupabaseAuthError(res, error, 400);
   }
 
   return res.json({ message: "If the account exists, a password reset link has been sent." });
