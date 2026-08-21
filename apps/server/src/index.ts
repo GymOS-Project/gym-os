@@ -49,9 +49,42 @@ const apiRateLimiter = createRateLimit({
   skip: (req) => req.method === "OPTIONS" || req.path === "/healthcheck",
 });
 
+function normalizeOrigin(origin: string) {
+  return origin.trim().replace(/\/$/, "");
+}
+
+function parseAllowedOrigins(value?: string) {
+  if (!value) return [] as string[];
+  return value
+    .split(/[,\s]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map(normalizeOrigin);
+}
+
+const allowedOrigins = parseAllowedOrigins(process.env.FRONTEND_URL || process.env.CORS_ORIGINS);
+const isProduction = process.env.NODE_ENV === "production";
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      const normalized = normalizeOrigin(origin);
+
+      if (allowedOrigins.length === 0) {
+        if (isProduction) {
+          return callback(new Error("CORS is not configured. Set FRONTEND_URL (or CORS_ORIGINS)."), false);
+        }
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(normalized)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS origin not allowed: ${normalized}`), false);
+    },
     credentials: true,
     optionsSuccessStatus: 200,
   })

@@ -40,6 +40,8 @@ VITE_POSTHOG_HOST=https://us.i.posthog.com
 
 `VITE_POSTHOG_KEY` is optional. If it is not set, analytics stays disabled.
 
+If `VITE_API_BASE_URL` is not set, the app falls back to `window.location.origin` (same-origin API).
+
 ## Local Run
 
 From the repo root:

@@ -1,17 +1,26 @@
 import { getStoredGymFilter } from "@/lib/gymFilter";
 
 const API_BASE_URL =
-  (import.meta as any).env.VITE_API_BASE_URL ||
-  "https://gymos.duckdns.org";
+  (typeof (import.meta as any).env?.VITE_API_BASE_URL === "string" && (import.meta as any).env.VITE_API_BASE_URL.trim()
+    ? (import.meta as any).env.VITE_API_BASE_URL.trim()
+    : (typeof window !== "undefined" ? window.location.origin : "")
+  ).replace(/\/$/, "");
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const isFormData = options?.body instanceof FormData;
   const headers = withGymHeader(path, options?.headers, isFormData);
-  const res = await fetch(`${API_BASE_URL}/api${path}`, {
-    ...options,
-    credentials: "include",
-    headers,
-  });
+  let res: Response;
+
+  try {
+    res = await fetch(`${API_BASE_URL}/api${path}`, {
+      ...options,
+      credentials: "include",
+      headers,
+    });
+  } catch (error: any) {
+    const reason = typeof error?.message === "string" && error.message ? ` (${error.message})` : "";
+    throw new Error(`Network error while contacting API at ${API_BASE_URL}${reason}`);
+  }
 
   if (!res.ok) {
     let message = `Request failed with status ${res.status}`;
@@ -27,10 +36,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 async function downloadFile(path: string, filename: string) {
-  const res = await fetch(`${API_BASE_URL}/api${path}`, {
-    credentials: "include",
-    headers: withGymHeader(path, undefined, false),
-  });
+  let res: Response;
+
+  try {
+    res = await fetch(`${API_BASE_URL}/api${path}`, {
+      credentials: "include",
+      headers: withGymHeader(path, undefined, false),
+    });
+  } catch (error: any) {
+    const reason = typeof error?.message === "string" && error.message ? ` (${error.message})` : "";
+    throw new Error(`Network error while downloading from API at ${API_BASE_URL}${reason}`);
+  }
 
   if (!res.ok) {
     let message = `Request failed with status ${res.status}`;

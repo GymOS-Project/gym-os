@@ -77,13 +77,13 @@ GET /healthcheck
 
 - Login and signup set HTTP-only cookies
 - Session refresh is handled on the backend
-- `FRONTEND_URL` must match the frontend origin for CORS
+- `FRONTEND_URL` must match the frontend origin for CORS (no trailing slash). You can also provide multiple origins as a comma-separated list, or use `CORS_ORIGINS`.
 - `RESEND_API_KEY` and `RESEND_FROM_EMAIL` enable welcome emails for onboarding and admin-created staff accounts
 - `MOBILE_APP_URL` overrides the default mobile app link used in staff welcome emails
 
 ## Production Notes
 
 - Set `NODE_ENV=production`
-- Use a real `FRONTEND_URL`, for example `https://app.yourdomain.com`
+- Use a real `FRONTEND_URL`, for example `https://app.yourdomain.com` (or a comma-separated list)
 - Prefer deploying behind `https`
 - If deployed separately from the frontend, keep both apps on the same root domain when possible
