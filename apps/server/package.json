@@ -10,10 +10,10 @@
     "dev": "tsc --watch && node --watch dist/index.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.112.2",
+    "@supabase/supabase-js": "^2.112.3",
     "axios": "^1.19.0",
     "bcryptjs": "^3.0.3",
-    "bullmq": "^6.0.8",
+    "bullmq": "^6.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
@@ -22,7 +22,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
     "nodemailer": "9.0.5",
-    "resend": "^6.18.1"
+    "resend": "^6.19.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
