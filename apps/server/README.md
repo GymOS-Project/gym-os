@@ -27,6 +27,7 @@ Example:
 PORT=3001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:8089
+PASSWORD_RESET_REDIRECT_URL=http://localhost:8089/reset-password
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 RESEND_API_KEY=re_xxxxx
@@ -78,6 +79,7 @@ GET /healthcheck
 - Login and signup set HTTP-only cookies
 - Session refresh is handled on the backend
 - `FRONTEND_URL` must match the frontend origin for CORS (no trailing slash). You can also provide multiple origins as a comma-separated list, or use `CORS_ORIGINS`.
+- `PASSWORD_RESET_REDIRECT_URL` controls the `redirect_to` value in Supabase password recovery emails (must be allow-listed in Supabase Auth redirect URLs).
 - `RESEND_API_KEY` and `RESEND_FROM_EMAIL` enable welcome emails for onboarding and admin-created staff accounts
 - `MOBILE_APP_URL` overrides the default mobile app link used in staff welcome emails
 

@@ -17,7 +17,17 @@ const SESSION_COOKIE_NAME = "sessionToken";
 const GYM_PHOTO_BUCKET = process.env.SUPABASE_GYM_PHOTO_BUCKET || "gym-photos";
 const ADMIN_LOGO_BUCKET = process.env.SUPABASE_ADMIN_LOGO_BUCKET || GYM_PHOTO_BUCKET;
 const MAX_GYM_PHOTOS = 10;
-const PASSWORD_RESET_REDIRECT_URL = process.env.PASSWORD_RESET_REDIRECT_URL
+
+function normalizeBaseUrl(value: unknown) {
+  if (typeof value !== "string") return null;
+  const first = value.split(/[,\s]+/).map((entry) => entry.trim()).filter(Boolean)[0];
+  if (!first) return null;
+  return first.replace(/\/$/, "");
+}
+
+const PASSWORD_RESET_REDIRECT_URL =
+  normalizeBaseUrl(process.env.PASSWORD_RESET_REDIRECT_URL)
+  || (normalizeBaseUrl(process.env.FRONTEND_URL) ? `${normalizeBaseUrl(process.env.FRONTEND_URL)}/reset-password` : null);
 
 type AuthUser = {
   id: string;
@@ -428,7 +438,9 @@ export async function forgotPassword(req: Request, res: Response) {
   }
 
   if (!PASSWORD_RESET_REDIRECT_URL) {
-    return res.status(500).json({ message: "Password reset redirect URL is not configured" });
+    return res.status(500).json({
+      message: "Password reset redirect URL is not configured. Set PASSWORD_RESET_REDIRECT_URL or FRONTEND_URL.",
+    });
   }
   const authClient = createSupabaseAuthClient();
   const { error } = await authClient.auth.resetPasswordForEmail(email, {
