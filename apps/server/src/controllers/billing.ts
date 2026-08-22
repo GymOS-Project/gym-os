@@ -14,6 +14,9 @@ import {
 } from "../services/billing.service";
 import { supabase } from "../supabase";
 
+const ONBOARDING_PAYMENTS_ENABLED =
+  (process.env.ONBOARDING_PAYMENTS_ENABLED ?? "true").toLowerCase() !== "false";
+
 function normalizeOptionalString(value: unknown) {
   if (typeof value !== "string") {
     return value == null ? null : String(value);
@@ -49,6 +52,12 @@ function parseWebhookPayload(req: Request) {
 }
 
 export async function createSignupCheckout(req: Request, res: Response) {
+  if (!ONBOARDING_PAYMENTS_ENABLED) {
+    return res.status(503).json({
+      message: "Online payments are disabled for onboarding. Start the free trial and upgrade later.",
+    });
+  }
+
   const { password, gym_type, plan_code, billing_cycle, email, account_email } = req.body as Record<string, unknown>;
   const planCode = normalizeOptionalString(plan_code) || "starter";
   const billingCycle = normalizeOptionalString(billing_cycle) === "yearly" ? "yearly" : "monthly";

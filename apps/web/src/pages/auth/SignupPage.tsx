@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { api } from '@/lib/api';
 import { BILLING_PLANS, BILLING_TRIAL_DAYS } from '@/lib/billing';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -51,6 +52,7 @@ function resizeGyms(existing: GymForm[], count: number) {
 export default function SignupPage() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const onboardingPaymentsAvailable = ((import.meta as any).env?.VITE_ONBOARDING_PAYMENTS_ENABLED ?? 'true') !== 'false';
   const [step, setStep] = useState(1);
   const [activeBranchIndex, setActiveBranchIndex] = useState(0);
   const [loadingAction, setLoadingAction] = useState<'trial' | 'purchase' | null>(null);
@@ -64,6 +66,7 @@ export default function SignupPage() {
   const [gymPhotos, setGymPhotos] = useState<File[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<BillingPlanCode>('starter');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+  const [useOnlineCheckout, setUseOnlineCheckout] = useState(onboardingPaymentsAvailable);
 
   const gymCount = gymType === 'branch' ? branchCount : 1;
   const activeGyms = gyms.slice(0, gymCount);
@@ -687,6 +690,19 @@ export default function SignupPage() {
               </div>
             ) : (
               <div className="mt-8 space-y-3">
+                <div className="flex items-center justify-center gap-3 rounded-xl border bg-muted/20 px-4 py-3 text-sm">
+                  <div className="flex-1 text-muted-foreground">
+                    <p className="font-medium text-foreground">Online payments</p>
+                    <p className="text-xs text-muted-foreground">
+                      Toggle Cashfree checkout during onboarding.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={useOnlineCheckout}
+                    onCheckedChange={(checked) => setUseOnlineCheckout(Boolean(checked))}
+                    disabled={!onboardingPaymentsAvailable || loading}
+                  />
+                </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Button type="button" variant="outline" onClick={prevStep} className="h-11">
                     Back
@@ -694,11 +710,22 @@ export default function SignupPage() {
                   <Button type="button" variant="accent" className="h-11" disabled={loading} onClick={handleTrialStart}>
                     {loadingAction === 'trial' ? 'Starting trial...' : `Start ${BILLING_TRIAL_DAYS}-Day Trial`}
                   </Button>
-                  <Button type="button" variant="gradient" className="h-11 gap-2" disabled={loading} onClick={handlePurchase}>
+                  <Button
+                    type="button"
+                    variant="gradient"
+                    className="h-11 gap-2"
+                    disabled={loading || !useOnlineCheckout || !onboardingPaymentsAvailable}
+                    onClick={handlePurchase}
+                  >
                     <CreditCard className="h-4 w-4" />
                     {loadingAction === 'purchase' ? 'Redirecting...' : 'Purchase Now'}
                   </Button>
                 </div>
+                {!onboardingPaymentsAvailable ? (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Online checkout is disabled. Set <span className="font-mono">VITE_ONBOARDING_PAYMENTS_ENABLED=true</span> to enable it.
+                  </p>
+                ) : null}
                 <p className="text-center text-xs text-muted-foreground">
                   Selected plan: <span className="font-medium text-foreground">{selectedPlanDetails.name}</span> · ₹{selectedPlanPrice.toLocaleString()} / {billingCycle === 'yearly' ? 'year' : 'month'}
                 </p>

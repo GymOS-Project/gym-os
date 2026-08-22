@@ -34,6 +34,7 @@ For production:
 
 ```env
 VITE_API_BASE_URL=https://api.yourdomain.com
+VITE_ONBOARDING_PAYMENTS_ENABLED=false
 VITE_POSTHOG_KEY=phc_your_project_key
 VITE_POSTHOG_HOST=https://us.i.posthog.com
 ```
