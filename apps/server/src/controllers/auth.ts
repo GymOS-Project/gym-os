@@ -29,6 +29,10 @@ const PASSWORD_RESET_REDIRECT_URL =
   normalizeBaseUrl(process.env.PASSWORD_RESET_REDIRECT_URL)
   || (normalizeBaseUrl(process.env.FRONTEND_URL) ? `${normalizeBaseUrl(process.env.FRONTEND_URL)}/reset-password` : null);
 
+const DISCLOSE_FORGOT_PASSWORD_USER_EXISTS =
+  (process.env.DISCLOSE_FORGOT_PASSWORD_USER_EXISTS ?? (process.env.NODE_ENV === "production" ? "false" : "true"))
+    .toLowerCase() === "true";
+
 type AuthUser = {
   id: string;
   email: string;
@@ -70,6 +74,32 @@ function respondSupabaseAuthError(res: Response, error: { message?: string } | n
   }
 
   return res.status(fallbackStatus).json({ message });
+}
+
+async function authUserExistsForEmail(email: string) {
+  const needle = email.trim().toLowerCase();
+  if (!needle) return false;
+
+  const perPage = 200;
+  const maxPages = 25; // up to 5000 users scanned
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const users = data?.users || [];
+    if (users.some((user) => (user.email || "").toLowerCase() === needle)) {
+      return true;
+    }
+
+    if (users.length < perPage) {
+      return false;
+    }
+  }
+
+  return false;
 }
 
 
@@ -442,6 +472,20 @@ export async function forgotPassword(req: Request, res: Response) {
       message: "Password reset redirect URL is not configured. Set PASSWORD_RESET_REDIRECT_URL or FRONTEND_URL.",
     });
   }
+
+  if (DISCLOSE_FORGOT_PASSWORD_USER_EXISTS) {
+    try {
+      const exists = await authUserExistsForEmail(email);
+      if (!exists) {
+        return res.status(404).json({ message: "No account found with this email." });
+      }
+    } catch (error) {
+      return res.status(503).json({
+        message: error instanceof Error ? error.message : "Auth service is unavailable. Please try again later.",
+      });
+    }
+  }
+
   const authClient = createSupabaseAuthClient();
   const { error } = await authClient.auth.resetPasswordForEmail(email, {
     redirectTo: PASSWORD_RESET_REDIRECT_URL,

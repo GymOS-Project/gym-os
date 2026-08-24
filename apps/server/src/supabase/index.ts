@@ -62,5 +62,5 @@ export const supabase: SupabaseClient = new Proxy(
 ) as unknown as SupabaseClient;
 
 export function createSupabaseAuthClient() {
-  return getSupabaseClient();
+  return createSupabaseServerClient();
 }

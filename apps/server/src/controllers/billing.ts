@@ -15,7 +15,7 @@ import {
 import { supabase } from "../supabase";
 
 const ONBOARDING_PAYMENTS_ENABLED =
-  (process.env.ONBOARDING_PAYMENTS_ENABLED ?? "true").toLowerCase() !== "false";
+  (process.env.ONBOARDING_PAYMENTS_ENABLED ?? "false").toLowerCase() === "true";
 
 function normalizeOptionalString(value: unknown) {
   if (typeof value !== "string") {
