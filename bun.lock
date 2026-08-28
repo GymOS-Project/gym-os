@@ -19,7 +19,7 @@
         "@supabase/supabase-js": "^2.112.3",
         "axios": "^1.19.0",
         "bcryptjs": "^3.0.3",
-        "bullmq": "^6.1.2",
+        "bullmq": "^6.2.0",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
         "dotenv": "^17.4.2",
@@ -949,7 +949,7 @@
 
     "buffer-from": ["buffer-from@1.1.2", "", {}, "sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ=="],
 
-    "bullmq": ["bullmq@6.1.2", "", { "dependencies": { "cron-parser": "5.10.0", "msgpackr": "2.0.5", "node-abort-controller": "3.1.1", "semver": "7.8.5", "tslib": "2.8.1" }, "peerDependencies": { "bullmq-otel": ">=2.0.0", "ioredis": ">=5.0.0", "pg": ">=8.0.0", "redis": ">=5.0.0" }, "optionalPeers": ["bullmq-otel", "ioredis", "pg", "redis"] }, "sha512-GSX8JfWN8CElAGDyt7Zmq59n1FfWZ0L7IjsThNUQq7X8mvVVDb9I5i2F+nFg4A00UbysJ5yejN0oWzmbUJPDFg=="],
+    "bullmq": ["bullmq@6.2.0", "", { "dependencies": { "cron-parser": "5.10.0", "msgpackr": "2.0.5", "node-abort-controller": "3.1.1", "semver": "7.8.5", "tslib": "2.8.1" }, "peerDependencies": { "bullmq-otel": ">=2.0.0", "ioredis": ">=5.0.0", "pg": ">=8.0.0", "redis": ">=5.0.0" }, "optionalPeers": ["bullmq-otel", "ioredis", "pg", "redis"] }, "sha512-9BVvqp1nJ6jzG2Ap37sZ+ucseAgHU+fxecLkHCcTJf8SMvLtRPSy1q5J7n7kutw+Hfwsa+araPPTULJSX3ID8g=="],
 
     "busboy": ["busboy@1.6.0", "", { "dependencies": { "streamsearch": "^1.1.0" } }, "sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA=="],
 
