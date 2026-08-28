@@ -136,13 +136,13 @@ export default function AddMemberPage() {
     if (!isEditing) {
       api.getPlans().then((data) => setPackages(data.filter((p) => p.is_active)));
     }
-    api.getCoupons().then(setCoupons).catch(() => {});
-    api.getShifts().then((data) => setShifts(data.filter((shift) => shift.is_active))).catch(() => {});
+    api.getCoupons().then(setCoupons).catch(() => { });
+    api.getShifts().then((data) => setShifts(data.filter((shift) => shift.is_active))).catch(() => { });
     if (canManageDietPlans) {
-      api.getDietPlans().then(setDietPlans).catch(() => {});
+      api.getDietPlans().then(setDietPlans).catch(() => { });
     }
     if (canManageExercisePlans) {
-      api.getExercisePlans().then(setExercisePlans).catch(() => {});
+      api.getExercisePlans().then(setExercisePlans).catch(() => { });
     }
     api.getActiveMembers().then((data) => {
       setMembers(isEditing ? data.filter((member) => member.id !== memberId) : data);
@@ -205,7 +205,7 @@ export default function AddMemberPage() {
     : "";
   const payableAmount = couponValidation?.netAmount ?? (parseFloat(form.amount_paid) || 0);
 
-  const set = <K extends keyof z.infer<typeof memberSchema>>(k: K, v: z.infer<typeof memberSchema>[K]) => methods.setValue(k, v, { shouldDirty: true, shouldValidate: true });
+  const set = <K extends keyof z.infer<typeof memberSchema>>(k: K, v: z.infer<typeof memberSchema>[K]) => methods.setValue(k, v as any, { shouldDirty: true, shouldValidate: true });
 
   useEffect(() => {
     if (!form.package_type_id || !form.gym_id || !form.coupon_id || !form.amount_paid) {
@@ -371,20 +371,20 @@ export default function AddMemberPage() {
       } else {
         const member = await api.createMember(memberPayload);
 
-         const amountPaid = parseFloat(values.amount_paid);
-         if (values.package_type_id && endDate && Number.isFinite(amountPaid) && amountPaid > 0) {
-           await api.createMemberSale({
-             gym_id: values.gym_id,
-             member_id: member.id,
-             package_type_id: values.package_type_id,
-             start_date: values.start_date,
-             end_date: endDate,
-             gross_amount: amountPaid,
-             payment_mode: values.payment_mode,
-             coupon_id: values.coupon_id || null,
-             description: `Package: ${selectedPkg!.name}`,
-           });
-         }
+        const amountPaid = parseFloat(values.amount_paid);
+        if (values.package_type_id && endDate && Number.isFinite(amountPaid) && amountPaid > 0) {
+          await api.createMemberSale({
+            gym_id: values.gym_id,
+            member_id: member.id,
+            package_type_id: values.package_type_id,
+            start_date: values.start_date,
+            end_date: endDate,
+            gross_amount: amountPaid,
+            payment_mode: values.payment_mode,
+            coupon_id: values.coupon_id || null,
+            description: `Package: ${selectedPkg!.name}`,
+          });
+        }
 
         if ((member as Member & { device_sync_warning?: string }).device_sync_warning) {
           toast.warning((member as Member & { device_sync_warning: string }).device_sync_warning);
