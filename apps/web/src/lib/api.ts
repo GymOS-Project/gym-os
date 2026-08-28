@@ -301,6 +301,7 @@ export const api = {
     request<EsslDevice>(`/essl/devices/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteEsslDevice: (id: string) => request<void>(`/essl/devices/${id}`, { method: "DELETE" }),
   getEsslRawLogs: () => request<EsslRawPunchLog[]>("/essl/raw-logs"),
+  getEsslDeviceCommands: () => request<EsslDeviceCommand[]>("/essl/device-commands"),
 
   // Shifts
   getShifts: () => request<Shift[]>("/shifts"),

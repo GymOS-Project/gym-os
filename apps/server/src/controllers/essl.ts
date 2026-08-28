@@ -4,6 +4,7 @@ import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware"
 import { logActivity } from "../services/activityLog.service";
 import { appendEsslDebugLog, getEsslDebugLogFilePath, readRecentEsslDebugLogs } from "../services/esslDebugLog.service";
 import { ingestEsslPunch } from "../services/essl.service";
+import { listRecentEsslDeviceCommands } from "../services/esslDeviceCommands.service";
 import { resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
 import { supabase } from "../supabase";
 
@@ -134,6 +135,25 @@ export async function listEsslRawLogs(req: AuthenticatedRequest, res: Response) 
   const { data, error } = await query;
   if (error) return res.status(500).json({ message: error.message });
   return res.json(data || []);
+}
+
+export async function listEsslDeviceCommands(req: AuthenticatedRequest, res: Response) {
+  const adminId = getAdminId(req, res);
+  if (!adminId) return;
+
+  const gymScope = await resolveGymScope(req, res);
+  if (!gymScope) return;
+
+  try {
+    const commands = await listRecentEsslDeviceCommands({
+      adminId,
+      gymId: gymScope.selectedGymId,
+      limit: 100,
+    });
+    return res.json(commands);
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to read eSSL device commands" });
+  }
 }
 
 export async function listPublicEsslDebugLogs(req: AuthenticatedRequest, res: Response) {

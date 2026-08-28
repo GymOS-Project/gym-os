@@ -44,6 +44,28 @@ export async function listQueuedEsslDeviceCommands(params: { serialNumber: strin
   return (data || []) as EsslDeviceCommand[];
 }
 
+export async function listRecentEsslDeviceCommands(params: { adminId: string; gymId?: string | null; limit?: number }) {
+  const { adminId, gymId, limit = 100 } = params;
+  let query = supabase
+    .from("essl_device_commands")
+    .select("*")
+    .eq("admin_id", adminId)
+    .order("created_at", { ascending: false })
+    .limit(Math.max(1, Math.min(limit, 250)));
+
+  if (gymId) {
+    query = query.eq("gym_id", gymId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    if (isMissingRelationError(error, "essl_device_commands")) return [] as EsslDeviceCommand[];
+    throw new Error(error.message);
+  }
+
+  return (data || []) as EsslDeviceCommand[];
+}
+
 export async function markEsslDeviceCommandsSent(params: { commandIds: string[]; serialNumber: string | null }) {
   const { commandIds, serialNumber } = params;
   if (!serialNumber || commandIds.length === 0) return;
@@ -130,3 +152,61 @@ export async function createEsslDeviceCommand(params: {
   return data as EsslDeviceCommand;
 }
 
+function sanitizeDeviceUserName(value: string) {
+  return value.replace(/[\t\r\n=]/g, " ").replace(/\s+/g, " ").trim().slice(0, 24);
+}
+
+export function buildEsslUserInfoCommand(params: { pin: string; name: string; card?: string | null }) {
+  const pin = params.pin.trim();
+  const name = sanitizeDeviceUserName(params.name) || pin;
+  const card = params.card?.trim() || "";
+
+  return [
+    "DATA UPDATE USERINFO",
+    `PIN=${pin}`,
+    `Name=${name}`,
+    "Pri=0",
+    "Passwd=",
+    `Card=${card}`,
+    "Grp=1",
+    "TZ=0000000100000000",
+  ].join("\t");
+}
+
+export async function queueEsslUserInfoForGymDevices(params: {
+  adminId: string;
+  gymId: string;
+  pin: string;
+  name: string;
+}) {
+  const { adminId, gymId, pin, name } = params;
+  const { data: devices, error } = await supabase
+    .from("essl_devices")
+    .select("id, serial_number")
+    .eq("admin_id", adminId)
+    .eq("gym_id", gymId)
+    .eq("is_active", true)
+    .not("serial_number", "is", null);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const command = buildEsslUserInfoCommand({ pin, name });
+  const queued: EsslDeviceCommand[] = [];
+
+  for (const device of devices || []) {
+    const serialNumber = typeof device.serial_number === "string" ? device.serial_number.trim() : "";
+    if (!serialNumber) continue;
+
+    queued.push(await createEsslDeviceCommand({
+      adminId,
+      gymId,
+      esslDeviceId: String(device.id),
+      serialNumber,
+      command,
+    }));
+  }
+
+  return queued;
+}

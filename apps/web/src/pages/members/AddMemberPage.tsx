@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -40,6 +41,7 @@ const memberSchema = z.object({
   pan_card_no: z.string(),
   marital_status: z.string(),
   external_user_code: z.string(),
+  create_device_user: z.boolean(),
   gym_id: z.string().min(1, "Gym selection is required"),
   reference_member_id: z.string(),
   package_type_id: z.string(),
@@ -110,6 +112,7 @@ export default function AddMemberPage() {
       pan_card_no: "",
       marital_status: "",
       external_user_code: "",
+      create_device_user: false,
       gym_id: "",
       reference_member_id: NO_REFERENCE_MEMBER_OPTION,
       package_type_id: "",
@@ -168,6 +171,7 @@ export default function AddMemberPage() {
           pan_card_no: member.pan_card_no || "",
           marital_status: member.marital_status || "",
           external_user_code: member.external_user_code || "",
+          create_device_user: false,
           gym_id: member.gym_id || "",
           reference_member_id: member.reference_member_id || NO_REFERENCE_MEMBER_OPTION,
           package_type_id: "",
@@ -201,7 +205,7 @@ export default function AddMemberPage() {
     : "";
   const payableAmount = couponValidation?.netAmount ?? (parseFloat(form.amount_paid) || 0);
 
-  const set = (k: keyof z.infer<typeof memberSchema>, v: string) => methods.setValue(k, v, { shouldDirty: true, shouldValidate: true });
+  const set = <K extends keyof z.infer<typeof memberSchema>>(k: K, v: z.infer<typeof memberSchema>[K]) => methods.setValue(k, v, { shouldDirty: true, shouldValidate: true });
 
   useEffect(() => {
     if (!form.package_type_id || !form.gym_id || !form.coupon_id || !form.amount_paid) {
@@ -242,6 +246,7 @@ export default function AddMemberPage() {
     pan_card_no: form.pan_card_no || null,
     marital_status: form.marital_status || null,
     external_user_code: form.external_user_code || null,
+    create_device_user: form.create_device_user,
     shift: form.shift || null,
     notes: form.notes || null,
     reference_member_id:
@@ -381,7 +386,11 @@ export default function AddMemberPage() {
            });
          }
 
-        toast.success("Member added successfully!");
+        if ((member as Member & { device_sync_warning?: string }).device_sync_warning) {
+          toast.warning((member as Member & { device_sync_warning: string }).device_sync_warning);
+        } else {
+          toast.success(form.create_device_user ? "Member added and device sync queued!" : "Member added successfully!");
+        }
       }
 
       navigate("/members");
@@ -440,6 +449,22 @@ export default function AddMemberPage() {
                 <Label>Attendance / Device Code</Label>
                 <Input value={form.external_user_code} onChange={(e) => set("external_user_code", e.target.value)} placeholder="Optional eSSL user code" />
               </div>
+              {!isEditing ? (
+                <div className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3">
+                  <Checkbox
+                    id="create_device_user"
+                    checked={form.create_device_user}
+                    onCheckedChange={(checked) => set("create_device_user", Boolean(checked))}
+                    className="mt-0.5"
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="create_device_user" className="cursor-pointer">Create user on eSSL device</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Queues this member for all active eSSL devices in the selected gym. If the device code is empty, GymOS assigns the next numeric code automatically.
+                    </p>
+                  </div>
+                </div>
+              ) : null}
               <div className="space-y-1.5">
                 <Label>Email</Label>
                 <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="member@email.com" />

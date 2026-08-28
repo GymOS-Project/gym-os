@@ -515,3 +515,19 @@ interface EsslRawPunchLog {
   created_at: string;
   updated_at: string;
 }
+
+interface EsslDeviceCommand {
+  id: string;
+  cmd_id: string | number;
+  admin_id: string | null;
+  gym_id: string | null;
+  essl_device_id: string | null;
+  serial_number: string | null;
+  command: string;
+  status: 'queued' | 'sent' | 'acked' | 'failed' | string;
+  sent_at: string | null;
+  acked_at: string | null;
+  device_result: string | null;
+  created_at: string;
+  updated_at: string;
+}

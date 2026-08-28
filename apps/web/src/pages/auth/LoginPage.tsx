@@ -1,6 +1,7 @@
 import {  useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { AuthShowcasePanel } from '@/components/auth/AuthShowcasePanel';
 import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,14 +9,6 @@ import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
-
-const decorationCircles = Array.from({ length: 20 }, (_, index) => ({
-  width: 60 + ((index * 37) % 180),
-  height: 60 + ((index * 53) % 180),
-  top: (index * 17) % 100,
-  left: (index * 29) % 100,
-  opacity: 0.12 + ((index % 5) * 0.08),
-}));
 
 export default function LoginPage() {
   const { signIn } = useAuth();
@@ -43,43 +36,7 @@ export default function LoginPage() {
         <ThemeToggle isToggle className="pointer-events-auto" />
       </div>
 
-      {/* Left Panel */}
-      <div className="gradient-accent relative hidden overflow-hidden p-12 lg:flex lg:w-2/5 lg:flex-col lg:items-center lg:justify-center">
-        <div className="absolute inset-0 opacity-10">
-          {decorationCircles.map((circle, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full border border-primary/60"
-              style={{
-                width: `${circle.width}px`,
-                height: `${circle.height}px`,
-                top: `${circle.top}%`,
-                left: `${circle.left}%`,
-                opacity: circle.opacity,
-              }}
-            />
-          ))}
-        </div>
-        <div className="relative z-10 text-center max-w-md">
-          <div className="flex items-center justify-center mb-8">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/25 bg-primary/15 backdrop-blur">
-              <BrandLogo tone="light" className="h-10 w-10" />
-            </div>
-          </div>
-          <h1 className="text-4xl font-bold text-white mb-4">GymOs Admin</h1>
-          <p className="text-lg leading-relaxed text-white/75">
-            Your complete gym management solution. Manage members, track revenue, follow up leads — all in one place.
-          </p>
-          <div className="mt-10 grid grid-cols-3 gap-4 text-center">
-            {[['Members', '∞'], ['Reports', '📊'], ['Follow-ups', '🔔']].map(([label, icon]) => (
-              <div key={label} className="rounded-xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm">
-                <div className="text-2xl mb-1">{icon}</div>
-                <div className="text-sm text-white/65">{label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <AuthShowcasePanel mode="login" />
 
       {/* Right Panel */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">

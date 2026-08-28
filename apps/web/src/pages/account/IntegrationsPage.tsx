@@ -18,15 +18,17 @@ export default function IntegrationsPage() {
   const { gyms, selectedGymId } = useAuth();
   const [devices, setDevices] = useState<EsslDevice[]>([]);
   const [logs, setLogs] = useState<EsslRawPunchLog[]>([]);
+  const [commands, setCommands] = useState<EsslDeviceCommand[]>([]);
   const [form, setForm] = useState({ ...EMPTY_INTEGRATION_FORM });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<EsslDevice | null>(null);
 
   const fetchData = async () => {
     try {
-      const [deviceData, rawLogs] = await Promise.all([api.getEsslDevices(), api.getEsslRawLogs()]);
+      const [deviceData, rawLogs, deviceCommands] = await Promise.all([api.getEsslDevices(), api.getEsslRawLogs(), api.getEsslDeviceCommands()]);
       setDevices(deviceData);
       setLogs(rawLogs);
+      setCommands(deviceCommands);
     } catch (error: any) {
       toast.error(error.message || "Failed to load integration data");
     }
@@ -97,7 +99,8 @@ export default function IntegrationsPage() {
   const configuredBaseUrl = (((import.meta as any).env.VITE_API_BASE_URL || window.location.origin) as string).replace(/\/$/, "");
   const admsBaseUrl = configuredBaseUrl.replace(/\/api$/, "");
   const admsEndpoint = `${admsBaseUrl}/iclock/cdata`;
-  const publicDebugUrl = `${configuredBaseUrl}/essl/public-debug`;
+  const apiBaseUrl = configuredBaseUrl.endsWith("/api") ? configuredBaseUrl : `${configuredBaseUrl}/api`;
+  const publicDebugUrl = `${apiBaseUrl}/essl/public-debug`;
   let serverAddress = admsBaseUrl;
   let serverPort = "443";
 
@@ -164,6 +167,33 @@ export default function IntegrationsPage() {
                   <TableCell>{device.ip_address ? `${device.ip_address}:${device.port || 4370}` : device.server_address || "Webhook only"}</TableCell>
                   <TableCell>{device.status}</TableCell>
                   <TableCell><div className="flex justify-end"><Button size="sm" variant="outline" onClick={() => openEdit(device)}>Edit</Button></div></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="overflow-hidden rounded-xl border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead>Created</TableHead>
+                <TableHead>Device</TableHead>
+                <TableHead>Command</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Result</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {commands.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="py-12 text-center text-muted-foreground">No eSSL device commands queued yet.</TableCell></TableRow>
+              ) : commands.map((command) => (
+                <TableRow key={command.id} className="hover:bg-muted/30">
+                  <TableCell>{command.created_at ? new Date(command.created_at).toLocaleString() : "-"}</TableCell>
+                  <TableCell>{command.serial_number || "Unknown"}</TableCell>
+                  <TableCell className="max-w-md truncate font-mono text-xs">{command.command}</TableCell>
+                  <TableCell>{command.status}</TableCell>
+                  <TableCell>{command.device_result || "-"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

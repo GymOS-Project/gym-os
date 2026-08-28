@@ -3,6 +3,7 @@ import type { AuthenticatedRequest } from "../middleware/sessionAuth.middleware"
 import { logActivity } from "../services/activityLog.service";
 import { countAdminUsage, getAdminSubscriptionSummary, getBillingLimit } from "../services/billing.service";
 import { sendMemberWelcomeEmail } from "../services/email.service";
+import { queueEsslUserInfoForGymDevices } from "../services/esslDeviceCommands.service";
 import { attachMemberPackages } from "../services/memberPackages.service";
 import { hasOwn, hasPlanContentInput, normalizeOptionalString, resolvePlanContentFields, type PlanTable } from "../services/planContent.service";
 import { ensureGymBelongsToAdmin, resolveGymScope, resolveWriteGymId } from "../services/gymScope.service";
@@ -18,6 +19,37 @@ function getAdminId(req: AuthenticatedRequest, res: Response) {
   }
 
   return adminId;
+}
+
+function normalizeBoolean(value: unknown) {
+  return value === true || value === "true" || value === "1" || value === 1;
+}
+
+async function generateNextDeviceUserCode(adminId: string, gymId: string) {
+  const [memberResult, staffResult] = await Promise.all([
+    supabase
+      .from("members")
+      .select("external_user_code")
+      .eq("admin_id", adminId)
+      .eq("gym_id", gymId)
+      .not("external_user_code", "is", null),
+    supabase
+      .from("staff_accounts")
+      .select("external_user_code")
+      .eq("admin_id", adminId)
+      .eq("gym_id", gymId)
+      .not("external_user_code", "is", null),
+  ]);
+
+  if (memberResult.error) throw new Error(memberResult.error.message);
+  if (staffResult.error) throw new Error(staffResult.error.message);
+
+  const maxCode = [...(memberResult.data || []), ...(staffResult.data || [])]
+    .map((entry) => Number(String(entry.external_user_code || "").trim()))
+    .filter((value) => Number.isInteger(value) && value > 0)
+    .reduce((max, value) => Math.max(max, value), 1000);
+
+  return String(maxCode + 1);
 }
 
 async function getScopedMember(
@@ -548,9 +580,11 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
     notes,
     reference_member_id,
     external_user_code,
+    create_device_user,
   } = req.body;
 
   const resolvedCurrentAddress = normalizeOptionalString(current_address ?? address);
+  const shouldCreateDeviceUser = normalizeBoolean(create_device_user);
 
   if (!name || !phone) {
     return res.status(400).json({ message: "name and phone are required" });
@@ -577,6 +611,16 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ message: gymError.message });
   }
 
+  let deviceUserCode = normalizeOptionalString(external_user_code);
+
+  if (shouldCreateDeviceUser && !deviceUserCode) {
+    try {
+      deviceUserCode = await generateNextDeviceUserCode(adminId, requestedGymId);
+    } catch (error) {
+      return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to generate device user code" });
+    }
+  }
+
   const { data, error } = await supabase
     .from("members")
     .insert({
@@ -596,7 +640,7 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
       shift,
       notes,
       reference_member_id,
-      external_user_code: normalizeOptionalString(external_user_code),
+      external_user_code: deviceUserCode,
       admin_id: adminId,
       gym_id: requestedGymId,
     })
@@ -619,6 +663,32 @@ export async function createMember(req: AuthenticatedRequest, res: Response) {
   }
 
   await logActivity(req, { action: "create", entityType: "member", entityId: data.id, gymId: requestedGymId, after: data });
+
+  if (shouldCreateDeviceUser && deviceUserCode) {
+    try {
+      const queuedCommands = await queueEsslUserInfoForGymDevices({
+        adminId,
+        gymId: requestedGymId,
+        pin: deviceUserCode,
+        name: String(name),
+      });
+
+      if (queuedCommands.length > 0) {
+        await logActivity(req, {
+          action: "create",
+          entityType: "essl_device_command",
+          entityId: data.id,
+          gymId: requestedGymId,
+          after: { member_id: data.id, external_user_code: deviceUserCode, queued_count: queuedCommands.length },
+        });
+      }
+    } catch (commandError) {
+      return res.status(201).json({
+        ...data,
+        device_sync_warning: commandError instanceof Error ? commandError.message : "Member created, but device command could not be queued",
+      });
+    }
+  }
 
   return res.status(201).json(data);
 }

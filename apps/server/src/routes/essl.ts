@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { createEsslDevice, deleteEsslDevice, listEsslDevices, listEsslRawLogs, listPublicEsslDebugLogs, receiveEsslWebhook, updateEsslDevice } from "../controllers/essl";
+import { createEsslDevice, deleteEsslDevice, listEsslDeviceCommands, listEsslDevices, listEsslRawLogs, listPublicEsslDebugLogs, receiveEsslWebhook, updateEsslDevice } from "../controllers/essl";
 import { requirePlanFeature } from "../middleware/billing.middleware";
 import { requireAdmin, requireAuthenticatedSession } from "../middleware/sessionAuth.middleware";
 
@@ -15,5 +15,6 @@ router.post("/devices", createEsslDevice);
 router.put("/devices/:id", updateEsslDevice);
 router.delete("/devices/:id", deleteEsslDevice);
 router.get("/raw-logs", listEsslRawLogs);
+router.get("/device-commands", listEsslDeviceCommands);
 
 export default router;

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { AuthShowcasePanel } from '@/components/auth/AuthShowcasePanel';
 import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,17 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BILLING_PLANS, BILLING_TRIAL_DAYS } from '@/lib/billing';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { MAX_IMAGE_SIZE_BYTES, MAX_SIGNUP_PHOTOS as MAX_PHOTOS, MAX_SIGNUP_PHOTOS, SIGNUP_STEPS as STEPS } from '@/utils/constants';
-import { Check, Eye, EyeOff, Building2, User, Lock, Upload, X, ImagePlus, Sparkles } from 'lucide-react';
+import { Check, Eye, EyeOff, Upload, X, ImagePlus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
-const decorationCircles = Array.from({ length: 20 }, (_, index) => ({
-  width: 60 + ((index * 37) % 180),
-  height: 60 + ((index * 53) % 180),
-  top: (index * 17) % 100,
-  left: (index * 29) % 100,
-  opacity: 0.12 + ((index % 5) * 0.08),
-}));
 
 function createGymForm(): GymForm {
   return {
@@ -280,67 +273,7 @@ export default function SignupPage() {
         <ThemeToggle isToggle={true} className="pointer-events-auto" />
       </div>
 
-      <div className="gradient-accent relative hidden overflow-hidden p-12 lg:flex lg:w-2/5 lg:flex-col lg:items-center lg:justify-center">
-        <div className="absolute inset-0 opacity-10">
-          {decorationCircles.map((circle, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full border border-primary/60"
-              style={{
-                width: `${circle.width}px`,
-                height: `${circle.height}px`,
-                top: `${circle.top}%`,
-                left: `${circle.left}%`,
-                opacity: circle.opacity,
-              }}
-            />
-          ))}
-        </div>
-        <div className="relative z-10 text-center max-w-sm">
-          <div className="flex items-center justify-center mb-8">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/25 bg-primary/15 backdrop-blur">
-              <BrandLogo tone="light" className="h-10 w-10" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-4">Join GymOs</h1>
-          <p className="leading-relaxed text-white/75">
-            Set up your gym management system for one gym or multiple branches in just a few steps.
-          </p>
-
-          <div className="mt-12 space-y-4">
-            {STEPS.map((section) => (
-              <div
-                key={section.id}
-                className={cn(
-                  'flex items-center gap-4 rounded-xl p-4 transition-all',
-                  step === section.id ? 'border border-white/20 bg-white/10 backdrop-blur-sm' : 'opacity-55'
-                )}
-              >
-                <div
-                  className={cn(
-                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2',
-                    step > section.id
-                      ? 'border-primary bg-primary'
-                      : step === section.id
-                        ? 'border-primary bg-primary/15'
-                        : 'border-white/20'
-                  )}
-                >
-                  {step > section.id ? (
-                    <Check className="h-5 w-5 text-white" />
-                  ) : (
-                    <section.icon className="h-5 w-5 text-primary" />
-                  )}
-                </div>
-                <div className="text-left">
-                  <p className="text-white font-medium">{section.title}</p>
-                  <p className="text-sm text-white/60">{section.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <AuthShowcasePanel mode="signup" step={step} steps={STEPS} />
 
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-3xl p-8">
