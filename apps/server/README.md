@@ -31,7 +31,12 @@ PASSWORD_RESET_REDIRECT_URL=http://localhost:8089/reset-password
 ONBOARDING_PAYMENTS_ENABLED=false
 DISCLOSE_FORGOT_PASSWORD_USER_EXISTS=true
 SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SESSION_COOKIE_SECRET=replace-with-a-long-random-secret
+SESSION_COOKIE_SAME_SITE=lax
+SESSION_COOKIE_SECURE=false
+SESSION_COOKIE_PARTITIONED=false
 RESEND_API_KEY=re_xxxxx
 RESEND_FROM_EMAIL=GymOS <no-reply@yourdomain.com>
 
@@ -80,6 +85,7 @@ GET /healthcheck
 
 - Login and signup set HTTP-only cookies
 - Session refresh is handled on the backend
+- `SESSION_COOKIE_SECRET` must be stable across deployments. Changing it makes existing cookies unreadable and forces logout.
 - `FRONTEND_URL` must match the frontend origin for CORS (no trailing slash). You can also provide multiple origins as a comma-separated list, or use `CORS_ORIGINS`.
 - `PASSWORD_RESET_REDIRECT_URL` controls the `redirect_to` value in Supabase password recovery emails (must be allow-listed in Supabase Auth redirect URLs).
 - `RESEND_API_KEY` and `RESEND_FROM_EMAIL` enable welcome emails for onboarding and admin-created staff accounts
@@ -91,3 +97,4 @@ GET /healthcheck
 - Use a real `FRONTEND_URL`, for example `https://app.yourdomain.com` (or a comma-separated list)
 - Prefer deploying behind `https`
 - If deployed separately from the frontend, keep both apps on the same root domain when possible
+- For cross-site frontend/backend domains like `pages.dev` -> `duckdns.org`, use `SESSION_COOKIE_SAME_SITE=none`, `SESSION_COOKIE_SECURE=true`, and `SESSION_COOKIE_PARTITIONED=true`. Same-site domains such as `app.yourdomain.com` -> `api.yourdomain.com` do not need partitioned cookies.

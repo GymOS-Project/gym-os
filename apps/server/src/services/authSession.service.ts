@@ -12,6 +12,8 @@ const COOKIE_SAME_SITE = (process.env.SESSION_COOKIE_SAME_SITE || (IS_PRODUCTION
 const COOKIE_SECURE = process.env.SESSION_COOKIE_SECURE
   ? process.env.SESSION_COOKIE_SECURE === "true"
   : IS_PRODUCTION;
+const COOKIE_DOMAIN = process.env.SESSION_COOKIE_DOMAIN?.trim() || undefined;
+const COOKIE_PARTITIONED = process.env.SESSION_COOKIE_PARTITIONED === "true";
 
 let cachedCookieEncryptionKey: Buffer | null = null;
 
@@ -119,12 +121,15 @@ export function getCookieOptions(maxAge?: number): CookieOptions {
       : COOKIE_SAME_SITE === "none"
         ? "none"
         : "lax";
+  const secure = sameSite === "none" ? true : COOKIE_SECURE;
 
   return {
     httpOnly: true,
     sameSite,
-    secure: COOKIE_SECURE,
+    secure,
     path: "/",
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+    ...(COOKIE_PARTITIONED ? ({ partitioned: true } as Partial<CookieOptions>) : {}),
     ...(maxAge ? { maxAge } : {}),
   };
 }

@@ -20,6 +20,7 @@ function normalizeSupabaseUrl(value?: string) {
 
 const supabaseUrl = normalizeSupabaseUrl(process.env.SUPABASE_URL);
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY?.trim();
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseServiceKey);
 
@@ -62,5 +63,20 @@ export const supabase: SupabaseClient = new Proxy(
 ) as unknown as SupabaseClient;
 
 export function createSupabaseAuthClient() {
-  return createSupabaseServerClient();
+  if (!supabaseUrl) {
+    throw new Error("SUPABASE_URL is missing or invalid.");
+  }
+
+  const authKey = supabaseAnonKey || supabaseServiceKey;
+  if (!authKey) {
+    throw new Error("SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY is missing.");
+  }
+
+  return createClient(supabaseUrl, authKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
 }
