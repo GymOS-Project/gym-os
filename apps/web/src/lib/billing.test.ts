@@ -16,4 +16,11 @@ describe("frontend billing helpers", () => {
     expect(hasPlanFeature({ entitled: true, features: ["classes"] } as any, "classes")).toBe(true);
     expect(hasPlanFeature({ entitled: false, features: ["classes"] } as any, "classes")).toBe(false);
   });
+
+  it("grants trial features according to plan tier", () => {
+    expect(hasPlanFeature({ entitled: true, status: "trialing", plan_code: "growth", features: [] } as any, "classes")).toBe(true);
+    expect(hasPlanFeature({ entitled: true, status: "trialing", plan_code: "growth", features: [] } as any, "payroll")).toBe(false);
+    expect(hasPlanFeature({ entitled: true, status: "trialing", plan_code: "scale", features: [] } as any, "payroll")).toBe(true);
+    expect(getPlanLimit({ entitled: true, status: "trialing", plan_code: "growth", limits: {} } as any, "max_active_members")).toBe(1200);
+  });
 });

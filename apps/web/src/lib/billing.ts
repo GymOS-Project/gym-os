@@ -105,8 +105,9 @@ export function hasPlanFeature(
   if (!subscription) {
     return true
   }
+
   if (subscription.status === 'trialing') {
-    return subscription.entitled && true
+    return subscription.entitled && getPlanDefinition(subscription.plan_code).features.includes(feature)
   }
 
   return subscription.entitled && subscription.features.includes(feature)
@@ -116,6 +117,10 @@ export function getPlanLimit(
   subscription: BillingSubscription | null | undefined,
   limit: BillingLimitKey
 ) {
+  if (subscription?.status === 'trialing' && subscription.entitled) {
+    return getPlanDefinition(subscription.plan_code).limits[limit]
+  }
+
   return subscription?.limits?.[limit] ?? BILLING_PLANS.scale.limits[limit]
 }
 

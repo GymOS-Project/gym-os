@@ -185,11 +185,19 @@ function buildSubscriptionSummary(row: Record<string, any> | null): BillingSubsc
 
 export function hasBillingFeature(subscription: BillingSubscriptionSummary | null | undefined, feature: BillingFeatureKey) {
   const resolved = subscription || createLegacySubscriptionSummary();
+  if (resolved.status === "trialing") {
+    return resolved.entitled && isFeatureAvailableInPlan(resolved.plan_code, feature);
+  }
+
   return resolved.entitled && resolved.features.includes(feature);
 }
 
 export function getBillingLimit(subscription: BillingSubscriptionSummary | null | undefined, limit: BillingLimitKey) {
   const resolved = subscription || createLegacySubscriptionSummary();
+  if (resolved.status === "trialing" && resolved.entitled) {
+    return getPlanDefinition(resolved.plan_code).limits[limit];
+  }
+
   return resolved.limits[limit];
 }
 
