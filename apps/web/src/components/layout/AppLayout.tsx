@@ -280,8 +280,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           </button>
           {title && <h1 className="font-semibold text-foreground">{title}</h1>}
           <div className="ml-auto flex items-center gap-3">
-             {gyms.length > 1 && role !== 'staff' && (
-               <Select value={selectedGymId} onValueChange={setSelectedGymId}>
+            {gyms.length > 1 && role !== 'staff' && (
+              <Select value={selectedGymId} onValueChange={setSelectedGymId}>
                 <SelectTrigger className="w-[150px] sm:w-[180px]">
                   <SelectValue placeholder="Filter gyms" />
                 </SelectTrigger>
@@ -294,8 +294,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
               </Select>
             )}
             <div className="hidden sm:block text-right">
-               <p className="text-sm font-medium text-foreground">{staff?.full_name || admin?.owner_name}</p>
-               <p className="text-xs text-muted-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name)}</p>
+              <p className="text-sm font-medium text-foreground">{staff?.full_name || admin?.owner_name}</p>
+              <p className="text-xs text-muted-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name)}</p>
             </div>
 
             <DropdownMenu>
@@ -306,18 +306,18 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   aria-label="Open account menu"
                 >
                   <Avatar className="h-8 w-8 border border-border/60 shadow-sm">
-                     <AvatarImage src={admin?.logo_url || undefined} alt={staff?.full_name || admin?.owner_name || 'User'} className="object-cover" />
-                     <AvatarFallback className="gradient-primary text-sm font-medium text-primary-foreground">
-                       {(staff?.full_name || admin?.owner_name || 'A')[0].toUpperCase()}
-                     </AvatarFallback>
+                    <AvatarImage src={admin?.logo_url || undefined} alt={staff?.full_name || admin?.owner_name || 'User'} className="object-cover" />
+                    <AvatarFallback className="gradient-primary text-sm font-medium text-primary-foreground">
+                      {(staff?.full_name || admin?.owner_name || 'A')[0].toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="space-y-0.5">
-                     <p className="text-sm font-medium text-foreground">{staff?.full_name || admin?.owner_name || 'Admin'}</p>
-                     <p className="text-xs font-normal text-muted-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name) || 'GymOs'}</p>
+                    <p className="text-sm font-medium text-foreground">{staff?.full_name || admin?.owner_name || 'Admin'}</p>
+                    <p className="text-xs font-normal text-muted-foreground">{selectedGym?.gym_name || (gyms.length > 1 ? 'All Gyms' : admin?.gym_name) || 'GymOs'}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -331,7 +331,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5">
-                  <ThemeToggle/>
+                  <ThemeToggle />
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
