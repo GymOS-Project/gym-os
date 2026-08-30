@@ -69,7 +69,7 @@ export default function SignupCheckoutStatusPage() {
             {isCompleted
               ? 'Your account has been created successfully. You can sign in and start using GymOS.'
               : loading
-                ? 'We are waiting for Cashfree to confirm the transaction and finish provisioning your account.'
+                ? 'We are waiting for Dodo Payments to confirm the transaction and finish provisioning your account.'
                 : error || 'We could not confirm the payment yet.'}
           </CardDescription>
         </CardHeader>

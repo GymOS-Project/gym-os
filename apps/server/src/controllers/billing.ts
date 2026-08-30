@@ -2,14 +2,15 @@ import type { Request, Response } from "express";
 import { randomUUID } from "crypto";
 
 import {
-  createCashfreePaymentLink,
+  createDodoCheckoutSession,
   decryptDraftPassword,
   finalizeSignup,
   getGymPhotoFiles,
+  getPlanDefinition,
   parseSignupGyms,
   requiresScalePlan,
   uploadSignupDraftPhotos,
-  verifyCashfreeWebhookSignature,
+  verifyDodoWebhookSignature,
   encryptDraftPassword,
 } from "../services/billing.service";
 import { supabase } from "../supabase";
@@ -51,6 +52,22 @@ function parseWebhookPayload(req: Request) {
   return null;
 }
 
+function getNestedOptionalString(source: unknown, paths: string[][]) {
+  for (const path of paths) {
+    let current = source as any;
+    for (const key of path) {
+      current = current?.[key];
+    }
+
+    const value = normalizeOptionalString(current);
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 export async function createSignupCheckout(req: Request, res: Response) {
   if (!ONBOARDING_PAYMENTS_ENABLED) {
     return res.status(503).json({
@@ -60,6 +77,7 @@ export async function createSignupCheckout(req: Request, res: Response) {
 
   const { password, gym_type, plan_code, billing_cycle, email, account_email } = req.body as Record<string, unknown>;
   const planCode = normalizeOptionalString(plan_code) || "starter";
+  const resolvedPlanCode = getPlanDefinition(planCode).code;
   const billingCycle = normalizeOptionalString(billing_cycle) === "yearly" ? "yearly" : "monthly";
   let gyms;
 
@@ -69,7 +87,7 @@ export async function createSignupCheckout(req: Request, res: Response) {
     return res.status(400).json({ message: error instanceof Error ? error.message : "Invalid signup payload" });
   }
 
-  if (requiresScalePlan(normalizeOptionalString(gym_type), planCode)) {
+  if (requiresScalePlan(normalizeOptionalString(gym_type), resolvedPlanCode)) {
     return res.status(400).json({ message: "Branch onboarding is available on the Scale plan" });
   }
 
@@ -87,7 +105,7 @@ export async function createSignupCheckout(req: Request, res: Response) {
       auth_email: authEmail,
       encrypted_password: encryptDraftPassword(password),
       gym_type,
-      plan_code,
+      plan_code: resolvedPlanCode,
       billing_cycle: billingCycle,
       status: "pending_payment",
       signup_payload: { gyms },
@@ -98,9 +116,9 @@ export async function createSignupCheckout(req: Request, res: Response) {
       return res.status(500).json({ message: draftInsert.error.message });
     }
 
-    const paymentLink = await createCashfreePaymentLink({
+    const checkoutSession = await createDodoCheckoutSession({
       draftId,
-      planCode: planCode as any,
+      planCode: resolvedPlanCode,
       billingCycle,
       customerName: gyms[0]?.owner_name || gyms[0]?.gym_name || "Gym owner",
       customerEmail: authEmail,
@@ -110,13 +128,15 @@ export async function createSignupCheckout(req: Request, res: Response) {
 
     const paymentInsert = await supabase.from("billing_payments").insert({
       signup_draft_id: draftId,
-      plan_code,
+      plan_code: resolvedPlanCode,
       billing_cycle: billingCycle,
-      amount: paymentLink.amount,
-      status: "link_created",
-      cashfree_link_id: paymentLink.linkId,
-      cashfree_cf_link_id: paymentLink.cfLinkId,
-      raw_payload: paymentLink.raw,
+      amount: checkoutSession.amount,
+      status: "checkout_created",
+      provider: "dodo",
+      dodo_checkout_id: checkoutSession.sessionId || null,
+      dodo_payment_id: checkoutSession.paymentId,
+      dodo_product_id: checkoutSession.productId,
+      raw_payload: checkoutSession.raw,
     });
 
     if (paymentInsert.error) {
@@ -124,12 +144,15 @@ export async function createSignupCheckout(req: Request, res: Response) {
     }
 
     await supabase.from("billing_signup_drafts").update({
-      cashfree_link_id: paymentLink.linkId,
-      cashfree_cf_link_id: paymentLink.cfLinkId,
+      dodo_checkout_id: checkoutSession.sessionId || null,
       updated_at: new Date().toISOString(),
     }).eq("id", draftId);
 
-    return res.status(201).json({ draft_id: draftId, link_url: paymentLink.linkUrl });
+    return res.status(201).json({
+      draft_id: draftId,
+      checkout_url: checkoutSession.checkoutUrl,
+      link_url: checkoutSession.checkoutUrl,
+    });
   } catch (error) {
     return res.status(500).json({ message: error instanceof Error ? error.message : "Failed to initiate checkout" });
   }
@@ -143,7 +166,7 @@ export async function getSignupCheckoutStatus(req: Request, res: Response) {
 
   const [draftResult, paymentResult] = await Promise.all([
     supabase.from("billing_signup_drafts").select("id, status, admin_id, plan_code, billing_cycle, created_at, updated_at").eq("id", draftId).maybeSingle(),
-    supabase.from("billing_payments").select("status, amount, cashfree_link_id, cashfree_transaction_id, updated_at").eq("signup_draft_id", draftId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("billing_payments").select("status, amount, provider, dodo_checkout_id, dodo_payment_id, dodo_subscription_id, updated_at").eq("signup_draft_id", draftId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   if (draftResult.error) {
@@ -166,34 +189,62 @@ export async function getSignupCheckoutStatus(req: Request, res: Response) {
   });
 }
 
-export async function handleCashfreeWebhook(req: Request, res: Response) {
+export async function handleDodoWebhook(req: Request, res: Response) {
   try {
-    const signature = req.get("x-webhook-signature") || "";
-    const timestamp = req.get("x-webhook-timestamp") || "";
-    const rawBody = getRawBody(req);
-    if (signature && timestamp && rawBody) {
-      verifyCashfreeWebhookSignature(rawBody, timestamp, signature);
-    }
+    const webhookId = req.get("webhook-id") || "";
+    const signature = req.get("webhook-signature") || "";
+    const timestamp = req.get("webhook-timestamp") || "";
+    const rawBody = getRawBody(req) || JSON.stringify(req.body || {});
+    verifyDodoWebhookSignature(rawBody, webhookId, timestamp, signature);
 
     const payload = parseWebhookPayload(req);
-    const data = payload?.data;
-    const linkNotes = data?.link_notes || {};
-    const draftId = normalizeOptionalString(linkNotes?.draft_id);
-    const transactionStatus = normalizeOptionalString(data?.order?.transaction_status);
-    const transactionId = normalizeOptionalString(data?.order?.transaction_id);
-    const linkId = normalizeOptionalString(data?.link_id);
+    const data = payload?.data || {};
+    const eventType = normalizeOptionalString(payload?.type);
+    const draftId = getNestedOptionalString(payload, [
+      ["data", "metadata", "draft_id"],
+      ["data", "payment", "metadata", "draft_id"],
+      ["data", "subscription", "metadata", "draft_id"],
+      ["data", "checkout", "metadata", "draft_id"],
+      ["data", "checkout_session", "metadata", "draft_id"],
+      ["metadata", "draft_id"],
+    ]);
+    const paymentId = getNestedOptionalString(payload, [
+      ["data", "payment_id"],
+      ["data", "id"],
+      ["data", "payment", "payment_id"],
+      ["data", "payment", "id"],
+    ]);
+    const subscriptionId = getNestedOptionalString(payload, [
+      ["data", "subscription_id"],
+      ["data", "subscription", "subscription_id"],
+      ["data", "subscription", "id"],
+    ]);
+    const checkoutId = getNestedOptionalString(payload, [
+      ["data", "checkout_session_id"],
+      ["data", "checkout_id"],
+      ["data", "session_id"],
+      ["data", "checkout", "session_id"],
+      ["data", "checkout_session", "session_id"],
+    ]);
+    const providerStatus = normalizeOptionalString(data?.status) || eventType || "pending";
 
     if (!draftId) {
       return res.status(200).json({ received: true, ignored: true });
     }
 
-    if (transactionStatus !== "SUCCESS") {
+    const isSuccessEvent = eventType === "payment.succeeded" || eventType === "subscription.active";
+    if (!isSuccessEvent) {
       await supabase.from("billing_payments").update({
-        status: normalizeOptionalString(data?.link_status) || "pending",
+        status: eventType === "payment.failed" ? "failed" : providerStatus,
+        provider: "dodo",
+        dodo_checkout_id: checkoutId,
+        dodo_payment_id: paymentId,
+        dodo_subscription_id: subscriptionId,
+        dodo_webhook_id: webhookId,
         raw_payload: payload,
         updated_at: new Date().toISOString(),
       }).eq("signup_draft_id", draftId);
-      return res.status(200).json({ received: true, status: transactionStatus || data?.link_status || "pending" });
+      return res.status(200).json({ received: true, status: providerStatus });
     }
 
     const draftLookup = await supabase
@@ -232,14 +283,18 @@ export async function handleCashfreeWebhook(req: Request, res: Response) {
       supabase.from("billing_signup_drafts").update({
         status: "completed",
         admin_id: finalizeResult.adminId,
-        cashfree_transaction_id: transactionId,
+        dodo_payment_id: paymentId,
+        dodo_subscription_id: subscriptionId,
         updated_at: new Date().toISOString(),
       }).eq("id", draftId),
       supabase.from("billing_payments").update({
         status: "paid",
         admin_id: finalizeResult.adminId,
-        cashfree_link_id: linkId,
-        cashfree_transaction_id: transactionId,
+        provider: "dodo",
+        dodo_checkout_id: checkoutId,
+        dodo_payment_id: paymentId,
+        dodo_subscription_id: subscriptionId,
+        dodo_webhook_id: webhookId,
         raw_payload: payload,
         updated_at: new Date().toISOString(),
       }).eq("signup_draft_id", draftId),

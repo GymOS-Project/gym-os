@@ -339,15 +339,6 @@ export function parseSignupGyms(body: Record<string, unknown>) {
   return [gym];
 }
 
-function getPublicBackendUrl() {
-  const url = process.env.BACKEND_PUBLIC_URL || process.env.API_PUBLIC_URL;
-  if (!url) {
-    throw new Error("BACKEND_PUBLIC_URL or API_PUBLIC_URL must be configured for Cashfree checkout");
-  }
-
-  return url.replace(/\/$/, "");
-}
-
 function getPublicFrontendUrl() {
   const url = process.env.FRONTEND_URL;
   if (!url) {
@@ -357,13 +348,28 @@ function getPublicFrontendUrl() {
   return url.replace(/\/$/, "");
 }
 
-function getCashfreeBaseUrl() {
-  return process.env.CASHFREE_ENV === "production"
-    ? "https://api.cashfree.com/pg"
-    : "https://sandbox.cashfree.com/pg";
+function getDodoPaymentsBaseUrl() {
+  const environment = (process.env.DODO_PAYMENTS_ENV || process.env.DODO_PAYMENTS_ENVIRONMENT || "test").toLowerCase();
+  return environment === "live" || environment === "live_mode" || environment === "production"
+    ? "https://live.dodopayments.com"
+    : "https://test.dodopayments.com";
 }
 
-export async function createCashfreePaymentLink(params: {
+function getDodoProductEnvName(planCode: BillingPlanCode, billingCycle: BillingCycle) {
+  return `DODO_PRODUCT_${planCode.toUpperCase()}_${billingCycle.toUpperCase()}`;
+}
+
+function getDodoProductId(planCode: BillingPlanCode, billingCycle: BillingCycle) {
+  const envName = getDodoProductEnvName(planCode, billingCycle);
+  const productId = process.env[envName];
+  if (!productId) {
+    throw new Error(`${envName} must be configured for Dodo Payments checkout`);
+  }
+
+  return productId;
+}
+
+export async function createDodoCheckoutSession(params: {
   draftId: string;
   planCode: BillingPlanCode;
   billingCycle: BillingCycle;
@@ -372,66 +378,54 @@ export async function createCashfreePaymentLink(params: {
   customerPhone: string;
   gymType: "single" | "branch";
 }) {
-  const clientId = process.env.CASHFREE_CLIENT_ID;
-  const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
+  const apiKey = process.env.DODO_PAYMENTS_API_KEY;
 
-  if (!clientId || !clientSecret) {
-    throw new Error("Cashfree credentials are not configured");
+  if (!apiKey) {
+    throw new Error("DODO_PAYMENTS_API_KEY is not configured");
   }
 
   const plan = getPlanDefinition(params.planCode);
   const amount = params.billingCycle === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
-  const linkId = `gymos_${params.draftId.replace(/-/g, "").slice(0, 24)}`;
-  console.log({params})
-  const response = await fetch(`${getCashfreeBaseUrl()}/links`, {
+  const productId = getDodoProductId(params.planCode, params.billingCycle);
+  const response = await fetch(`${getDodoPaymentsBaseUrl()}/checkouts`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-version": process.env.CASHFREE_API_VERSION || "2026-01-01",
-      "x-client-id": clientId,
-      "x-client-secret": clientSecret,
-      "x-request-id": randomUUID(),
-      "x-idempotency-key": randomUUID(),
+      "Authorization": `Bearer ${apiKey}`,
+      "Idempotency-Key": `signup_${params.draftId}`,
     },
     body: JSON.stringify({
-      link_id: linkId,
-      link_amount: amount,
-      link_currency: "INR",
-      link_purpose: `GymOS ${plan.name} plan (${params.gymType})`,
-      customer_details: {
-        customer_name: params.customerName,
-        customer_email: params.customerEmail,
-        customer_phone: params.customerPhone,
+      product_cart: [{ product_id: productId, quantity: 1 }],
+      customer: {
+        email: params.customerEmail,
+        name: params.customerName,
       },
-      link_notify: {
-        send_email: Boolean(params.customerEmail),
-        send_sms: false,
-        send_whatsapp: false,
+      billing_currency: process.env.DODO_PAYMENTS_CURRENCY || "INR",
+      billing_address: {
+        country: process.env.DODO_PAYMENTS_COUNTRY || "IN",
       },
-      link_notes: {
+      metadata: {
         draft_id: params.draftId,
         plan_code: params.planCode,
         billing_cycle: params.billingCycle,
         gym_type: params.gymType,
+        customer_phone: params.customerPhone,
       },
-      link_meta: {
-        notify_url: `${getPublicBackendUrl()}/api/billing/cashfree/webhook`,
-        return_url: `${getPublicFrontendUrl()}/signup/checkout-status?draft=${params.draftId}`,
-      },
-      enable_invoice: true,
+      return_url: `${getPublicFrontendUrl()}/signup/checkout-status?draft=${params.draftId}`,
     }),
   });
 
   const json = await response.json().catch(() => null) as Record<string, any> | null;
-  if (!response.ok || !json?.link_url) {
-    throw new Error(json?.message || "Failed to create Cashfree payment link");
+  if (!response.ok || !json?.checkout_url) {
+    throw new Error(json?.message || json?.error?.message || "Failed to create Dodo Payments checkout session");
   }
 
   return {
-    linkId: json.link_id || linkId,
-    cfLinkId: json.cf_link_id ? String(json.cf_link_id) : null,
+    sessionId: String(json.session_id || json.id || ""),
+    paymentId: json.payment_id ? String(json.payment_id) : null,
+    productId,
     amount,
-    linkUrl: String(json.link_url),
+    checkoutUrl: String(json.checkout_url),
     raw: json,
   };
 }
@@ -455,18 +449,41 @@ export function decryptDraftPassword(value: string) {
   return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
 }
 
-export function verifyCashfreeWebhookSignature(rawBody: string, timestamp: string, signature: string) {
-  const secret = process.env.CASHFREE_CLIENT_SECRET;
+function normalizeDodoSignatureCandidates(signature: string) {
+  return signature
+    .split(" ")
+    .flatMap((part) => part.split(","))
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => part.includes("=") ? part.split("=").pop() || "" : part)
+    .filter(Boolean);
+}
+
+export function verifyDodoWebhookSignature(rawBody: string, webhookId: string, timestamp: string, signature: string) {
+  const secret = process.env.DODO_PAYMENTS_WEBHOOK_KEY || process.env.DODO_PAYMENTS_WEBHOOK_SECRET || process.env.DODO_WEBHOOK_SECRET;
   if (!secret) {
-    throw new Error("Cashfree client secret is not configured");
+    throw new Error("Dodo Payments webhook secret is not configured");
   }
 
-  const computed = createHmac("sha256", secret).update(`${timestamp}${rawBody}`).digest("base64");
-  const left = Buffer.from(computed);
-  const right = Buffer.from(signature || "");
+  if (!rawBody || !webhookId || !timestamp || !signature) {
+    throw new Error("Missing Dodo Payments webhook signature headers");
+  }
 
-  if (left.length !== right.length || !timingSafeEqual(left, right)) {
-    throw new Error("Invalid Cashfree webhook signature");
+  const signedContent = `${webhookId}.${timestamp}.${rawBody}`;
+  const secrets = secret.startsWith("whsec_")
+    ? [secret, Buffer.from(secret.slice("whsec_".length), "base64")]
+    : [secret];
+  const expected = secrets.map((candidate) => createHmac("sha256", candidate).update(signedContent).digest("base64"));
+  const received = normalizeDodoSignatureCandidates(signature);
+
+  const isValid = expected.some((computed) => received.some((candidate) => {
+    const left = Buffer.from(computed);
+    const right = Buffer.from(candidate);
+    return left.length === right.length && timingSafeEqual(left, right);
+  }));
+
+  if (!isValid) {
+    throw new Error("Invalid Dodo Payments webhook signature");
   }
 }
 

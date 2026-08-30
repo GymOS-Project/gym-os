@@ -133,6 +133,7 @@ export interface CreatedPayrollRun {
 
 export interface SignupCheckoutResult {
   draft_id: string;
+  checkout_url: string;
   link_url: string;
 }
 
@@ -145,8 +146,10 @@ export interface SignupCheckoutStatus {
   payment: {
     status: string;
     amount: number;
-    cashfree_link_id: string | null;
-    cashfree_transaction_id: string | null;
+    provider: string | null;
+    dodo_checkout_id: string | null;
+    dodo_payment_id: string | null;
+    dodo_subscription_id: string | null;
     updated_at: string;
   } | null;
 }

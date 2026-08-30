@@ -29,6 +29,17 @@ NODE_ENV=development
 FRONTEND_URL=http://localhost:8089
 PASSWORD_RESET_REDIRECT_URL=http://localhost:8089/reset-password
 ONBOARDING_PAYMENTS_ENABLED=false
+DODO_PAYMENTS_ENV=test
+DODO_PAYMENTS_API_KEY=dodo_test_xxxxx
+DODO_PAYMENTS_WEBHOOK_SECRET=whsec_xxxxx
+DODO_PAYMENTS_CURRENCY=INR
+DODO_PAYMENTS_COUNTRY=IN
+DODO_PRODUCT_STARTER_MONTHLY=pdt_xxxxx
+DODO_PRODUCT_STARTER_YEARLY=pdt_xxxxx
+DODO_PRODUCT_GROWTH_MONTHLY=pdt_xxxxx
+DODO_PRODUCT_GROWTH_YEARLY=pdt_xxxxx
+DODO_PRODUCT_SCALE_MONTHLY=pdt_xxxxx
+DODO_PRODUCT_SCALE_YEARLY=pdt_xxxxx
 DISCLOSE_FORGOT_PASSWORD_USER_EXISTS=true
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
@@ -88,6 +99,8 @@ GET /healthcheck
 - `SESSION_COOKIE_SECRET` must be stable across deployments. Changing it makes existing cookies unreadable and forces logout.
 - `FRONTEND_URL` must match the frontend origin for CORS (no trailing slash). You can also provide multiple origins as a comma-separated list, or use `CORS_ORIGINS`.
 - `PASSWORD_RESET_REDIRECT_URL` controls the `redirect_to` value in Supabase password recovery emails (must be allow-listed in Supabase Auth redirect URLs).
+- `ONBOARDING_PAYMENTS_ENABLED=true` enables Dodo Payments checkout during onboarding; keep it `false` to bypass online payment collection.
+- Dodo webhook URL: `/api/billing/dodo/webhook`.
 - `RESEND_API_KEY` and `RESEND_FROM_EMAIL` enable welcome emails for onboarding and admin-created staff accounts
 - `MOBILE_APP_URL` overrides the default mobile app link used in staff welcome emails
 
