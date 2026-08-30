@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import { AuthShowcasePanel } from '@/components/auth/AuthShowcasePanel';
 import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BILLING_PLANS, BILLING_TRIAL_DAYS } from '@/lib/billing';
+import { api } from '@/lib/api';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { MAX_IMAGE_SIZE_BYTES, MAX_SIGNUP_PHOTOS as MAX_PHOTOS, MAX_SIGNUP_PHOTOS, SIGNUP_STEPS as STEPS } from '@/utils/constants';
 import { Check, Eye, EyeOff, Upload, X, ImagePlus, Sparkles } from 'lucide-react';
@@ -41,8 +41,6 @@ function resizeGyms(existing: GymForm[], count: number) {
 }
 
 export default function SignupPage() {
-  const { signUp } = useAuth();
-  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [activeBranchIndex, setActiveBranchIndex] = useState(0);
   const [loadingAction, setLoadingAction] = useState<'trial' | 'purchase' | null>(null);
@@ -251,21 +249,15 @@ export default function SignupPage() {
     payload.append('start_trial', 'true');
     setLoadingAction('trial');
 
-    const { error, authenticated } = await signUp(payload);
-    setLoadingAction(null);
-
-    if (error) {
-      toast.error(error.message || 'Sign up failed');
-      return;
+    try {
+      const checkout = await api.createSignupCheckout(payload);
+      window.location.href = checkout.checkout_url || checkout.link_url;
+    } catch (error) {
+      setLoadingAction(null);
+      toast.error(error instanceof Error ? error.message : 'Failed to start checkout');
     }
-
-    toast.success(
-      authenticated
-        ? `Your ${BILLING_TRIAL_DAYS}-day free trial has started.`
-        : 'Account created! Please sign in to continue.'
-    );
-    navigate(authenticated ? '/' : '/login');
   };
+
 
   return (
     <div className="relative min-h-screen flex">
@@ -509,8 +501,8 @@ export default function SignupPage() {
               <div className="space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-primary">14-day free trial on every plan</p>
-                    <p className="mt-1 text-sm text-muted-foreground">No card required for the trial. Choose a plan now and decide whether to start free or purchase immediately.</p>
+                    <p className="text-sm font-semibold text-primary">{BILLING_TRIAL_DAYS}-day free trial on every plan</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Checkout is handled by Dodo Payments. If your Dodo product requires a payment method for trials, the customer will enter it there.</p>
                   </div>
                   <div className="inline-flex rounded-full border bg-background p-1">
                     <button type="button" onClick={() => setBillingCycle('monthly')} className={cn('rounded-full px-4 py-2 text-sm transition-colors', billingCycle === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>

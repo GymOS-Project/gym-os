@@ -75,10 +75,11 @@ export async function createSignupCheckout(req: Request, res: Response) {
     });
   }
 
-  const { password, gym_type, plan_code, billing_cycle, email, account_email } = req.body as Record<string, unknown>;
+  const { password, gym_type, plan_code, billing_cycle, email, account_email, start_trial } = req.body as Record<string, unknown>;
   const planCode = normalizeOptionalString(plan_code) || "starter";
   const resolvedPlanCode = getPlanDefinition(planCode).code;
   const billingCycle = normalizeOptionalString(billing_cycle) === "yearly" ? "yearly" : "monthly";
+  const startTrial = start_trial === true || start_trial === "true";
   let gyms;
 
   try {
@@ -108,7 +109,7 @@ export async function createSignupCheckout(req: Request, res: Response) {
       plan_code: resolvedPlanCode,
       billing_cycle: billingCycle,
       status: "pending_payment",
-      signup_payload: { gyms },
+      signup_payload: { gyms, start_trial: startTrial },
       photo_urls: photoUrls,
     }).select("id").single();
 
@@ -124,6 +125,7 @@ export async function createSignupCheckout(req: Request, res: Response) {
       customerEmail: authEmail,
       customerPhone: gyms[0]?.phone || "9999999999",
       gymType: gym_type === "branch" ? "branch" : "single",
+      startTrial,
     });
 
     const paymentInsert = await supabase.from("billing_payments").insert({
@@ -267,6 +269,7 @@ export async function handleDodoWebhook(req: Request, res: Response) {
     }
 
     const gyms = Array.isArray(draft.signup_payload?.gyms) ? draft.signup_payload.gyms : [];
+    const shouldStartTrial = draft.signup_payload?.start_trial === true || draft.signup_payload?.start_trial === "true";
     const finalizeResult = await finalizeSignup({
       authEmail: draft.auth_email,
       password: decryptDraftPassword(draft.encrypted_password),
@@ -274,7 +277,7 @@ export async function handleDodoWebhook(req: Request, res: Response) {
       gyms,
       planCode: draft.plan_code,
       billingCycle: draft.billing_cycle === "yearly" ? "yearly" : "monthly",
-      status: "active",
+      status: shouldStartTrial ? "trialing" : "active",
       gymPhotoUrls: Array.isArray(draft.photo_urls) ? draft.photo_urls : [],
       createSession: false,
     });

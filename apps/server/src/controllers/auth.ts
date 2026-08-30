@@ -33,6 +33,9 @@ const DISCLOSE_FORGOT_PASSWORD_USER_EXISTS =
   (process.env.DISCLOSE_FORGOT_PASSWORD_USER_EXISTS ?? (process.env.NODE_ENV === "production" ? "false" : "true"))
     .toLowerCase() === "true";
 
+const ONBOARDING_PAYMENTS_ENABLED =
+  (process.env.ONBOARDING_PAYMENTS_ENABLED ?? "false").toLowerCase() === "true";
+
 type AuthUser = {
   id: string;
   email: string;
@@ -317,6 +320,10 @@ export async function signup(req: Request, res: Response) {
 
   if (requiresScalePlan(gym_type, typeof plan_code === "string" ? plan_code : null)) {
     return res.status(400).json({ message: "Branch onboarding is available on the Scale plan" });
+  }
+
+  if (ONBOARDING_PAYMENTS_ENABLED && typeof plan_code === "string" && plan_code) {
+    return res.status(409).json({ message: "Onboarding payments are enabled. Start checkout from the signup billing step." });
   }
 
   const signupClient = createSupabaseAuthClient();

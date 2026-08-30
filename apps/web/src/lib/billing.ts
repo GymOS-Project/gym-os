@@ -1,4 +1,4 @@
-export const BILLING_TRIAL_DAYS = 14
+export const BILLING_TRIAL_DAYS = 7
 
 export const BILLING_PLANS = {
   starter: {

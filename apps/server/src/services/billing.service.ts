@@ -10,7 +10,7 @@ const BILLING_ENCRYPTION_KEY = createHash("sha256")
   .update(BILLING_ENCRYPTION_SECRET || "billing-fallback")
   .digest();
 
-export const BILLING_TRIAL_DAYS = 14;
+export const BILLING_TRIAL_DAYS = 7;
 
 export const BILLING_PLANS = {
   starter: {
@@ -377,6 +377,7 @@ export async function createDodoCheckoutSession(params: {
   customerEmail: string | null;
   customerPhone: string;
   gymType: "single" | "branch";
+  startTrial: boolean;
 }) {
   const apiKey = process.env.DODO_PAYMENTS_API_KEY;
 
@@ -410,6 +411,7 @@ export async function createDodoCheckoutSession(params: {
         billing_cycle: params.billingCycle,
         gym_type: params.gymType,
         customer_phone: params.customerPhone,
+        start_trial: String(params.startTrial),
       },
       return_url: `${getPublicFrontendUrl()}/signup/checkout-status?draft=${params.draftId}`,
     }),
