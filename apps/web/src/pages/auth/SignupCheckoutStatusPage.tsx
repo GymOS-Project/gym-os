@@ -26,7 +26,11 @@ export default function SignupCheckoutStatusPage() {
 
     const poll = async () => {
       try {
-        const next = await api.getSignupCheckoutStatus(draftId);
+        const next = await api.getSignupCheckoutStatus(draftId, {
+          subscription_id: searchParams.get('subscription_id'),
+          status: searchParams.get('status'),
+          email: searchParams.get('email'),
+        });
         if (stopped) return;
         setStatus(next);
         setError(null);
@@ -49,7 +53,7 @@ export default function SignupCheckoutStatusPage() {
       stopped = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [draftId]);
+  }, [draftId, searchParams]);
 
   const isCompleted = status?.status === 'completed';
 

@@ -162,8 +162,15 @@ export const api = {
     request<LoginResult>("/auth/signup", { method: "POST", body: data }),
   createSignupCheckout: (data: FormData) =>
     request<SignupCheckoutResult>("/billing/public/signup-checkout", { method: "POST", body: data }),
-  getSignupCheckoutStatus: (draftId: string) =>
-    request<SignupCheckoutStatus>(`/billing/public/signup-checkout/${draftId}`),
+  getSignupCheckoutStatus: (draftId: string, params?: Record<string, string | null>) => {
+    const query = new URLSearchParams();
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value) query.set(key, value);
+    });
+
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<SignupCheckoutStatus>(`/billing/public/signup-checkout/${draftId}${suffix}`);
+  },
   forgotPassword: (email: string) =>
     request<{ message: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
   resetPassword: (access_token: string, new_password: string, refresh_token?: string) =>

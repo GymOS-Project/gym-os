@@ -423,13 +423,35 @@ export async function createDodoCheckoutSession(params: {
   }
 
   return {
-    sessionId: String(json.session_id || json.id || ""),
+    sessionId: String(json.checkout_session_id || json.session_id || json.id || ""),
     paymentId: json.payment_id ? String(json.payment_id) : null,
     productId,
     amount,
     checkoutUrl: String(json.checkout_url),
     raw: json,
   };
+}
+
+export async function retrieveDodoSubscription(subscriptionId: string) {
+  const apiKey = process.env.DODO_PAYMENTS_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("DODO_PAYMENTS_API_KEY is not configured");
+  }
+
+  const response = await fetch(`${getDodoPaymentsBaseUrl()}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+    },
+  });
+
+  const json = await response.json().catch(() => null) as Record<string, any> | null;
+  if (!response.ok || !json) {
+    throw new Error(json?.message || json?.error?.message || "Failed to verify Dodo Payments subscription");
+  }
+
+  return json;
 }
 
 export function encryptDraftPassword(value: string) {
