@@ -131,7 +131,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">No enquiries found</TableCell></TableRow>
               ) : filtered.map((e) => (
-                <TableRow key={e.id} className="hover:bg-muted/30">
+                <TableRow key={e.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => { setFollowupDialog(e); setFuForm({ next_followup_date: "", notes: "", status: "done" }); }}>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">{e.name[0].toUpperCase()}</div>
@@ -143,7 +143,7 @@ export default function EnquiryListPage({ filterStatus, title, description }: En
                   <TableCell className="text-sm">{e.interest || "—"}</TableCell>
                   <TableCell className="text-sm">{e.next_followup_date ? new Date(e.next_followup_date).toLocaleDateString() : "—"}</TableCell>
                   <TableCell>{statusBadge(e.status)}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${e.phone}`)}>
                         <Phone className="h-3.5 w-3.5" />

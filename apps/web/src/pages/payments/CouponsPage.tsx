@@ -179,7 +179,7 @@ export default function CouponsPage() {
               ) : filteredCoupons.map((coupon) => {
                 const gym = gyms.find((item) => item.id === coupon.gym_id);
                 return (
-                  <TableRow key={coupon.id} className="hover:bg-muted/30">
+                  <TableRow key={coupon.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(coupon)}>
                     <TableCell><p className="font-medium">{coupon.code}</p><p className="text-xs text-muted-foreground">{coupon.name}</p></TableCell>
                     <TableCell className="text-sm">{coupon.discount_type === "percentage" ? `${coupon.discount_value}%` : `₹${Number(coupon.discount_value).toLocaleString()}`}</TableCell>
                     <TableCell className="text-sm">{coupon.gym_id ? gym?.gym_name || "-" : "All gyms"}</TableCell>
@@ -189,7 +189,7 @@ export default function CouponsPage() {
                     </TableCell>
                     <TableCell className="text-sm">{coupon.starts_at ? new Date(coupon.starts_at).toLocaleDateString() : "Any"} to {coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString() : "Open"}</TableCell>
                     <TableCell>{coupon.is_active ? "Active" : "Inactive"}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(coupon)}><Pencil className="h-3.5 w-3.5" /></Button>
                         {coupon.is_active ? <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(coupon.id)}><Trash2 className="h-3.5 w-3.5" /></Button> : null}

@@ -243,7 +243,7 @@ export default function MemberListPage() {
               ) : filtered.map((m) => {
                 const pkg = getActivePackage(m);
                 return (
-                  <TableRow key={m.id} className="hover:bg-muted/30">
+                  <TableRow key={m.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/members/${m.id}/edit`)}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
@@ -262,7 +262,7 @@ export default function MemberListPage() {
                     <TableCell className="text-sm">{pkg?.package_name || "—"}</TableCell>
                     <TableCell>{statusBadge(getStatus(m))}</TableCell>
                     <TableCell className="text-sm">{pkg?.end_date ? new Date(pkg.end_date).toLocaleDateString() : "—"}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${m.phone}`)}>
                           <Phone className="h-3.5 w-3.5" />

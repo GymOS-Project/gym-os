@@ -296,7 +296,7 @@ export default function PaymentsCollectionsPage() {
               ) : filteredCollections.length === 0 ? (
                 <TableRow><TableCell colSpan={9} className="py-12 text-center text-muted-foreground">No collections found.</TableCell></TableRow>
               ) : filteredCollections.map((item) => (
-                <TableRow key={item.id} className="hover:bg-muted/30">
+                <TableRow key={item.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(item)}>
                   <TableCell className="text-sm">{new Date(item.transaction_date).toLocaleDateString()}</TableCell>
                   <TableCell><p className="font-medium text-sm">{item.members?.name || "-"}</p><p className="text-xs text-muted-foreground">{item.members?.phone || ""}</p></TableCell>
                   <TableCell><Badge className={item.type === "payment" ? "badge-success" : item.type === "refund" ? "badge-destructive" : "badge-secondary"}>{item.type}</Badge></TableCell>
@@ -305,7 +305,7 @@ export default function PaymentsCollectionsPage() {
                   <TableCell className="font-medium text-primary">₹{Number(item.net_amount ?? item.amount ?? 0).toLocaleString()}</TableCell>
                   <TableCell className="text-sm capitalize">{item.payment_mode}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{item.description || "-"}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
                       {!item.member_package_id && !item.package_sale_id && Number(item.discount_amount ?? 0) === 0 ? (
                         <>

@@ -165,7 +165,7 @@ export default function StaffListPage() {
               ) : filteredStaff.map((staff) => {
                 const gym = gyms.find((item) => item.id === staff.gym_id);
                 return (
-                  <TableRow key={staff.id} className="hover:bg-muted/30">
+                  <TableRow key={staff.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(staff)}>
                     <TableCell>
                       <p className="font-medium">{staff.full_name}</p>
                       <p className="text-xs text-muted-foreground">{staff.email}</p>
@@ -175,7 +175,7 @@ export default function StaffListPage() {
                     </TableCell>
                     <TableCell>{gym?.gym_name || "-"}</TableCell>
                     <TableCell>{staff.is_active ? "Active" : "Inactive"}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(staff)}>
                           <Pencil className="h-3.5 w-3.5" />

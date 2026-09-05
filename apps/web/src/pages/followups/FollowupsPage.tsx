@@ -134,7 +134,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
               ) : followups.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">No follow-ups yet</TableCell></TableRow>
               ) : followups.map((fu) => (
-                <TableRow key={fu.id} className="hover:bg-muted/30">
+                <TableRow key={fu.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(fu)}>
                   <TableCell>
                     {fu.members ? (
                       <div><p className="font-medium">{fu.members.name}</p><p className="text-xs text-muted-foreground">{fu.members.phone}</p></div>
@@ -144,7 +144,7 @@ export default function FollowupsPage({ type, title, description }: FollowupsPag
                   <TableCell>{fu.next_followup_date ? new Date(fu.next_followup_date).toLocaleDateString() : "—"}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-sm">{fu.notes || "—"}</TableCell>
                   <TableCell>{statusBadge(fu.status)}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       {fu.members && (
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => window.open(`tel:${fu.members!.phone}`)}>

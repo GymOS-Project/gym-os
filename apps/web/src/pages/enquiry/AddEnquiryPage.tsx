@@ -14,6 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
 
 const enquirySchema = z.object({
   gym_id: z.string().min(1, "Gym is required"),
@@ -88,6 +89,9 @@ export default function AddEnquiryPage() {
     <AppLayout title="Add Enquiry">
       <div className="mx-auto max-w-2xl">
         <div className="mb-6">
+          <Button variant="ghost" className="gap-2 mb-4 -ml-2" onClick={() => navigate("/enquiry")}>
+            <ArrowLeft className="h-4 w-4" /> Back to Enquiries
+          </Button>
           <h1 className="text-2xl font-bold">Add New Enquiry</h1>
           <p className="mt-1 text-muted-foreground">Register a new lead or prospective member</p>
         </div>

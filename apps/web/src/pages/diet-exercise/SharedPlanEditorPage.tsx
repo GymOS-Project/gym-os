@@ -13,6 +13,7 @@ import { buildPlanFormData, createPlanEditorValue, type PlanEditorValue } from '
 import { useAuth } from '@/contexts/AuthContext';
 import { SHARED_PLAN_CONTENT_CONFIG } from '@/utils/constants';
 import { toast } from 'sonner';
+import { ArrowLeft } from 'lucide-react';
 export default function SharedPlanEditorPage({ planType }: SharedPlanPageProps) {
   const { gyms, selectedGymId } = useAuth();
   const navigate = useNavigate();
@@ -113,6 +114,9 @@ export default function SharedPlanEditorPage({ planType }: SharedPlanPageProps) 
     <AppLayout title={isEditing ? `Edit ${content.title}` : `Create ${content.title}`}>
       <div className="mx-auto max-w-3xl">
         <div className="mb-6">
+          <Button variant="ghost" className="gap-2 mb-4 -ml-2" onClick={() => navigate(content.basePath)}>
+            <ArrowLeft className="h-4 w-4" /> Back to {content.title}
+          </Button>
           <h1 className="text-2xl font-bold">{isEditing ? `Edit ${content.title}` : `Create ${content.title}`}</h1>
           <p className="mt-1 text-muted-foreground">Build a reusable shared template that can later be customized per member.</p>
         </div>

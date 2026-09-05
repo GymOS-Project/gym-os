@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { StaffForm, createEmptyStaffForm } from "@/components/staff/StaffForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
@@ -8,6 +11,7 @@ import { toast } from "sonner";
 
 export default function CreateStaffPage() {
   const { gyms, selectedGymId } = useAuth();
+  const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<StaffFormValue>(createEmptyStaffForm(selectedGymId !== "all" ? selectedGymId : gyms[0]?.id || ""));
 
@@ -49,6 +53,9 @@ export default function CreateStaffPage() {
     <AppLayout title="Create Staff">
       <div className="mx-auto max-w-4xl space-y-5">
         <div>
+          <Button variant="ghost" className="gap-2 mb-4 -ml-2" onClick={() => navigate("/staff/list")}>
+            <ArrowLeft className="h-4 w-4" /> Back to Staff
+          </Button>
           <h1 className="text-2xl font-bold">Create Staff</h1>
           <p className="mt-1 text-muted-foreground">Create any staff account and tag it with a custom designation such as trainer, desk manager, or peon.</p>
         </div>

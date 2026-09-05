@@ -125,7 +125,7 @@ export default function PackageTypesPage() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           {packages.map((pkg) => (
-            <div key={pkg.id} className={`rounded-xl border bg-card p-5 transition-all ${!pkg.is_active ? "opacity-60" : ""}`}>
+            <div key={pkg.id} className={`rounded-xl border bg-card p-5 transition-all cursor-pointer ${!pkg.is_active ? "opacity-60" : ""}`} onClick={() => openEdit(pkg)}>
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-semibold text-lg">{pkg.name}</h3>
@@ -139,7 +139,7 @@ export default function PackageTypesPage() {
               </div>
               <p className="text-2xl font-bold text-primary">₹{Number(pkg.price).toLocaleString()}</p>
               {pkg.description && <p className="text-sm text-muted-foreground mt-1">{pkg.description}</p>}
-              <div className="flex items-center justify-between mt-4 pt-3 border-t">
+              <div className="flex items-center justify-between mt-4 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
                 <Switch checked={pkg.is_active} onCheckedChange={() => toggleActive(pkg)} />
                 <div className="flex gap-1">
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(pkg)}><Edit className="h-3.5 w-3.5" /></Button>

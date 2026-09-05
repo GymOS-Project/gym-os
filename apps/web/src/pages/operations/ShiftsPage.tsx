@@ -162,7 +162,7 @@ export default function ShiftsPage() {
             {shifts.map((shift) => {
               const gym = gyms.find((item) => item.id === shift.gym_id);
               return (
-                <div key={shift.id} className={`rounded-xl border bg-card p-5 ${!shift.is_active ? "opacity-60" : ""}`}>
+                <div key={shift.id} className={`rounded-xl border bg-card p-5 cursor-pointer ${!shift.is_active ? "opacity-60" : ""}`} onClick={() => openEdit(shift)}>
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -178,7 +178,7 @@ export default function ShiftsPage() {
                   )}
                   {shift.event_date && <p className="mt-1 text-sm text-muted-foreground">Event Date: {new Date(shift.event_date).toLocaleDateString()}</p>}
                   {shift.description && <p className="mt-2 text-sm text-muted-foreground">{shift.description}</p>}
-                  <div className="mt-4 flex items-center justify-between border-t pt-3">
+                  <div className="mt-4 flex items-center justify-between border-t pt-3" onClick={(e) => e.stopPropagation()}>
                     <Switch checked={shift.is_active} onCheckedChange={() => toggleActive(shift)} />
                     <div className="flex gap-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(shift)}><Pencil className="h-3.5 w-3.5" /></Button>

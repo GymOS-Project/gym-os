@@ -291,7 +291,7 @@ export default function AttendancePage() {
                   {logs.length === 0 ? (
                     <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">No attendance records found.</TableCell></TableRow>
                   ) : logs.map((log) => (
-                    <TableRow key={log.id} className="hover:bg-muted/30">
+                    <TableRow key={log.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(log)}>
                       <TableCell>
                         <p className="font-medium">{log.entity_type === "member" ? memberMap.get(log.member_id || "")?.name : staffMap.get(log.staff_account_id || "")?.full_name || "Unknown"}</p>
                         <p className="text-xs text-muted-foreground">{log.entity_type}</p>
@@ -300,7 +300,7 @@ export default function AttendancePage() {
                       <TableCell>{log.check_in_at ? new Date(log.check_in_at).toLocaleTimeString() : "-"}</TableCell>
                       <TableCell>{log.check_out_at ? new Date(log.check_out_at).toLocaleTimeString() : "-"}</TableCell>
                       <TableCell>{log.status}</TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
                           {!log.check_out_at && <Button size="sm" variant="outline" className="gap-1" onClick={() => handleCheckOut(log)}><LogOut className="h-3.5 w-3.5" /> Out</Button>}
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(log)}><Pencil className="h-3.5 w-3.5" /></Button>

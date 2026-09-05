@@ -145,13 +145,13 @@ export default function ReviewsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {reviews.map((r) => (
-              <div key={r.id} className="rounded-xl border bg-card p-5">
+              <div key={r.id} className="rounded-xl border bg-card p-5 cursor-pointer" onClick={() => openEdit(r)}>
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="font-medium">{r.members?.name || "Anonymous"}</p>
                     <p className="text-xs text-muted-foreground">{new Date(r.review_date).toLocaleDateString()}</p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <StarRating rating={r.rating || 0} />
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(r)}>
                       <Pencil className="h-3.5 w-3.5" />

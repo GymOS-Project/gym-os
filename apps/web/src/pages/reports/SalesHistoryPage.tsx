@@ -174,7 +174,7 @@ export default function SalesHistoryPage() {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-12 text-muted-foreground">No sales records</TableCell></TableRow>
               ) : filtered.map((s) => (
-                <TableRow key={s.id} className="hover:bg-muted/30">
+                <TableRow key={s.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(s)}>
                   <TableCell><p className="font-medium">{s.members?.name}</p><p className="text-xs text-muted-foreground">{s.members?.phone}</p></TableCell>
                   <TableCell className="text-sm">{s.package_name}</TableCell>
                   <TableCell className="text-sm">{new Date(s.start_date).toLocaleDateString()}</TableCell>
@@ -182,7 +182,7 @@ export default function SalesHistoryPage() {
                   <TableCell className="font-medium text-primary">₹{Number(s.amount_paid).toLocaleString()}</TableCell>
                   <TableCell className="text-sm capitalize">{s.payment_mode}</TableCell>
                   <TableCell>{statusBadge(s.status)}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(s)}>
                         <Pencil className="h-3.5 w-3.5" />

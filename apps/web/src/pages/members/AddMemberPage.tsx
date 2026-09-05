@@ -24,6 +24,7 @@ import { buildPlanFormData, createPlanEditorValue, type PlanEditorValue } from "
 import { isDateAfter, todayDateValue } from "@/lib/date";
 import { toast } from "sonner";
 import { addDays, addMonths, format } from "date-fns";
+import { ArrowLeft } from "lucide-react";
 
 const memberSchema = z.object({
   name: z.string().trim().min(1, "Full name is required"),
@@ -413,6 +414,9 @@ export default function AddMemberPage() {
     <AppLayout title={isEditing ? "Edit Member" : "Add Member"}>
       <div className="mx-auto max-w-4xl">
         <div className="mb-6">
+          <Button variant="ghost" className="gap-2 mb-4 -ml-2" onClick={() => navigate("/members")}>
+            <ArrowLeft className="h-4 w-4" /> Back to Members
+          </Button>
           <h1 className="text-2xl font-bold">{isEditing ? "Edit Member" : "Add New Member"}</h1>
           <p className="text-muted-foreground mt-1">
             {isEditing ? "Update the member details below" : "Fill in the details to register a new member"}

@@ -196,7 +196,7 @@ export default function ClassSchedulePage() {
               {sessions.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="py-12 text-center text-muted-foreground">No class sessions yet.</TableCell></TableRow>
               ) : sessions.map((session) => (
-                <TableRow key={session.id} className="hover:bg-muted/30">
+                <TableRow key={session.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(session)}>
                   <TableCell>
                     <p className="font-medium">{session.name}</p>
                     <p className="text-xs text-muted-foreground">{session.description || session.recurrence_label || "No description"}</p>
@@ -207,7 +207,7 @@ export default function ClassSchedulePage() {
                   </TableCell>
                   <TableCell>{staffMap.get(session.trainer_staff_id || "")?.full_name || "Unassigned"}</TableCell>
                   <TableCell>{session.capacity || 0}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
                       <Button size="sm" variant="outline" className="gap-1" onClick={() => openBookings(session)}><Users className="h-3.5 w-3.5" /> Bookings</Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(session)}><Pencil className="h-3.5 w-3.5" /></Button>

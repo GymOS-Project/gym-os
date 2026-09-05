@@ -152,7 +152,7 @@ export default function TransactionsPage() {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">No transactions</TableCell></TableRow>
               ) : filtered.map((t) => (
-                <TableRow key={t.id} className="hover:bg-muted/30">
+                <TableRow key={t.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(t)}>
                   <TableCell className="text-sm">{new Date(t.transaction_date).toLocaleDateString()}</TableCell>
                   <TableCell><p className="font-medium text-sm">{t.members?.name || "—"}</p></TableCell>
                   <TableCell>
@@ -163,7 +163,7 @@ export default function TransactionsPage() {
                   </TableCell>
                   <TableCell className="text-sm capitalize">{t.payment_mode}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{t.description || "—"}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(t)}>
                         <Pencil className="h-3.5 w-3.5" />

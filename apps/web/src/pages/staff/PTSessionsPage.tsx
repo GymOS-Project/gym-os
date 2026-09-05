@@ -150,7 +150,7 @@ export default function PTSessionsPage() {
               {sessions.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="py-12 text-center text-muted-foreground">No PT sessions yet.</TableCell></TableRow>
               ) : sessions.map((session) => (
-                <TableRow key={session.id} className="hover:bg-muted/30">
+                <TableRow key={session.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(session)}>
                   <TableCell>{staffMap.get(session.trainer_staff_id)?.full_name || "Unknown"}</TableCell>
                   <TableCell>{memberMap.get(session.member_id)?.name || "Unknown"}</TableCell>
                   <TableCell>
@@ -158,7 +158,7 @@ export default function PTSessionsPage() {
                     <p className="text-xs text-muted-foreground">{session.duration_minutes} mins</p>
                   </TableCell>
                   <TableCell>{session.status}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(session)}><Pencil className="h-3.5 w-3.5" /></Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(session.id)}><Trash2 className="h-3.5 w-3.5" /></Button>

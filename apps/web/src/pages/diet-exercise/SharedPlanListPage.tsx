@@ -99,7 +99,7 @@ export default function SharedPlanListPage({ planType }: SharedPlanPageProps) {
               ) : plans.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="py-12 text-center text-muted-foreground">{content.empty}</TableCell></TableRow>
               ) : plans.map((plan) => (
-                <TableRow key={plan.id} className="hover:bg-muted/30">
+                <TableRow key={plan.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => setPreviewPlan(plan)}>
                   <TableCell>
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -117,7 +117,7 @@ export default function SharedPlanListPage({ planType }: SharedPlanPageProps) {
                     </div>
                   </TableCell>
                   <TableCell>{new Date(plan.updated_at).toLocaleDateString()}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPreviewPlan(plan)}>
                         <Eye className="h-3.5 w-3.5" />

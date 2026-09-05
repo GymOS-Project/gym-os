@@ -170,7 +170,7 @@ export default function InvoicesPage() {
               {invoices.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">No invoices generated yet.</TableCell></TableRow>
               ) : invoices.map((invoice) => (
-                <TableRow key={invoice.id} className="hover:bg-muted/30">
+                <TableRow key={invoice.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(invoice)}>
                   <TableCell>
                     <p className="font-medium">{invoice.invoice_number}</p>
                     <p className="text-xs text-muted-foreground">{invoice.receipt_number || "Receipt pending"}</p>
@@ -179,7 +179,7 @@ export default function InvoicesPage() {
                   <TableCell>{new Date(invoice.issue_date).toLocaleDateString()}</TableCell>
                   <TableCell>₹{Number(invoice.total_amount || 0).toLocaleString()}</TableCell>
                   <TableCell>{invoice.status}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
                       <Button size="sm" variant="outline" onClick={() => openEdit(invoice)}>Edit</Button>
                       {invoice.status !== "paid" && <Button size="sm" onClick={() => handleMarkPaid(invoice.id)}><FileText className="mr-1 h-3.5 w-3.5" /> Mark Paid</Button>}

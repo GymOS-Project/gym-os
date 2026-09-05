@@ -158,7 +158,7 @@ export default function IntegrationsPage() {
               {devices.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="py-12 text-center text-muted-foreground">No eSSL devices configured yet.</TableCell></TableRow>
               ) : devices.map((device) => (
-                <TableRow key={device.id} className="hover:bg-muted/30">
+                <TableRow key={device.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openEdit(device)}>
                   <TableCell>
                     <p className="font-medium">{device.device_name}</p>
                     <p className="text-xs text-muted-foreground">{device.serial_number || "No serial number"}</p>
@@ -166,7 +166,7 @@ export default function IntegrationsPage() {
                   <TableCell>{device.integration_mode}</TableCell>
                   <TableCell>{device.ip_address ? `${device.ip_address}:${device.port || 4370}` : device.server_address || "Webhook only"}</TableCell>
                   <TableCell>{device.status}</TableCell>
-                  <TableCell><div className="flex justify-end"><Button size="sm" variant="outline" onClick={() => openEdit(device)}>Edit</Button></div></TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}><div className="flex justify-end"><Button size="sm" variant="outline" onClick={() => openEdit(device)}>Edit</Button></div></TableCell>
                 </TableRow>
               ))}
             </TableBody>
